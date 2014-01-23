@@ -70,13 +70,13 @@ namespace WinterBot
         /// Event handler for when messages are received from the chat channel.
         /// </summary>
         /// <param name="msg">The message received.</param>
-        public delegate void MessageHandler(TwitchClient sender, string user, string question);
+        public delegate void MessageHandler(TwitchClient sender, TwitchUser user, string question);
 
         /// <summary>
         /// Event handler for when user-related events occur.
         /// </summary>
         /// <param name="user">The user in question.</param>
-        public delegate void UserEventHandler(TwitchClient sender, string user);
+        public delegate void UserEventHandler(TwitchClient sender, TwitchUser user);
 
         #endregion
 
@@ -86,7 +86,7 @@ namespace WinterBot
         /// and mods, it simply keeps track of every user we've been informed of their
         /// status.
         /// </summary>
-        public TwitchData ChannelData { get { return m_chanData; } }
+        public TwitchData ChannelData { get { return m_data; } }
 
         /// <summary>
         /// Returns the name of the stream we are connected to.
@@ -227,7 +227,8 @@ namespace WinterBot
                 int i = text.IndexOf(" just");
                 if (i > 0)
                 {
-                    OnUserSubscribed(text, i);
+                    var user = m_data.GetUser(text.Substring(0, i));
+                    OnUserSubscribed(user);
                     return;
                 }
             }
@@ -255,7 +256,7 @@ namespace WinterBot
 
                     if (cmd == "specialuser")
                     {
-                        var u = m_chanData.GetUser(user);
+                        var u = m_data.GetUser(user);
                         if (param == "subscriber")
                         {
                             u.IsSubscriber = true;
@@ -362,8 +363,9 @@ namespace WinterBot
         {
             if (chanUser.Modes.Contains('o'))
             {
-                var user = m_chanData.GetUser(chanUser.User.NickName.ToLower());
-                m_chanData.AddModerator(user);
+                var user = m_data.GetUser(chanUser.User.NickName.ToLower());
+                m_data.AddModerator(user);
+                OnInformModerator(user);
                 return true;
             }
 
@@ -449,42 +451,50 @@ namespace WinterBot
                 status(this, string.Format(fmt, objs));
         }
 
-        protected void OnUserSubscribed(string text, int i)
+        protected void OnUserSubscribed(TwitchUser user)
         {
             var subscribed = UserSubscribed;
             if (subscribed != null)
-                subscribed(this, text.Substring(0, i));
+                subscribed(this, user);
         }
 
         protected void OnMessageReceived(IrcMessageEventArgs e)
         {
+            var user = m_data.GetUser(e.Source.Name);
+
             var msgRcv = MessageReceived;
             if (msgRcv != null)
-                msgRcv(this, e.Source.Name, e.Text);
+                msgRcv(this, user, e.Text);
         }
 
-        protected void OnInformModerator(string user)
+        protected void OnInformModerator(TwitchUser user)
         {
             var evt = InformModerator;
             if (evt != null)
                 evt(this, user);
         }
 
-        protected void OnInformSubscriber(string user)
+        protected void OnInformSubscriber(string username)
         {
+            var user = m_data.GetUser(username);
+
             var evt = InformSubscriber;
             if (evt != null)
                 evt(this, user);
         }
 
-        protected void OnInformTurbo(string user)
+        protected void OnInformTurbo(string username)
         {
+            var user = m_data.GetUser(username);
+
             var evt = InformTurbo;
             if (evt != null)
                 evt(this, user);
         }
-        protected void OnChatClear(string user)
+        protected void OnChatClear(string username)
         {
+            var user = m_data.GetUser(username);
+
             var evt = InformChatClear;
             if (evt != null)
                 evt(this, user);
@@ -500,7 +510,7 @@ namespace WinterBot
         private string m_stream;
         private volatile bool m_alive;
         DateTime m_lastCheck = DateTime.Now;
-        TwitchData m_chanData = new TwitchData();
+        TwitchData m_data = new TwitchData();
         private IrcChannel m_channel;
         #endregion
     }

@@ -18,13 +18,13 @@ namespace WinterBot
 
     public class BaseEvent
     {
-        public string User { get; set; }
+        public TwitchUser User { get; set; }
 
         public EventKind Kind { get; set; }
 
         public DateTime Timestamp { get; set; }
 
-        public BaseEvent(string user, EventKind kind)
+        public BaseEvent(TwitchUser user, EventKind kind)
         {
             Timestamp = DateTime.Now;
             User = user;
@@ -34,7 +34,7 @@ namespace WinterBot
 
     public class ModeratorNotifyEvent : BaseEvent
     {
-        public ModeratorNotifyEvent(string user)
+        public ModeratorNotifyEvent(TwitchUser user)
             : base(user, EventKind.InformModerator)
         {
         }
@@ -42,7 +42,7 @@ namespace WinterBot
 
     public class TimeoutEvent : BaseEvent
     {
-        public TimeoutEvent(string user)
+        public TimeoutEvent(TwitchUser user)
             : base(user, EventKind.Timeout)
         {
         }
@@ -52,7 +52,7 @@ namespace WinterBot
     {
         public string Text { get; set; }
 
-        public MessageEvent(string user, string text)
+        public MessageEvent(TwitchUser user, string text)
             : base(user, EventKind.Message)
         {
             Text = text;
@@ -61,7 +61,7 @@ namespace WinterBot
 
     public class SubscriberNotifyEvent : BaseEvent
     {
-        public SubscriberNotifyEvent(string user)
+        public SubscriberNotifyEvent(TwitchUser user)
             : base(user, EventKind.InformSubscriber)
         {
         }
@@ -69,7 +69,7 @@ namespace WinterBot
 
     public class UserSubscribeEvent : BaseEvent
     {
-        public UserSubscribeEvent(string user)
+        public UserSubscribeEvent(TwitchUser user)
             : base(user, EventKind.Subscribe)
         {
         }

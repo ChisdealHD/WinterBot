@@ -201,7 +201,7 @@ namespace WinterBot
                     total++;
 
                     var timestamp = evt.Timestamp;
-                    TwitchUser user = m_data.GetUser(evt.User);
+                    TwitchUser user = evt.User;
                     switch (evt.Kind)
                     {
                         case EventKind.InformModerator:
@@ -284,31 +284,31 @@ namespace WinterBot
         #endregion
 
         #region Async Event Handlers
-        private void MessageHandler(TwitchClient source, string user, string text)
+        private void MessageHandler(TwitchClient source, TwitchUser user, string text)
         {
             m_events.Enqueue(new MessageEvent(user, text));
             m_event.Set();
         }
 
-        private void InformSubscriberHandler(TwitchClient source, string user)
+        private void InformSubscriberHandler(TwitchClient source, TwitchUser user)
         {
             m_events.Enqueue(new SubscriberNotifyEvent(user));
             m_event.Set();
         }
 
-        private void InformModeratorHandler(TwitchClient source, string user)
+        private void InformModeratorHandler(TwitchClient source, TwitchUser user)
         {
             m_events.Enqueue(new ModeratorNotifyEvent(user));
             m_event.Set();
         }
 
-        private void ClearChatHandler(TwitchClient source, string user)
+        private void ClearChatHandler(TwitchClient source, TwitchUser user)
         {
             m_events.Enqueue(new TimeoutEvent(user));
             m_event.Set();
         }
 
-        private void SubscribeHandler(TwitchClient source, string user)
+        private void SubscribeHandler(TwitchClient source, TwitchUser user)
         {
             m_events.Enqueue(new UserSubscribeEvent(user));
             m_event.Set();
