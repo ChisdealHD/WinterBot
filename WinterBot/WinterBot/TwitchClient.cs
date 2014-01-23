@@ -65,19 +65,18 @@ namespace WinterBot
         /// Fired when a chat message is received.
         /// </summary>
         public event MessageHandler MessageReceived;
-
+        
         /// <summary>
         /// Event handler for when messages are received from the chat channel.
         /// </summary>
         /// <param name="msg">The message received.</param>
-        public delegate void MessageHandler(TwitchClient sender, TwitchUser user, string question);
+        public delegate void MessageHandler(TwitchClient sender, TwitchUser user, string text);
 
         /// <summary>
         /// Event handler for when user-related events occur.
         /// </summary>
         /// <param name="user">The user in question.</param>
         public delegate void UserEventHandler(TwitchClient sender, TwitchUser user);
-
         #endregion
 
         /// <summary>
@@ -123,10 +122,12 @@ namespace WinterBot
             Task t = new Task(CheckAliveWorker);
             t.Start();
 
+            m_stream = stream.ToLower();
+            m_data = new TwitchData(this, m_stream);
+
             // Create client and hook up events.
             string server = "irc.twitch.tv";
             int port = 6667;
-            m_stream = stream.ToLower(); ;
 
             WriteDiagnosticMessage("Attempting to connect to server...");
 
@@ -228,6 +229,7 @@ namespace WinterBot
                 if (i > 0)
                 {
                     var user = m_data.GetUser(text.Substring(0, i));
+                    user.IsSubscriber = true;
                     OnUserSubscribed(user);
                     return;
                 }
@@ -364,8 +366,10 @@ namespace WinterBot
             if (chanUser.Modes.Contains('o'))
             {
                 var user = m_data.GetUser(chanUser.User.NickName.ToLower());
-                m_data.AddModerator(user);
+
+                user.IsModerator = true;
                 OnInformModerator(user);
+                
                 return true;
             }
 
@@ -510,7 +514,7 @@ namespace WinterBot
         private string m_stream;
         private volatile bool m_alive;
         DateTime m_lastCheck = DateTime.Now;
-        TwitchData m_data = new TwitchData();
+        TwitchData m_data;
         private IrcChannel m_channel;
         #endregion
     }

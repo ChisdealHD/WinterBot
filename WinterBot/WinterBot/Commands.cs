@@ -9,7 +9,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-
 namespace WinterBot
 {
     public enum AccessLevel
@@ -17,374 +16,225 @@ namespace WinterBot
         Normal,
         Regular,
         Subscriber,
-        Mod
+        Mod,
+        Streamer
     }
 
-    [Serializable]
-    public abstract class WinterBotCommand
+    [AttributeUsage(AttributeTargets.Method)]
+    public class BotCommandAttribute : Attribute
     {
-        public IEnumerable<string> Commands { get; set; }
-
+        public string[] Commands { get; set; }
         public AccessLevel AccessRequired { get; set; }
 
-        public WinterBotCommand(AccessLevel access)
+        public BotCommandAttribute(AccessLevel accessRequired, params string[] commands)
         {
-            AccessRequired = access;
-        }
-
-        abstract public bool Execute(TwitchUser user, string cmd, string value, TwitchData data, TwitchClient twitch, WinterBotController controller);
-
-        public bool CanUseCommand(TwitchUser user)
-        {
-            switch (AccessRequired)
-            {
-                case AccessLevel.Mod:
-                    return user.IsModerator;
-
-                case AccessLevel.Subscriber:
-                    return user.IsSubscriber || user.IsModerator;
-
-                case AccessLevel.Regular:
-                    return user.IsSubscriber || user.IsModerator || user.IsRegular;
-            }
-
-            return true;
+            Commands = commands;
+            AccessRequired = accessRequired;
         }
     }
 
-    [Serializable]
-    public class RegularCommand : WinterBotCommand
+    public class BuiltInCommands
     {
-        public RegularCommand()
-            : base(AccessLevel.Mod)
+        private WinterBot m_winterBot;
+
+        public BuiltInCommands(WinterBot bot)
         {
-            Commands = new string[] { "regular", "addregular", "delregular", "deleteregular", "remregular", "removeregular" };
+            m_winterBot = bot;
         }
 
-        public override bool Execute(TwitchUser user, string cmd, string value, TwitchData data, TwitchClient twitch, WinterBotController controller)
+        [BotCommand(AccessLevel.Mod, "addreg", "addregular")]
+        public void AddRegular(TwitchUser user, string cmd, string value)
         {
-            bool add = false;
-            switch (cmd)
-            {
-                case "regular":
-                case "addregular":
-                    add = true;
-                    break;
+            SetRegular(cmd, value, true);
+        }
 
-                case "delregular":
-                case "deleteregular":
-                case "remregular":
-                case "removeregular":
-                    break;
+        [BotCommand(AccessLevel.Mod, "delreg", "delregular", "remreg", "remregular")]
+        public void RemoveRegular(TwitchUser user, string cmd, string value)
+        {
+            SetRegular(cmd, value, false);
+        }
 
-                default:
-                    return false;
-            }
-
+        private void SetRegular(string cmd, string value, bool regular)
+        {
             value = value.Trim().ToLower();
-            TwitchUser target = null;
-            if (!data.IsValidUserName(value) || (target = data.GetUser(value)) == null)
+
+            var userData = m_winterBot.UserData;
+            if (!userData.IsValidUserName(value))
             {
-                twitch.SendMessage(string.Format("Invalid user {0}.", user.Name));
-                return false;
+                m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
+                return;
             }
 
-            if (add)
-            {
-                data.SetRegular(user, true);
-                twitch.SendMessage(string.Format("{0} added to regulars list.", value));
+            var reg = userData.GetUser(value);
+            reg.IsRegular = regular;
 
-                return true;
-            }
+            if (regular)
+                m_winterBot.SendMessage("{0} added to regular list.", value);
             else
-            {
-                data.SetRegular(user, false);
-                twitch.SendMessage(string.Format("{0} removed from regulars list.", value));
-
-                return true;
-            }
+                m_winterBot.SendMessage("{0} removed from regular list.", value);
         }
+
     }
 
-
-    [Serializable]
-    public class PermitCommand : WinterBotCommand
+    public class TimeoutController
     {
-        public PermitCommand()
-            : base(AccessLevel.Mod)
+        private WinterBot m_winterBot;
+        HashSet<string> m_permit = new HashSet<string>();
+        HashSet<string> m_allowedUrls = new HashSet<string>();
+        HashSet<string> m_urlExtensions = new HashSet<string>();
+        Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w- ./?%&=]*)?", RegexOptions.IgnoreCase);
+
+        public TimeoutController(WinterBot bot)
         {
-            Commands = new string[] { "permit" };
+            LoadExtensions();
+            m_winterBot = bot;
+            m_winterBot.MessageReceived += CheckMessage;
         }
 
-        public override bool Execute(TwitchUser user, string cmd, string value, TwitchData data, TwitchClient twitch, WinterBotController controller)
+        [BotCommand(AccessLevel.Mod, "permit")]
+        public void Permit(TwitchUser user, string cmd, string value)
         {
-            if (!CanUseCommand(user))
-                return false;
-
             value = value.Trim().ToLower();
-            TwitchUser target = null;
-            if (!data.IsValidUserName(value) || ((target = data.GetUser(value)) == null))
+
+            var userData = m_winterBot.UserData;
+            if (!userData.IsValidUserName(value))
             {
-                twitch.SendMessage(string.Format("Invalid user '{0}'.  Usage:  !permit [username]", value));
-                return false;
+                m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
+                return;
             }
 
-            target.PermitLinkPost(1);
-            twitch.SendMessage(string.Format("{0} -> {1} has been granted permission to post a single link.", user.Name, target.Name));
+            m_permit.Add(value);
+            m_winterBot.SendMessage("{0} -> {1} has been granted permission to post a single link.", user.Name, value);
+        }
+
+
+        public void CheckMessage(WinterBot sender, TwitchUser user, string text)
+        {
+            if (user.IsRegular || user.IsSubscriber || user.IsModerator)
+                return;
+
+            if (HasSpecialCharacter(text))
+            {
+                m_winterBot.SendMessage(string.Format("{0}: Sorry, no special characters allowed to keep the dongers to a minimum. (This is not a timeout.)", user.Name));
+                user.ClearChat();
+                return;
+            }
+
+            if (TooManyCaps(text))
+            {
+                m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam caps. (This is not a timeout.)", user.Name));
+                user.ClearChat();
+                return;
+            }
+
+            string url;
+            if (HasUrl(text, out url))
+            {
+                text = text.ToLower();
+                url = url.ToLower();
+                if (!m_allowedUrls.Contains(url) || (url.Contains("teamliquid") && (text.Contains("userfiles") || text.Contains("image") || text.Contains("profile"))))
+                {
+                    if (url.Contains("naked-julia.com") || url.Contains("codes4free.net") || url.Contains("slutty-kate.com"))
+                    {
+                        m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
+                        user.Ban();
+                    }
+                    else
+                    {
+                        m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
+                        user.ClearChat();
+                    }
+
+                    return;
+                }
+            }
+        }
+
+        private bool TooManyCaps(string message)
+        {
+            int upper = 0;
+            int lower = 0;
+
+            foreach (char c in message)
+            {
+                if ('a' <= c && c <= 'z')
+                    lower++;
+                else if ('A' <= c && c <= 'Z')
+                    upper++;
+            }
+
+            int total = lower + upper;
+            if (total <= 15)
+                return false;
+
+
+            int percent = 100 * upper / total;
+            if (percent < 70)
+                return false;
+
             return true;
         }
-    }
 
 
-    [Serializable]
-    class UserCommandController : WinterBotCommand
-    {
-        public UserCommandController()
-            : base(AccessLevel.Mod)
+        static bool HasSpecialCharacter(string str)
         {
-            Commands = new string[] { "addcom", "addcommand", "removecommand", "delcommand", "remcommand", "listcommands", "commands" };
-        }
-
-        public override bool Execute(TwitchUser user, string cmd, string value, TwitchData data, TwitchClient twitch, WinterBotController controller)
-        {
-            if (!CanUseCommand(user))
-                return false;
-
-            cmd = cmd.ToLower();
-            switch (cmd)
-            {
-                case "addcom":
-                case "addcommand":
-                    return OnAddCommand(user, value, data, twitch, controller);
-
-                case "delcommand":
-                case "remcommand":
-                case "removecommand":
-                    return OnRemoveCommand(user, value, data, twitch, controller);
-                    
-                case "commands":
-                case "listcommands":
-                    return OnListCommands(user, value, data, twitch, controller);
-            }
+            for (int i = 0; i < str.Length; ++i)
+                if (!Allowed(str[i]))
+                    return true;
 
             return false;
         }
 
-        private bool OnAddCommand(TwitchUser user, string value, TwitchData data, TwitchClient twitch, WinterBotController controller)
+        static bool Allowed(char c)
         {
-            string cmdValue = value.Trim();
-            if (cmdValue.Length < 2)
-            {
-                WriteOutput(twitch, m_addCommandUsage);
+            if (c < 255)
+                return true;
+
+            // punctuation block
+            if (0x2010 <= c && c <= 0x2049)
+                return true;
+
+            return c == '♥' || c == '…' || c == '€' || IsKoreanCharacter(c);
+        }
+
+        static bool IsKoreanCharacter(char c)
+        {
+            return (0xac00 <= c && c <= 0xd7af) ||
+                (0x1100 <= c && c <= 0x11ff) ||
+                (0x3130 <= c && c <= 0x318f) ||
+                (0x3200 <= c && c <= 0x32ff) ||
+                (0xa960 <= c && c <= 0xa97f) ||
+                (0xd7b0 <= c && c <= 0xd7ff) ||
+                (0xff00 <= c && c <= 0xffef);
+        }
+
+        bool HasUrl(string str, out string url)
+        {
+            url = null;
+            var match = m_url.Match(str);
+            if (!match.Success)
                 return false;
-            }
 
-            string[] split = cmdValue.ToLower().Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
-            if (split.Length < 2)
-            {
-                WriteOutput(twitch, m_addCommandUsage);
+            var groups = match.Groups;
+            if (!m_urlExtensions.Contains(groups[groups.Count - 2].Value))
                 return false;
-            }
 
-            AccessLevel level = AccessLevel.Mod;
-
-            int cmd = 0;
-            int len = Math.Min(4, split[0].Length);
-            if (split[0].Substring(0, len) == "-ul=")
-            {
-                cmd = 1;
-                var access = split[0].Substring(4);
-
-                switch (access)
-                {
-                    case "user":
-                        level = AccessLevel.Normal;
-                        break;
-
-                    case "sub":
-                    case "subscriber":
-                        level = AccessLevel.Subscriber;
-                        break;
-
-                    case "regular":
-                    case "reg":
-                        level = AccessLevel.Regular;
-                        break;
-
-                    case "mod":
-                    case "moderator":
-                        level = AccessLevel.Mod;
-                        break;
-
-                    default:
-                        WriteOutput(twitch, "Invalid user level {0}. {1}", access, m_addCommandUsage);
-                        return false;
-                }
-            }
-
-
-            if (split[cmd].Length < 2 || split[cmd][0] != '!')
-            {
-                WriteOutput(twitch, "User commands must start with a '!'. {0}", m_addCommandUsage);
-                return false;
-            }
-
-            string cmdName = split[cmd].Substring(1);
-            string cmdText = value.Substring(cmdValue.IndexOf(cmdName) + cmdName.Length).Trim();
-
-            bool exists = controller.GetCommand(cmdName) != null;
-            if (cmdText[0] == '.' || cmdText[0] == '/')
-            {
-                WriteOutput(twitch, "Cannot create a command which starts with a '{0}'.", cmdText[0]);
-                return false;
-            }
-
-            var existingCmd = controller.GetCommand(cmdName);
-            if (existingCmd != null && !(existingCmd is UserCommand))
-            {
-                WriteOutput(twitch, "You cannot modify built in commands.");
-                return false;
-            }
-
-            UserCommand userCommand = new UserCommand(cmdText);
-            userCommand.AccessRequired = level;
-            userCommand.Commands = new string[] { cmdName };
-            controller.AddCommand(userCommand);
-
-            if (exists)
-                WriteOutput(twitch, "Updated command: !{0}.", cmdName);
-            else
-                WriteOutput(twitch, "Successfully added command: !{0}.", cmdName);
-
+            url = groups[1].Value + groups[2].Value;
             return true;
         }
 
-        private bool OnListCommands(TwitchUser user, string value, TwitchData data, TwitchClient twitch, WinterBotController controller)
+        void LoadExtensions()
         {
-            StringBuilder sb = new StringBuilder();
+            var exts = File.ReadAllLines(@"extensions.txt");
+            m_urlExtensions = new HashSet<string>(exts);
 
-            var cmds = EnumerateUserCommands(controller);
-            List<UserCommand> userCmds = new List<UserCommand>(from cmd in cmds
-                                                           where cmd.AccessRequired == AccessLevel.Normal
-                                                           select cmd);
-            
-            List<UserCommand> sub = new List<UserCommand>(from cmd in cmds
-                                                           where cmd.AccessRequired == AccessLevel.Subscriber || cmd.AccessRequired == AccessLevel.Regular
-                                                           select cmd);
-
-            List<UserCommand> mod = new List<UserCommand>(from cmd in cmds
-                                                           where cmd.AccessRequired == AccessLevel.Mod
-                                                           select cmd);
-
-            AddCmds(sb, "User", userCmds);
-            AddCmds(sb, "Subscriber", sub);
-            AddCmds(sb, "Mod", mod);
-
-            WriteOutput(twitch, sb.ToString());
-            return true;
+            var allowed = File.ReadAllLines(@"whitelist_urls.txt");
+            m_allowedUrls = new HashSet<string>(allowed);
         }
 
-        private static void AddCmds(StringBuilder sb, string type, List<UserCommand> user)
-        {
-            if (user.Count > 0)
-                sb.AppendFormat("{0} cmds: {1}. ", type, string.Join(", ", EnumCommands(user)));
-        }
-
-        private static IEnumerable<string> EnumCommands(List<UserCommand> cmds)
-        {
-            foreach (var cmd in cmds)
-                foreach (string val in cmd.Commands)
-                    yield return val;
-        }
-
-        private static IEnumerable<UserCommand> EnumerateUserCommands(WinterBotController controller)
-        {
-            var cmds = from cmd in controller.Commands
-                       where cmd is UserCommand
-                       select (UserCommand)cmd;
-            return cmds;
-        }
-
-        IEnumerable<string> EnumerateAllCommands(IEnumerable<WinterBotCommand> cmds)
-        {
-            foreach (var cmd in cmds)
-                if (cmd is UserCommand)
-                    foreach (string cmdName in cmd.Commands)
-                        yield return cmdName;
-        }
-
-        private bool OnRemoveCommand(TwitchUser user, string value, TwitchData data, TwitchClient twitch, WinterBotController controller)
-        {
-            value = value.Trim().ToLower();
-            if (value.Length == 0)
-            {
-                WriteOutput(twitch, m_removeCommandUsage);
-                return false;
-            }
-
-            if (value[0] != '!')
-                value = "!" + value;
-
-            var cmd = controller.GetCommand(value);
-            if (cmd == null)
-            {
-                WriteOutput(twitch, "Command {0} not found.", value);
-                return false;
-            }
-
-            controller.RemoveCommand(value);
-            return true;
-        }
-
-
-        private void WriteOutput(TwitchClient client, string fmt, params object[] values)
-        {
-            string value = string.Format(fmt, values);
-            client.SendMessage(value);
-        }
-
-        string m_addCommandUsage = "Usage:  !addcommand -ul=[user|regular|sub|mod] !command [text]";
-        string m_removeCommandUsage = "Usage:  !removecommand !command";
     }
 
 
-
-    [Serializable]
-    class TextCommand : WinterBotCommand
-    {
-        string m_output;
-
-        public TextCommand()
-            : base(AccessLevel.Regular)
-        {
-        }
-
-        public TextCommand(string output)
-            : base(AccessLevel.Regular)
-        {
-            m_output = output;
-        }
-
-        public override bool Execute(TwitchUser user, string cmd, string value, TwitchData data, TwitchClient twitch, WinterBotController controller)
-        {
-            if (!CanUseCommand(user))
-                return false;
-
-            twitch.SendMessage(string.Format(m_output, user.Name, value));
-            return true;
-        }
-    }
-
-    [Serializable]
-    class UserCommand : TextCommand
-    {
-        public UserCommand()
-        {
-        }
-
-        public UserCommand(string output)
-            : base(output)
-        {
-        }
-    }
+    // TODO: User text commands
+    // TODO: Interval message commands
 }

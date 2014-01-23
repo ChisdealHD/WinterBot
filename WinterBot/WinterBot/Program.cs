@@ -15,7 +15,7 @@ namespace WinterBot
     {
         static void Main(string[] args)
         {
-            WinterBot bot = new WinterBot("");
+            WinterBot bot = new WinterBot("", "", "");
             bot.Go();
         }
     }

@@ -6,17 +6,15 @@ using System.Threading.Tasks;
 
 namespace WinterBot
 {
-    public enum EventKind
+    enum EventKind
     {
         Default,
         Timeout,
         Message,
-        InformModerator,
-        InformSubscriber,
         Subscribe
     }
 
-    public class BaseEvent
+    class BaseEvent
     {
         public TwitchUser User { get; set; }
 
@@ -32,15 +30,7 @@ namespace WinterBot
         }
     }
 
-    public class ModeratorNotifyEvent : BaseEvent
-    {
-        public ModeratorNotifyEvent(TwitchUser user)
-            : base(user, EventKind.InformModerator)
-        {
-        }
-    }
-
-    public class TimeoutEvent : BaseEvent
+    class TimeoutEvent : BaseEvent
     {
         public TimeoutEvent(TwitchUser user)
             : base(user, EventKind.Timeout)
@@ -48,7 +38,7 @@ namespace WinterBot
         }
     }
 
-    public class MessageEvent : BaseEvent
+    class MessageEvent : BaseEvent
     {
         public string Text { get; set; }
 
@@ -59,15 +49,7 @@ namespace WinterBot
         }
     }
 
-    public class SubscriberNotifyEvent : BaseEvent
-    {
-        public SubscriberNotifyEvent(TwitchUser user)
-            : base(user, EventKind.InformSubscriber)
-        {
-        }
-    }
-
-    public class UserSubscribeEvent : BaseEvent
+    class UserSubscribeEvent : BaseEvent
     {
         public UserSubscribeEvent(TwitchUser user)
             : base(user, EventKind.Subscribe)
