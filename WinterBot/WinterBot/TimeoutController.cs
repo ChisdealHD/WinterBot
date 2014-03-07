@@ -23,6 +23,10 @@ namespace WinterBot
         Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w- ./?%&=]*)?", RegexOptions.IgnoreCase);
         Regex m_banUrlRegex = new Regex(@"(slutty)|(naked)-[a-zA-Z0-9]+\.com", RegexOptions.IgnoreCase);
 
+        int m_maxCaps = 16;
+        int m_capsPercent = 70;
+        int m_maxEmotes = 3;
+
         public TimeoutController(WinterBot bot)
         {
             ThreadPool.QueueUserWorkItem(LoadEmoticons);
@@ -35,6 +39,12 @@ namespace WinterBot
 
         void LoadOptions(IniReader options)
         {
+            // Load url whitelist
+            section = options.GetSectionByName("whitelist");
+            if (section != null)
+                m_allowedUrls = new HashSet<string>(section.EnumerateRawStrings());
+
+            // Load URL extensions
             var section = options.GetSectionByName("chat");
             if (section != null)
             {
@@ -49,9 +59,10 @@ namespace WinterBot
                 m_urlExtensions = new HashSet<string>(tmp);
             }
 
-            section = options.GetSectionByName("whitelist");
-            if (section != null)
-                m_allowedUrls = new HashSet<string>(section.EnumerateRawStrings());
+            // Load timeout variables
+            section.GetValue("MaxCaps", ref m_maxCaps);
+            section.GetValue("MaxCapsPercent", ref m_capsPercent);
+            section.GetValue("MaxEmotes", ref m_maxEmotes);
         }
 
 
@@ -132,7 +143,7 @@ namespace WinterBot
                 foreach (string item in m_defaultImageSet)
                 {
                     count += CountEmote(message, item);
-                    if (count > 3)
+                    if (count > m_maxEmotes)
                         return true;
                 }
             }
@@ -149,7 +160,7 @@ namespace WinterBot
                     foreach (string item in imageSet)
                     {
                         count += CountEmote(message, item);
-                        if (count > 3)
+                        if (count > m_maxEmotes)
                             return true;
                     }
                 }
@@ -185,12 +196,11 @@ namespace WinterBot
             }
 
             int total = lower + upper;
-            if (total <= 15)
+            if (total < m_maxCaps)
                 return false;
 
-
             int percent = 100 * upper / total;
-            if (percent < 70)
+            if (percent < m_capsPercent)
                 return false;
 
             return true;
@@ -233,6 +243,7 @@ namespace WinterBot
         {
             url = null;
             var match = m_url.Match(str);
+
             if (!match.Success)
                 return false;
 

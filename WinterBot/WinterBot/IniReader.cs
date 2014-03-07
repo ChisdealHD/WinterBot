@@ -84,6 +84,16 @@ namespace WinterBot
                 m_pairs[name] = value;
             }
         }
+
+        internal bool GetValue(string key, ref int value)
+        {
+            string data = GetValue(key);
+
+            if (data != null)
+                return int.TryParse(key, out value);
+
+            return false;
+        }
     }
 
     public class IniReader
