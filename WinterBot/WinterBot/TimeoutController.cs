@@ -12,68 +12,6 @@ using System.Threading.Tasks;
 
 namespace WinterBot
 {
-    public enum AccessLevel
-    {
-        Normal,
-        Regular,
-        Subscriber,
-        Mod,
-        Streamer
-    }
-
-    [AttributeUsage(AttributeTargets.Method)]
-    public class BotCommandAttribute : Attribute
-    {
-        public string[] Commands { get; set; }
-        public AccessLevel AccessRequired { get; set; }
-
-        public BotCommandAttribute(AccessLevel accessRequired, params string[] commands)
-        {
-            Commands = commands;
-            AccessRequired = accessRequired;
-        }
-    }
-
-    public class BuiltinCommands
-    {
-
-        [BotCommand(AccessLevel.Mod, "addreg", "addregular")]
-        public void AddRegular(WinterBot sender, TwitchUser user, string cmd, string value)
-        {
-            SetRegular(sender, cmd, value, true);
-        }
-
-        [BotCommand(AccessLevel.Mod, "delreg", "delregular", "remreg", "remregular")]
-        public void RemoveRegular(WinterBot sender, TwitchUser user, string cmd, string value)
-        {
-            SetRegular(sender, cmd, value, false);
-        }
-
-        private void SetRegular(WinterBot sender, string cmd, string value, bool regular)
-        {
-            value = value.Trim().ToLower();
-
-            var userData = sender.UserData;
-            if (!userData.IsValidUserName(value))
-            {
-                sender.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
-                return;
-            }
-
-            if (regular)
-            {
-                sender.AddRegular(value);
-                sender.SendMessage("{0} added to regular list.", value);
-            }
-            else
-            {
-                sender.RemoveRegular(value);
-                sender.SendMessage("{0} removed from regular list.", value);
-            }
-        }
-    }
-
-
     public class TimeoutController
     {
         private WinterBot m_winterBot;
@@ -346,8 +284,4 @@ namespace WinterBot
             m_imageSets = imageSets;
         }
     }
-
-
-    // TODO: User text commands
-    // TODO: Interval message commands
 }

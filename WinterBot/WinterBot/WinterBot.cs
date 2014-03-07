@@ -417,4 +417,27 @@ namespace WinterBot
             return m_regulars.Contains(user.Name.ToLower());
         }
     }
+
+    public enum AccessLevel
+    {
+        Normal,
+        Regular,
+        Subscriber,
+        Mod,
+        Streamer
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public class BotCommandAttribute : Attribute
+    {
+        public string[] Commands { get; set; }
+        public AccessLevel AccessRequired { get; set; }
+
+        public BotCommandAttribute(AccessLevel accessRequired, params string[] commands)
+        {
+            Commands = commands;
+            AccessRequired = accessRequired;
+        }
+    }
+
 }

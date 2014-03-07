@@ -48,7 +48,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Commands.cs" />
+    <Compile Include="BuiltinCommands.cs" />
+    <Compile Include="TimeoutController.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="TwitchJsonObjects.cs" />
     <Compile Include="WinterBotEvents.cs" />
