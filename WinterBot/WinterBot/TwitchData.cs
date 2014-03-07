@@ -122,6 +122,8 @@ namespace WinterBot
         TwitchClient m_client;
         bool m_regular;
 
+        public int[] IconSet { get; set; }
+
         public string Name { get; set; }
         
         public int Id { get; set; }

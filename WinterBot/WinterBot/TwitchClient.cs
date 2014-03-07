@@ -249,31 +249,55 @@ namespace WinterBot
         {
             if (e.Source.Name.Equals("jtv", StringComparison.CurrentCultureIgnoreCase))
             {
-                string[] items = e.Text.ToLower().Split(' ');
-                if (items.Length == 3)
-                {
-                    string cmd = items[0];
-                    string user = items[1];
-                    string param = items[2];
+                string text = e.Text;
 
-                    if (cmd == "specialuser")
+                if (text.StartsWith("EMOTESET"))
+                {
+                    string[] items = text.ToLower().Split(new char[] { ' ' }, 3);
+
+                    if (items.Length == 3)
                     {
+                        string user = items[1];
+                        string setString = items[2];
+                        setString = setString.Substring(1, setString.Length - 2);
+
+                        int[] iconSet = (from str in setString.Split(',')
+                                         let i = int.Parse(str)
+                                         orderby i
+                                         select i).ToArray();
+
                         var u = m_data.GetUser(user);
-                        if (param == "subscriber")
-                        {
-                            u.IsSubscriber = true;
-                            OnInformSubscriber(user);
-                        }
-                        else if (param == "turbo")
-                        {
-                            u.IsTurbo = true;
-                            OnInformTurbo(user);
-                        }
+                        u.IconSet = iconSet;
                     }
-                    else if (cmd == "clearchat")
+                }
+                else
+                {
+                    string[] items = e.Text.ToLower().Split(' ');
+                    if (items.Length == 3)
                     {
-                        // This is a timeout or ban.
-                        OnChatClear(user);
+                        string cmd = items[0];
+                        string user = items[1];
+                        string param = items[2];
+
+                        if (cmd == "specialuser")
+                        {
+                            var u = m_data.GetUser(user);
+                            if (param == "subscriber")
+                            {
+                                u.IsSubscriber = true;
+                                OnInformSubscriber(user);
+                            }
+                            else if (param == "turbo")
+                            {
+                                u.IsTurbo = true;
+                                OnInformTurbo(user);
+                            }
+                        }
+                        else if (cmd == "clearchat")
+                        {
+                            // This is a timeout or ban.
+                            OnChatClear(user);
+                        }
                     }
                 }
             }

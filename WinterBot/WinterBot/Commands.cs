@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -73,7 +74,6 @@ namespace WinterBot
             else
                 m_winterBot.SendMessage("{0} removed from regular list.", value);
         }
-
     }
 
     public class TimeoutController
@@ -82,7 +82,10 @@ namespace WinterBot
         HashSet<string> m_permit = new HashSet<string>();
         HashSet<string> m_allowedUrls = new HashSet<string>();
         HashSet<string> m_urlExtensions = new HashSet<string>();
+        private HashSet<string> m_defaultImageSet;
+        private Dictionary<int, HashSet<string>> m_imageSets;
         Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w- ./?%&=]*)?", RegexOptions.IgnoreCase);
+        Regex m_banUrlRegex = new Regex(@"(slutty)|(naked)-[a-zA-Z0-9]+\.com", RegexOptions.IgnoreCase);
 
         public TimeoutController(WinterBot bot)
         {
@@ -134,7 +137,7 @@ namespace WinterBot
                 url = url.ToLower();
                 if (!m_allowedUrls.Contains(url) || (url.Contains("teamliquid") && (text.Contains("userfiles") || text.Contains("image") || text.Contains("profile"))))
                 {
-                    if (url.Contains("naked-julia.com") || url.Contains("codes4free.net") || url.Contains("slutty-kate.com"))
+                    if (m_banUrlRegex.IsMatch(url) || url.Contains("codes4free.net") || url.Contains("vine4you.com") || url.Contains("prizescode.net"))
                     {
                         m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
                         user.Ban();
@@ -148,6 +151,56 @@ namespace WinterBot
                     return;
                 }
             }
+        }
+
+        private bool TooManyEmotes(TwitchUser user, string message, out string offender)
+        {
+            int count = 0;
+
+            offender = message;
+            if (m_defaultImageSet != null)
+            {
+                foreach (string item in m_defaultImageSet)
+                {
+                    count += CountEmote(message, item);
+                    if (count > 3)
+                        return true;
+                }
+            }
+
+            int[] userSets = user.IconSet;
+            if (userSets != null && m_imageSets != null)
+            {
+                foreach (int setId in userSets)
+                {
+                    HashSet<string> imageSet;
+                    if (!m_imageSets.TryGetValue(setId, out imageSet))
+                        continue;
+
+                    foreach (string item in imageSet)
+                    {
+                        count += CountEmote(message, item);
+                        if (count > 3)
+                            return true;
+                    }
+                }
+            }
+
+            offender = null;
+            return false;
+        }
+
+        private int CountEmote(string message, string item)
+        {
+            int count = 0;
+            int i = message.IndexOf(item);
+            while (i != -1)
+            {
+                count++;
+                i = message.IndexOf(item, i + 1);
+            }
+
+            return count;
         }
 
         private bool TooManyCaps(string message)
@@ -232,6 +285,45 @@ namespace WinterBot
             m_allowedUrls = new HashSet<string>(allowed);
         }
 
+
+        private void LoadEmoticons(object state)
+        {
+            var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(@"https://api.twitch.tv/kraken/chat/emoticons");
+            req.UserAgent = "Question Grabber Bot/0.0.0.1";
+            var response = req.GetResponse();
+            var fromStream = response.GetResponseStream();
+
+            StreamReader reader = new StreamReader(fromStream);
+            string data = reader.ReadToEnd();
+
+            TwitchEmoticonResponse emotes = JsonConvert.DeserializeObject<TwitchEmoticonResponse>(data);
+
+            HashSet<string> defaultSet = new HashSet<string>();
+            Dictionary<int, HashSet<string>> imageSets = new Dictionary<int, HashSet<string>>();
+
+            foreach (var emote in emotes.emoticons)
+            {
+                foreach (var image in emote.images)
+                {
+                    if (image.emoticon_set == null)
+                    {
+                        defaultSet.Add(emote.regex);
+                    }
+                    else
+                    {
+                        int setId = (int)image.emoticon_set;
+                        HashSet<string> set;
+                        if (!imageSets.TryGetValue(setId, out set))
+                            imageSets[setId] = set = new HashSet<string>();
+
+                        set.Add(emote.regex);
+                    }
+                }
+            }
+
+            m_defaultImageSet = defaultSet;
+            m_imageSets = imageSets;
+        }
     }
 
 
