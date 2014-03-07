@@ -52,7 +52,6 @@
     <Compile Include="TimeoutController.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="TwitchJsonObjects.cs" />
-    <Compile Include="WinterBotEvents.cs" />
     <Compile Include="IniReader.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>

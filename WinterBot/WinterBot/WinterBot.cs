@@ -27,7 +27,7 @@ namespace WinterBot
     public class WinterBot
     {
         private TwitchClient m_twitch;
-        ConcurrentQueue<BaseEvent> m_events = new ConcurrentQueue<BaseEvent>();
+        ConcurrentQueue<Tuple<Delegate, object[]>> m_events = new ConcurrentQueue<Tuple<Delegate, object[]>>();
         AutoResetEvent m_event = new AutoResetEvent(false);
         string m_channel;
 
@@ -103,6 +103,8 @@ namespace WinterBot
             m_options = options;
             m_channel = channel.ToLower();
 
+            MessageReceived += TryProcessCommand;
+
             m_twitch = new TwitchClient();
             m_twitch.InformChatClear += ClearChatHandler;
             m_twitch.MessageReceived += ChatMessageReceived;
@@ -169,29 +171,6 @@ namespace WinterBot
                 evt(this, user, cmd, value);
         }
 
-        private void OnNewChatMessage(TwitchUser user, string text)
-        {
-            var evt = MessageReceived;
-            if (evt != null)
-                evt(this, user, text);
-
-            TryProcessCommand(user, text);
-        }
-
-
-        private void OnUserTimedOut(TwitchUser user)
-        {
-            var evt = UserTimedOut;
-            if (evt != null)
-                evt(this, user);
-        }
-
-        private void OnUserSubscribed(TwitchUser user)
-        {
-            var evt = UserSubscribed;
-            if (evt != null)
-                evt(this, user);
-        }
 
         private void OnTick(TimeSpan timeSpan)
         {
@@ -202,48 +181,62 @@ namespace WinterBot
         #endregion
 
         #region Giant Switch Statement
+        private void ChatMessageReceived(TwitchClient source, TwitchUser user, string text)
+        {
+            var evt = MessageReceived;
+            if (evt != null)
+            {
+                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user, text }));
+                m_event.Set();
+            }
+        }
+
+        private void ClearChatHandler(TwitchClient source, TwitchUser user)
+        {
+            var evt = UserTimedOut;
+            if (evt != null)
+            {
+                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
+                m_event.Set();
+            }
+        }
+
+        private void SubscribeHandler(TwitchClient source, TwitchUser user)
+        {
+            var evt = UserSubscribed;
+            if (evt != null)
+            {
+                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
+                m_event.Set();
+            }
+        }
+
         public void Go()
         {
             if (!Connect())
                 return;
 
-            DateTime lastTick = DateTime.Now;
-            OnTick(new TimeSpan(0));
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
 
             while (true)
             {
                 m_event.WaitOne(250);
 
-                BaseEvent evt;
+                Tuple<Delegate, object[]> evt;
                 while (m_events.TryDequeue(out evt))
                 {
-                    var timestamp = evt.Timestamp;
-                    TwitchUser user = evt.User;
-                    switch (evt.Kind)
-                    {
-                        case EventKind.Subscribe:
-                            OnUserSubscribed(user);
-                            break;
+                    Delegate function = evt.Item1;
+                    object[] args = evt.Item2;
 
-                        case EventKind.Message:
-                            OnNewChatMessage(user, ((MessageEvent)evt).Text);
-                            break;
-
-                        case EventKind.Timeout:
-                            OnUserTimedOut(user);
-                            break;
-
-                        default:
-                            break;
-                    }
+                    function.DynamicInvoke(args);
                 }
 
-                DateTime now = DateTime.Now;
-                TimeSpan diff = now - lastTick;
-                if (diff.TotalMilliseconds > 500)
+                if (timer.Elapsed.TotalSeconds >= 15)
                 {
-                    OnTick(diff);
-                    lastTick = now;
+                    timer.Stop();
+                    OnTick(timer.Elapsed);
+                    timer.Restart();
                 }
             }
         }
@@ -251,8 +244,10 @@ namespace WinterBot
 
         #region Helpers
 
-        private void TryProcessCommand(TwitchUser user, string text)
+        private void TryProcessCommand(WinterBot sender, TwitchUser user, string text)
         {
+            Debug.Assert(sender == this);
+
             string cmd, value;
             if (!TryReadCommand(text, out cmd, out value))
                 return;
@@ -340,25 +335,6 @@ namespace WinterBot
         }
         #endregion
 
-        #region Twitch Client Helpers
-        private void ChatMessageReceived(TwitchClient source, TwitchUser user, string text)
-        {
-            m_events.Enqueue(new MessageEvent(user, text));
-            m_event.Set();
-        }
-
-        private void ClearChatHandler(TwitchClient source, TwitchUser user)
-        {
-            m_events.Enqueue(new TimeoutEvent(user));
-            m_event.Set();
-        }
-
-        private void SubscribeHandler(TwitchClient source, TwitchUser user)
-        {
-            m_events.Enqueue(new UserSubscribeEvent(user));
-            m_event.Set();
-        }
-        #endregion
         struct CmdValue
         {
             public AccessLevel Access;
