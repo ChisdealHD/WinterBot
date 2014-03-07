@@ -50,8 +50,6 @@ namespace WinterBot
             m_channel = channel;
             m_users = new List<TwitchUser>();
             m_userMap = new Dictionary<string, TwitchUser>();
-
-            LoadRegularList();
         }
 
         public TwitchUser GetUser(string username)
@@ -86,37 +84,8 @@ namespace WinterBot
 
             return user;
         }
-
-        internal void SaveRegularList()
-        {
-            string filename = m_channel + "_regulars.txt";
-            if (File.Exists(filename))
-            {
-                string backup = filename + ".bak";
-                if (File.Exists(backup))
-                    File.Delete(backup);
-
-                File.Move(filename, backup);
-            }
-
-            File.WriteAllLines(filename, Regulars.Select(p=>p.Name));
-        }
-
-        private void LoadRegularList()
-        {
-            string filename = m_channel + "_regulars.txt";
-            if (!File.Exists(filename))
-                return;
-
-            string name;
-            using (var file = File.OpenText(filename))
-                while ((name = file.ReadLine()) != null)
-                    if (IsValidUserName(name))
-                        GetUser(name).IsRegular = true;
-        }
     }
 
-    [Serializable]
     public class TwitchUser
     {
         TwitchClient m_client;
@@ -146,7 +115,6 @@ namespace WinterBot
                 if (m_regular != value)
                 {
                     m_regular = value;
-                    m_client.ChannelData.SaveRegularList();
                 }
             }
         }
@@ -167,14 +135,13 @@ namespace WinterBot
         }
 
         #region Constructors
-        public TwitchUser()
-        {
-        }
-
         public TwitchUser(TwitchClient client, string name, int id)
         {
+            Debug.Assert(client != null);
+
             Name = name;
             Id = id;
+            m_client = client;
         }
         #endregion
 

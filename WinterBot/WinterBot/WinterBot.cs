@@ -81,6 +81,8 @@ namespace WinterBot
         public delegate void UnknownCommandHandler(WinterBot sender, TwitchUser user, string cmd, string value);
         #endregion
 
+        public Options Options { get { return m_options; } }
+
         public TwitchData UserData
         {
             get
@@ -104,7 +106,8 @@ namespace WinterBot
 
         private void LoadExtensions()
         {
-            AddCommands(new BuiltInCommands());
+            AddCommands(new BuiltInCommands(this));
+            AddCommands(new TimeoutController(this));
         }
 
         private void AddCommands(object commands)
@@ -148,7 +151,6 @@ namespace WinterBot
         {
             SendMessage(string.Format(fmt, param));
         }
-
 
 
         #region Event Wrappers

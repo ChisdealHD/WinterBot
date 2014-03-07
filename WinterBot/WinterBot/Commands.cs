@@ -36,7 +36,7 @@ namespace WinterBot
 
     public class BuiltInCommands
     {
-        public BuiltInCommands()
+        public BuiltInCommands(WinterBot bot)
         {
         }
 
@@ -78,7 +78,7 @@ namespace WinterBot
         private WinterBot m_winterBot;
         HashSet<string> m_permit = new HashSet<string>();
         HashSet<string> m_allowedUrls = new HashSet<string>();
-        HashSet<string> m_urlExtensions = new HashSet<string>();
+        HashSet<string> m_urlExtensions;
         private HashSet<string> m_defaultImageSet;
         private Dictionary<int, HashSet<string>> m_imageSets;
         Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w- ./?%&=]*)?", RegexOptions.IgnoreCase);
@@ -86,14 +86,40 @@ namespace WinterBot
 
         public TimeoutController(WinterBot bot)
         {
-            LoadExtensions();
+            ThreadPool.QueueUserWorkItem(LoadEmoticons);
+            LoadOptions(bot.Options.RawIniData);
+
             m_winterBot = bot;
             m_winterBot.MessageReceived += CheckMessage;
         }
 
-        [BotCommand(AccessLevel.Mod, "permit")]
-        public void Permit(TwitchUser user, string cmd, string value)
+
+        void LoadOptions(IniReader options)
         {
+            var section = options.GetSectionByName("chat");
+            if (section != null)
+            {
+                var exts = section.GetValue("urlExtensions");
+                if (exts != null)
+                    m_urlExtensions = new HashSet<string>(exts.Split(','));
+            }
+
+            if (m_urlExtensions == null)
+            {
+                string[] tmp = { "net", "com", "org" };
+                m_urlExtensions = new HashSet<string>(tmp);
+            }
+
+            section = options.GetSectionByName("whitelist");
+            if (section != null)
+                m_allowedUrls = new HashSet<string>(section.EnumerateRawStrings());
+        }
+
+        [BotCommand(AccessLevel.Mod, "permit")]
+        public void Permit(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            Debug.Assert(m_winterBot == sender);
+
             value = value.Trim().ToLower();
 
             var userData = m_winterBot.UserData;
@@ -127,6 +153,13 @@ namespace WinterBot
                 return;
             }
 
+            if (TooManyEmotes(user, text))
+            {
+                m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam emotes. (This is not a timeout.)", user.Name));
+                user.ClearChat();
+                return;
+            }
+
             string url;
             if (HasUrl(text, out url))
             {
@@ -150,11 +183,10 @@ namespace WinterBot
             }
         }
 
-        private bool TooManyEmotes(TwitchUser user, string message, out string offender)
+        private bool TooManyEmotes(TwitchUser user, string message)
         {
             int count = 0;
 
-            offender = message;
             if (m_defaultImageSet != null)
             {
                 foreach (string item in m_defaultImageSet)
@@ -183,7 +215,6 @@ namespace WinterBot
                 }
             }
 
-            offender = null;
             return false;
         }
 
@@ -271,15 +302,6 @@ namespace WinterBot
 
             url = groups[1].Value + groups[2].Value;
             return true;
-        }
-
-        void LoadExtensions()
-        {
-            var exts = File.ReadAllLines(@"extensions.txt");
-            m_urlExtensions = new HashSet<string>(exts);
-
-            var allowed = File.ReadAllLines(@"whitelist_urls.txt");
-            m_allowedUrls = new HashSet<string>(allowed);
         }
 
 
