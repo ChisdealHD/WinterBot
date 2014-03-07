@@ -26,6 +26,15 @@ namespace WinterBot
 
     public class WinterBot
     {
+        private TwitchClient m_twitch;
+        ConcurrentQueue<BaseEvent> m_events = new ConcurrentQueue<BaseEvent>();
+        AutoResetEvent m_event = new AutoResetEvent(false);
+        string m_channel;
+
+        Dictionary<string, CmdValue> m_commands = new Dictionary<string, CmdValue>();
+        private Options m_options;
+        HashSet<string> m_regulars = new HashSet<string>();
+
         #region Events
         /// <summary>
         /// Fired when a user subscribes to the channel.
@@ -51,8 +60,6 @@ namespace WinterBot
         /// Called when a !command is run, but no handler is registered.
         /// </summary>
         public event UnknownCommandHandler UnknownCommandReceived;
-
-
 
         /// <summary>
         /// Event handler for when messages are received from the chat channel.
@@ -101,12 +108,13 @@ namespace WinterBot
             m_twitch.MessageReceived += ChatMessageReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
 
+            LoadRegulars();
             LoadExtensions();
         }
 
         private void LoadExtensions()
         {
-            AddCommands(new BuiltInCommands(this));
+            AddCommands(new BuiltinCommands());
             AddCommands(new TimeoutController(this));
         }
 
@@ -268,22 +276,23 @@ namespace WinterBot
 
         public bool CanUseCommand(TwitchUser user, AccessLevel required)
         {
+            bool isStreamer = m_channel.Equals(user.Name, StringComparison.CurrentCultureIgnoreCase);
             switch (required)
             {
                 case AccessLevel.Normal:
                     return true;
 
                 case AccessLevel.Mod:
-                    return user.IsModerator;
+                    return isStreamer || user.IsModerator;
 
                 case AccessLevel.Subscriber:
-                    return user.IsSubscriber || user.IsModerator;
+                    return isStreamer || user.IsSubscriber || user.IsModerator;
 
                 case AccessLevel.Regular:
-                    return user.IsSubscriber || user.IsModerator || user.IsRegular;
+                    return isStreamer || user.IsSubscriber || user.IsModerator || m_regulars.Contains(user.Name.ToLower());
 
                 case AccessLevel.Streamer:
-                    return m_channel.Equals(user.Name, StringComparison.CurrentCultureIgnoreCase);
+                    return isStreamer;
 
                 default:
                     return false;
@@ -362,12 +371,50 @@ namespace WinterBot
             }
         }
 
-        private TwitchClient m_twitch;
-        ConcurrentQueue<BaseEvent> m_events = new ConcurrentQueue<BaseEvent>();
-        AutoResetEvent m_event = new AutoResetEvent(false);
-        string m_channel;
+        internal void AddRegular(string value)
+        {
+            if (!m_regulars.Contains(value))
+            {
+                m_regulars.Add(value);
+                SaveRegulars();
+            }
+        }
 
-        Dictionary<string, CmdValue> m_commands = new Dictionary<string, CmdValue>();
-        private Options m_options;
+        internal void RemoveRegular(string value)
+        {
+            if (m_regulars.Contains(value))
+            {
+                m_regulars.Remove(value);
+                SaveRegulars();
+            }
+        }
+
+        void LoadRegulars()
+        {
+            string regulars = GetRegularFile();
+            if (File.Exists(regulars))
+                m_regulars = new HashSet<string>(File.ReadAllLines(regulars));
+            else
+                m_regulars = new HashSet<string>();
+        }
+
+        void SaveRegulars()
+        {
+            var regulars = GetRegularFile();
+            if (m_regulars.Count > 0)
+                File.WriteAllLines(regulars, m_regulars);
+            else if (File.Exists(regulars))
+                File.Delete(regulars);
+        }
+
+        private string GetRegularFile()
+        {
+            return Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), m_channel + "_regulars.txt");
+        }
+
+        internal bool IsRegular(TwitchUser user)
+        {
+            return m_regulars.Contains(user.Name.ToLower());
+        }
     }
 }

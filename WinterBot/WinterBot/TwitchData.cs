@@ -18,32 +18,6 @@ namespace WinterBot
         Dictionary<string, TwitchUser> m_userMap;
         TwitchClient m_client;
 
-        public IEnumerable<TwitchUser> Users { get { return m_users; } }
-
-        public IEnumerable<TwitchUser> Moderators
-        {
-            get
-            {
-                return from user in m_users where user.IsModerator select user;
-            }
-        }
-
-        public IEnumerable<TwitchUser> Subscribers
-        {
-            get
-            {
-                return from user in m_users where user.IsSubscriber select user;
-            }
-        }
-
-        public IEnumerable<TwitchUser> Regulars
-        {
-            get
-            {
-                return from user in m_users where user.IsRegular select user;
-            }
-        }
-
         public TwitchData(TwitchClient client, string channel)
         {
             m_client = client;
@@ -89,7 +63,6 @@ namespace WinterBot
     public class TwitchUser
     {
         TwitchClient m_client;
-        bool m_regular;
 
         public int[] IconSet { get; set; }
 
@@ -102,22 +75,6 @@ namespace WinterBot
         public bool IsSubscriber { get; set; }
 
         public bool IsTurbo { get; set; }
-
-        public bool IsRegular
-        {
-            get
-            {
-                return m_regular;
-            }
-
-            set
-            {
-                if (m_regular != value)
-                {
-                    m_regular = value;
-                }
-            }
-        }
 
         public void Ban()
         {

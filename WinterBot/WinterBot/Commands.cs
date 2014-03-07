@@ -34,11 +34,8 @@ namespace WinterBot
         }
     }
 
-    public class BuiltInCommands
+    public class BuiltinCommands
     {
-        public BuiltInCommands(WinterBot bot)
-        {
-        }
 
         [BotCommand(AccessLevel.Mod, "addreg", "addregular")]
         public void AddRegular(WinterBot sender, TwitchUser user, string cmd, string value)
@@ -63,15 +60,19 @@ namespace WinterBot
                 return;
             }
 
-            var reg = userData.GetUser(value);
-            reg.IsRegular = regular;
-
             if (regular)
+            {
+                sender.AddRegular(value);
                 sender.SendMessage("{0} added to regular list.", value);
+            }
             else
+            {
+                sender.RemoveRegular(value);
                 sender.SendMessage("{0} removed from regular list.", value);
+            }
         }
     }
+
 
     public class TimeoutController
     {
@@ -115,6 +116,7 @@ namespace WinterBot
                 m_allowedUrls = new HashSet<string>(section.EnumerateRawStrings());
         }
 
+
         [BotCommand(AccessLevel.Mod, "permit")]
         public void Permit(WinterBot sender, TwitchUser user, string cmd, string value)
         {
@@ -136,7 +138,7 @@ namespace WinterBot
 
         public void CheckMessage(WinterBot sender, TwitchUser user, string text)
         {
-            if (user.IsRegular || user.IsSubscriber || user.IsModerator)
+            if (user.IsSubscriber || user.IsModerator || sender.IsRegular(user))
                 return;
 
             if (HasSpecialCharacter(text))
