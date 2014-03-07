@@ -90,7 +90,7 @@ namespace WinterBot
             string data = GetValue(key);
 
             if (data != null)
-                return int.TryParse(key, out value);
+                return int.TryParse(data, out value);
 
             return false;
         }
