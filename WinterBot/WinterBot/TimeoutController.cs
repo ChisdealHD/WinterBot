@@ -74,7 +74,7 @@ namespace WinterBot
             value = value.Trim().ToLower();
 
             var userData = m_winterBot.UserData;
-            if (!userData.IsValidUserName(value))
+            if (!TwitchData.IsValidUserName(value))
             {
                 m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
                 return;
