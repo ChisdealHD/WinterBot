@@ -9,6 +9,10 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+
+
+// TODO: User text commands
+// TODO: Interval message commands
 namespace WinterBot
 {
     class Program

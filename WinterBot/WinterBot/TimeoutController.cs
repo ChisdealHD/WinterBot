@@ -40,12 +40,12 @@ namespace WinterBot
         void LoadOptions(IniReader options)
         {
             // Load url whitelist
-            section = options.GetSectionByName("whitelist");
+            var section = options.GetSectionByName("whitelist");
             if (section != null)
                 m_allowedUrls = new HashSet<string>(section.EnumerateRawStrings());
 
             // Load URL extensions
-            var section = options.GetSectionByName("chat");
+            section = options.GetSectionByName("chat");
             if (section != null)
             {
                 var exts = section.GetValue("urlExtensions");
