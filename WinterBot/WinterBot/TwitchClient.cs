@@ -374,9 +374,13 @@ namespace WinterBot
                 m_client = null;
             }
         }
+
+
         private void CheckModeratorStatus(IIrcMessageSource msgSource)
         {
             IrcUser ircuser = msgSource as IrcUser;
+
+
             if (ircuser != null)
             {
                 IrcChannelUser chanUser = m_channel.GetChannelUser(ircuser);
@@ -456,12 +460,18 @@ namespace WinterBot
 
         void ChannelUser_ModesChanged(object sender, EventArgs e)
         {
+            IrcChannelUser user = sender as IrcChannelUser;
+            if (user != null)
+                CheckModeratorStatus(user);
         }
 
         void m_channel_UsersListReceived(object sender, EventArgs e)
         {
             foreach (var user in m_channel.Users)
+            {
                 CheckModeratorStatus(user);
+                user.ModesChanged += ChannelUser_ModesChanged;
+            }
         }
 
 
