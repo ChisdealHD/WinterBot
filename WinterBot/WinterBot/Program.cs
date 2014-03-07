@@ -15,7 +15,10 @@ namespace WinterBot
     {
         static void Main(string[] args)
         {
-            WinterBot bot = new WinterBot("", "", "");
+            string iniFile = Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), "options.ini");
+            Options options = new Options(iniFile);
+
+            WinterBot bot = new WinterBot(options, options.Channel, options.Username, options.Password);
             bot.Go();
         }
     }

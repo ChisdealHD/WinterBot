@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace WinterBot
 {
-    public delegate void WinterBotCommand(TwitchUser user, string cmd, string value);
+    public delegate void WinterBotCommand(WinterBot sender, TwitchUser user, string cmd, string value);
 
     public enum DiagnosticLevel
     {
@@ -89,10 +89,39 @@ namespace WinterBot
             }
         }
 
-        public WinterBot(string channel, string user, string oauth)
+        public WinterBot(Options options, string channel, string user, string oauth)
         {
+            m_options = options;
             m_channel = channel.ToLower();
-            InitTwitchClient();
+
+            m_twitch = new TwitchClient();
+            m_twitch.InformChatClear += ClearChatHandler;
+            m_twitch.MessageReceived += ChatMessageReceived;
+            m_twitch.UserSubscribed += SubscribeHandler;
+
+            LoadExtensions();
+        }
+
+        private void LoadExtensions()
+        {
+            AddCommands(new BuiltInCommands());
+        }
+
+        private void AddCommands(object commands)
+        {
+            var methods = from m in commands.GetType().GetMethods()
+                          where m.IsPublic
+                          let attrs = m.GetCustomAttributes(typeof(BotCommandAttribute), false)
+                          where attrs.Length == 1
+                          select new
+                          {
+                              Attribute = (BotCommandAttribute)attrs[0],
+                              Method = (WinterBotCommand)Delegate.CreateDelegate(typeof(WinterBotCommand), commands, m)
+                          };
+
+            foreach (var method in methods)
+                foreach (string cmd in method.Attribute.Commands)
+                    AddCommand(cmd, method.Method, method.Attribute.AccessRequired);
         }
 
         public void AddCommand(string cmd, WinterBotCommand command, AccessLevel requiredAccess)
@@ -227,7 +256,7 @@ namespace WinterBot
                 if (!CanUseCommand(user, command.Access))
                     return;
 
-                command.Command(user, cmd, value);
+                command.Command(this, user, cmd, value);
             }
             else
             {
@@ -290,7 +319,8 @@ namespace WinterBot
         }
         private bool Connect()
         {
-            bool connected = m_twitch.Connect(m_channel, "", "");
+            bool connected = m_twitch.Connect(m_channel, m_options.Username, m_options.Password);
+
             if (connected)
                 Console.WriteLine("Connected to {0}...", m_channel);
             else
@@ -300,21 +330,6 @@ namespace WinterBot
         #endregion
 
         #region Twitch Client Helpers
-        private void InitTwitchClient()
-        {
-            if (m_twitch != null)
-            {
-                m_twitch.InformChatClear -= ClearChatHandler;
-                m_twitch.MessageReceived -= ChatMessageReceived;
-                m_twitch.UserSubscribed -= SubscribeHandler;
-            }
-
-            m_twitch = new TwitchClient();
-            m_twitch.InformChatClear += ClearChatHandler;
-            m_twitch.MessageReceived += ChatMessageReceived;
-            m_twitch.UserSubscribed += SubscribeHandler;
-        }
-
         private void ChatMessageReceived(TwitchClient source, TwitchUser user, string text)
         {
             m_events.Enqueue(new MessageEvent(user, text));
@@ -351,5 +366,6 @@ namespace WinterBot
         string m_channel;
 
         Dictionary<string, CmdValue> m_commands = new Dictionary<string, CmdValue>();
+        private Options m_options;
     }
 }
