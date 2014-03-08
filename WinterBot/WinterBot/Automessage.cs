@@ -61,6 +61,7 @@ namespace WinterBot
         {
             if (m_timer.Elapsed.Minutes >= m_delay && m_totalMessages >= m_messageDelay)
             {
+                m_totalMessages = 0;
                 m_timer.Restart();
 
                 string msg = null;
