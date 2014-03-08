@@ -124,7 +124,7 @@ namespace WinterBot
                     int start = line.IndexOf('[');
                     int end = line.IndexOf(']');
 
-                    if (start != -1 && end != -1)
+                    if (start == 0 && end != -1)
                     {
                         if (start != 0 || end != line.Length - 1 || start == end - 1)
                             throw new FormatException(string.Format("Line '{0}' is not a valid section header.", line));
