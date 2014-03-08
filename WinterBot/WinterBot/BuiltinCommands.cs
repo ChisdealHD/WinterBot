@@ -8,6 +8,10 @@ namespace WinterBot
 {
     public class BuiltinCommands
     {
+        public BuiltinCommands(WinterBot sender)
+        {
+        }
+
         [BotCommand(AccessLevel.Mod, "addreg", "addregular")]
         public void AddRegular(WinterBot sender, TwitchUser user, string cmd, string value)
         {

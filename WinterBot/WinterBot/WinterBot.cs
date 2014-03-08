@@ -116,9 +116,10 @@ namespace WinterBot
 
         private void LoadExtensions()
         {
-            AddCommands(new BuiltinCommands());
+            AddCommands(new BuiltinCommands(this));
             AddCommands(new TimeoutController(this));
             AddCommands(new AutoMessage(this));
+            AddCommands(new UserCommands(this));
         }
 
         private void AddCommands(object commands)
