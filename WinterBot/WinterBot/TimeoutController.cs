@@ -102,8 +102,7 @@ namespace WinterBot
                 if (MatchesAny(urls, m_urlBanlist))
                 {
                     m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
-                    user.Timeout(6000);
-                    //user.Ban();
+                    user.Ban();
 
                     m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }

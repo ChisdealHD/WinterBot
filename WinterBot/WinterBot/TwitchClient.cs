@@ -202,11 +202,13 @@ namespace WinterBot
 
         public void Timeout(string user, int duration = 600)
         {
+            Thread.Sleep(100);
             SendMessage(string.Format(".timeout {0} {1}", user, duration));
         }
 
         public void Ban(string user)
         {
+            Thread.Sleep(100);
             SendMessage(string.Format(".ban {0}", user));
         }
 
