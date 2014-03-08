@@ -95,6 +95,25 @@ namespace WinterBot
             if (user.IsSubscriber || user.IsModerator || sender.IsRegular(user))
                 return;
 
+            List<string> urls;
+            if (HasUrls(text, out urls))
+            {
+                // Check bans.
+                if (MatchesAny(urls, m_urlBanlist))
+                {
+                    m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
+                    user.Timeout(6000);
+                    //user.Ban();
+
+                    m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
+                }
+                else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
+                {
+                    m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
+                    user.ClearChat();
+                }
+            }
+
             if (HasSpecialCharacter(text))
             {
                 m_winterBot.SendMessage(string.Format("{0}: Sorry, no special characters allowed to keep the dongers to a minimum. (This is not a timeout.)", user.Name));
@@ -116,21 +135,6 @@ namespace WinterBot
                 return;
             }
 
-            List<string> urls;
-            if (HasUrls(text, out urls))
-            {
-                // Check bans.
-                if (MatchesAny(urls, m_urlBanlist))
-                {
-                    m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
-                    user.Ban();
-                }
-                else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
-                {
-                    m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
-                    user.ClearChat();
-                }
-            }
         }
 
         private static bool MatchesAny(List<string> urls, List<Regex> regexes)
