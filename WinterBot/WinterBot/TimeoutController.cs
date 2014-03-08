@@ -15,13 +15,17 @@ namespace WinterBot
     public class TimeoutController
     {
         private WinterBot m_winterBot;
+        
         HashSet<string> m_permit = new HashSet<string>();
-        HashSet<string> m_allowedUrls = new HashSet<string>();
+
+        Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w-./?%&=]*)?", RegexOptions.IgnoreCase);
+        List<Regex> m_urlWhitelist;
+        List<Regex> m_urlBlacklist;
+        List<Regex> m_urlBanlist;
         HashSet<string> m_urlExtensions;
+        
         private HashSet<string> m_defaultImageSet;
         private Dictionary<int, HashSet<string>> m_imageSets;
-        Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w- ./?%&=]*)?", RegexOptions.IgnoreCase);
-        Regex m_banUrlRegex = new Regex(@"(slutty)|(naked)-[a-zA-Z0-9]+\.com", RegexOptions.IgnoreCase);
 
         int m_maxCaps = 16;
         int m_capsPercent = 70;
@@ -39,10 +43,18 @@ namespace WinterBot
 
         void LoadOptions(IniReader options)
         {
-            // Load url whitelist
+            // Load url lists
             var section = options.GetSectionByName("whitelist");
             if (section != null)
-                m_allowedUrls = new HashSet<string>(section.EnumerateRawStrings());
+                m_urlWhitelist = new List<Regex>(from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select new Regex(r, RegexOptions.IgnoreCase));
+
+            section = options.GetSectionByName("blacklist");
+            if (section != null)
+                m_urlBlacklist = new List<Regex>(from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select new Regex(r, RegexOptions.IgnoreCase));
+
+            section = options.GetSectionByName("banlist");
+            if (section != null)
+                m_urlBanlist = new List<Regex>(from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select new Regex(r, RegexOptions.IgnoreCase));
 
             // Load URL extensions
             section = options.GetSectionByName("chat");
@@ -111,27 +123,31 @@ namespace WinterBot
                 return;
             }
 
-            string url;
-            if (HasUrl(text, out url))
+            List<string> urls;
+            if (HasUrls(text, out urls))
             {
-                text = text.ToLower();
-                url = url.ToLower();
-                if (!m_allowedUrls.Contains(url) || (url.Contains("teamliquid") && (text.Contains("userfiles") || text.Contains("image") || text.Contains("profile"))))
+                // Check bans.
+                if (MatchesAny(urls, m_urlBanlist))
                 {
-                    if (m_banUrlRegex.IsMatch(url) || url.Contains("codes4free.net") || url.Contains("vine4you.com") || url.Contains("prizescode.net"))
-                    {
-                        m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
-                        user.Ban();
-                    }
-                    else
-                    {
-                        m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
-                        user.ClearChat();
-                    }
-
-                    return;
+                    m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
+                    user.Ban();
+                }
+                else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
+                {
+                    m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
+                    user.ClearChat();
                 }
             }
+        }
+
+        private static bool MatchesAny(List<string> urls, List<Regex> regexes)
+        {
+            return urls.Any(url => regexes.Any(regex => regex.IsMatch(url)));
+        }
+
+        private static bool MatchesAll(List<string> urls, List<Regex> regexes)
+        {
+            return urls.All(url => regexes.Any(regex => regex.IsMatch(url)));
         }
 
         private bool TooManyEmotes(TwitchUser user, string message)
@@ -239,20 +255,23 @@ namespace WinterBot
                 (0xff00 <= c && c <= 0xffef);
         }
 
-        bool HasUrl(string str, out string url)
+        bool HasUrls(string str, out List<string> urls)
         {
-            url = null;
-            var match = m_url.Match(str);
+            urls = null;
 
-            if (!match.Success)
+            var matches = m_url.Matches(str);
+            if (matches.Count == 0)
                 return false;
 
-            var groups = match.Groups;
-            if (!m_urlExtensions.Contains(groups[groups.Count - 2].Value))
-                return false;
-
-            url = groups[1].Value + groups[2].Value;
-            return true;
+            urls = new List<string>(matches.Count);
+            foreach (Match match in matches)
+            {
+                var groups = match.Groups;
+                if (m_urlExtensions.Contains(groups[groups.Count - 2].Value))
+                    urls.Add(groups[0].Value);
+            }
+            
+            return urls.Count > 0;
         }
 
 
