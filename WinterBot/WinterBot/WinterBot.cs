@@ -118,6 +118,7 @@ namespace WinterBot
         {
             AddCommands(new BuiltinCommands());
             AddCommands(new TimeoutController(this));
+            AddCommands(new AutoMessage(this));
         }
 
         private void AddCommands(object commands)

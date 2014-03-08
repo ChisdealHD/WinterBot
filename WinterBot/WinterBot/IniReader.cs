@@ -85,12 +85,53 @@ namespace WinterBot
             }
         }
 
-        internal bool GetValue(string key, ref int value)
+        public bool GetValue(string key, ref int value)
         {
             string data = GetValue(key);
 
-            if (data != null)
-                return int.TryParse(data, out value);
+            int tmp;
+            if (data != null && int.TryParse(data, out tmp))
+            {
+                value = tmp;
+                return true;
+            }
+
+            return false;
+        }
+
+
+        public bool GetValue(string key, ref bool result)
+        {
+            string value = GetValue(key);
+            if (value == null)
+                return false;
+
+            if (bool.TryParse(value, out result))
+                return true;
+
+            result = true;
+            if (value.Equals("true", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("t", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("yes", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("y", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("1", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+
+            result = false;
+            if (value.Equals("false", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("f", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("no", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("n", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("0", StringComparison.CurrentCultureIgnoreCase))
+                return true;
 
             return false;
         }
