@@ -218,6 +218,7 @@ namespace WinterBot
             if (!Connect())
                 return;
 
+            LoadModerators();
             Stopwatch timer = new Stopwatch();
             timer.Start();
 
@@ -364,6 +365,21 @@ namespace WinterBot
             {
                 m_regulars.Remove(value);
                 SaveRegulars();
+            }
+        }
+
+        void LoadModerators()
+        {
+            var channelData = m_twitch.ChannelData;
+            var stream = m_options.RawIniData.GetSectionByName("stream");
+            if (stream != null)
+            {
+                string moderators = stream.GetValue("moderators");
+                if (moderators != null)
+                {
+                    foreach (string moderator in moderators.Split(','))
+                        channelData.GetUser(moderator).IsModerator = true;
+                }
             }
         }
 
