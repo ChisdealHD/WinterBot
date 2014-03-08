@@ -113,25 +113,20 @@ namespace WinterBot
                 }
             }
 
-            if (HasSpecialCharacter(text))
+            else if (HasSpecialCharacter(text))
             {
                 m_winterBot.SendMessage(string.Format("{0}: Sorry, no special characters allowed to keep the dongers to a minimum. (This is not a timeout.)", user.Name));
                 user.ClearChat();
-                return;
             }
-
-            if (TooManyCaps(text))
+            else if (TooManyCaps(text))
             {
                 m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam caps. (This is not a timeout.)", user.Name));
                 user.ClearChat();
-                return;
             }
-
-            if (TooManyEmotes(user, text))
+            else if (TooManyEmotes(user, text))
             {
                 m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam emotes. (This is not a timeout.)", user.Name));
                 user.ClearChat();
-                return;
             }
 
         }
