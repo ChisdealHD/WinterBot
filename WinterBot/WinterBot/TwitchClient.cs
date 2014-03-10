@@ -69,7 +69,6 @@ namespace WinterBot
         /// <summary>
         /// Event handler for when messages are received from the chat channel.
         /// </summary>
-        /// <param name="msg">The message received.</param>
         public delegate void MessageHandler(TwitchClient sender, TwitchUser user, string text);
 
         /// <summary>
@@ -77,6 +76,11 @@ namespace WinterBot
         /// </summary>
         /// <param name="user">The user in question.</param>
         public delegate void UserEventHandler(TwitchClient sender, TwitchUser user);
+
+        /// <summary>
+        /// Event handler for when users are timed out.
+        /// </summary>
+        public delegate void UserTimeoutHandler(TwitchClient sender, TwitchUser user, int duration);
         #endregion
 
         /// <summary>
@@ -275,27 +279,31 @@ namespace WinterBot
                 else
                 {
                     string[] items = e.Text.ToLower().Split(' ');
-                    if (items.Length == 3)
+                    if (items.Length >= 2)
                     {
                         string cmd = items[0];
                         string user = items[1];
-                        string param = items[2];
 
-                        if (cmd == "specialuser")
+                        if (items.Length == 3)
                         {
-                            var u = m_data.GetUser(user);
-                            if (param == "subscriber")
+                            string param = items[2];
+
+                            if (cmd == "specialuser")
                             {
-                                u.IsSubscriber = true;
-                                OnInformSubscriber(user);
-                            }
-                            else if (param == "turbo")
-                            {
-                                u.IsTurbo = true;
-                                OnInformTurbo(user);
+                                var u = m_data.GetUser(user);
+                                if (param == "subscriber")
+                                {
+                                    u.IsSubscriber = true;
+                                    OnInformSubscriber(user);
+                                }
+                                else if (param == "turbo")
+                                {
+                                    u.IsTurbo = true;
+                                    OnInformTurbo(user);
+                                }
                             }
                         }
-                        else if (cmd == "clearchat")
+                        else if (items.Length == 2 && cmd == "clearchat")
                         {
                             // This is a timeout or ban.
                             OnChatClear(user);

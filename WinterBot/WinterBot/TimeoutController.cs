@@ -102,31 +102,31 @@ namespace WinterBot
                 if (MatchesAny(urls, m_urlBanlist))
                 {
                     m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
-                    user.Ban();
+                    m_winterBot.Ban(user);
 
                     m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
                 else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
                 {
                     m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
-                    user.ClearChat();
+                    m_winterBot.ClearChat(user);
                 }
             }
 
             else if (HasSpecialCharacter(text))
             {
                 m_winterBot.SendMessage(string.Format("{0}: Sorry, no special characters allowed to keep the dongers to a minimum. (This is not a timeout.)", user.Name));
-                user.ClearChat();
+                m_winterBot.ClearChat(user);
             }
             else if (TooManyCaps(text))
             {
                 m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam caps. (This is not a timeout.)", user.Name));
-                user.ClearChat();
+                m_winterBot.ClearChat(user);
             }
             else if (TooManyEmotes(user, text))
             {
                 m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam emotes. (This is not a timeout.)", user.Name));
-                user.ClearChat();
+                m_winterBot.ClearChat(user);
             }
 
         }

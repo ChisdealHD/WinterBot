@@ -87,21 +87,6 @@ namespace WinterBot
             m_client = client;
         }
 
-        public void Ban()
-        {
-            m_client.Ban(Name);
-        }
-
-        public void ClearChat()
-        {
-            m_client.Timeout(Name, 1);
-        }
-
-        public void Timeout(int duration=600)
-        {
-            m_client.Timeout(Name, duration);
-        }
-
         public override string ToString()
         {
             return Name;

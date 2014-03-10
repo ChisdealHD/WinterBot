@@ -49,7 +49,19 @@ namespace WinterBot
         /// <summary>
         /// Fired when a user is timed out or banned (we don't know for how long).
         /// </summary>
-        public event UserEventHandler UserTimedOut;
+        public event UserEventHandler ChatClear;
+
+        /// <summary>
+        /// Fired when the bot times out a user.  There will also be a ChatClear message
+        /// when the server tells the client to clear chat after a timeout is issued.
+        /// </summary>
+        public event UserTimeoutHandler UserTimedOut;
+
+        /// <summary>
+        /// Fired when the bot bans a user.  There will also be a ChatClear message
+        /// when the server tells the client to clear chat after a timeout is issued.
+        /// </summary>
+        public event UserEventHandler UserBanned;
 
         /// <summary>
         /// Fired occasionally to let addons do periodic work.
@@ -72,6 +84,13 @@ namespace WinterBot
         /// </summary>
         /// <param name="user">The user in question.</param>
         public delegate void UserEventHandler(WinterBot sender, TwitchUser user);
+
+        /// <summary>
+        /// Event handler for when users are timed out by the bot.
+        /// </summary>
+        /// <param name="user">The user in question.</param>
+        /// <param name="duration">The duration of the timeout.</param>
+        public delegate void UserTimeoutHandler(WinterBot sender, TwitchUser user, int duration);
 
         /// <summary>
         /// Event handler called occasionally by the main processing loop of the bot.
@@ -114,12 +133,41 @@ namespace WinterBot
             LoadExtensions();
         }
 
+        public void Ban(TwitchUser user)
+        {
+            var evt = UserBanned;
+            if (evt != null)
+                evt(this, user);
+
+            m_twitch.Ban(user.Name);
+        }
+
+        public void ClearChat(TwitchUser user)
+        {
+            var evt = UserTimedOut;
+            if (evt != null)
+                evt(this, user, 1);
+
+            m_twitch.Timeout(user.Name, 1);
+        }
+
+        public void Timeout(TwitchUser user, int duration = 600)
+        {
+            var evt = UserTimedOut;
+            if (evt != null)
+                evt(this, user, duration);
+
+            m_twitch.Timeout(user.Name, duration);
+        }
+
+
         private void LoadExtensions()
         {
             AddCommands(new BuiltinCommands(this));
             AddCommands(new TimeoutController(this));
             AddCommands(new AutoMessage(this));
             AddCommands(new UserCommands(this));
+            AddCommands(new ChatLogger(this));
         }
 
         private void AddCommands(object commands)
@@ -195,7 +243,7 @@ namespace WinterBot
 
         private void ClearChatHandler(TwitchClient source, TwitchUser user)
         {
-            var evt = UserTimedOut;
+            var evt = ChatClear;
             if (evt != null)
             {
                 m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));

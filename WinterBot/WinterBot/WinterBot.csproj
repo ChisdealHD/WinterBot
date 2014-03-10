@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="AutoMessage.cs" />
     <Compile Include="BuiltinCommands.cs" />
+    <Compile Include="ChatLogger.cs" />
     <Compile Include="TimeoutController.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="TwitchJsonObjects.cs" />
