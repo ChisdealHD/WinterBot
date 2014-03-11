@@ -95,13 +95,14 @@ namespace WinterBot
             if (user.IsSubscriber || user.IsModerator || sender.IsRegular(user))
                 return;
 
+            string clearReason = null;
+
             List<string> urls;
             if (HasUrls(text, out urls))
             {
                 // Check bans.
                 if (MatchesAny(urls, m_urlBanlist))
                 {
-                    m_winterBot.SendMessage(string.Format("{0}: Banned.", user.Name));
                     m_winterBot.Ban(user);
 
                     m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
@@ -114,28 +115,99 @@ namespace WinterBot
                     }
                     else
                     {
-                        m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
-                        m_winterBot.ClearChat(user);
+                        clearReason = "Only subscribers are allowed to post links.";
                     }
                 }
             }
 
             else if (HasSpecialCharacter(text))
             {
-                m_winterBot.SendMessage(string.Format("{0}: Sorry, no special characters allowed to keep the dongers to a minimum. (This is not a timeout.)", user.Name));
-                m_winterBot.ClearChat(user);
+                clearReason = "Sorry, no special characters allowed.";
             }
             else if (TooManyCaps(text))
             {
-                m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam caps. (This is not a timeout.)", user.Name));
-                m_winterBot.ClearChat(user);
+                clearReason = "Please don't spam caps.";
             }
             else if (TooManyEmotes(user, text))
             {
-                m_winterBot.SendMessage(string.Format("{0}: Sorry, please don't spam emotes. (This is not a timeout.)", user.Name));
-                m_winterBot.ClearChat(user);
+                clearReason = "Please don't spam emotes.";
             }
 
+            if (clearReason != null)
+                ClearChat(sender, user, clearReason);
+        }
+
+        private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
+        {
+            bool shouldMessage = true;
+            var now = DateTime.Now;
+            TimeoutCount timeout;
+            if (!m_timeouts.TryGetValue(user.Name, out timeout))
+            {
+                timeout = m_timeouts[user.Name] = new TimeoutCount(now);
+            }
+            else
+            {
+                shouldMessage = (DateTime.Now > timeout.LastTimeout) && (DateTime.Now - timeout.LastTimeout).TotalMinutes > 60;
+
+                int curr = timeout.Count;
+                int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 10;
+                    if (diff > 0)
+                        curr -= diff;
+
+                timeout.Count = curr + 1;
+            }
+
+            timeout.LastTimeout = now;
+
+            int duration = 0;
+            switch (timeout.Count)
+            {
+                case 1:
+                case 2:
+                    if (shouldMessage)
+                        sender.SendMessage("{0}: {1} (This is not a timeout.)", user.Name, clearReason);
+
+                    sender.ClearChat(user);
+                    break;
+
+                case 3:
+                    duration = 5;
+                    sender.SendMessage("{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Timeout(user, duration * 60);
+                    timeout.LastTimeout = now.AddMinutes(duration);
+                    break;
+
+                case 4:
+                    duration = 10;
+                    sender.SendMessage("{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Timeout(user, duration * 60);
+                    timeout.LastTimeout = now.AddMinutes(duration);
+                    break;
+
+                default:
+                    Debug.Assert(timeout.Count > 0);
+                    sender.SendMessage("{0}: {1} (8 hour timeout.)", user.Name, clearReason);
+                    sender.Timeout(user, 8 * 60 * 60);
+                    timeout.LastTimeout = now.AddHours(8);
+                    break;
+            }
+        }
+
+        Dictionary<string, TimeoutCount> m_timeouts = new Dictionary<string, TimeoutCount>();
+
+        class TimeoutCount
+        {
+            public TimeoutCount(DateTime time)
+            {
+                LastTimeout = time;
+                Count = 1;
+            }
+
+
+            public DateTime LastTimeout { get; set; }
+
+            public int Count { get; set; }
         }
 
         private static bool MatchesAny(List<string> urls, List<Regex> regexes)
