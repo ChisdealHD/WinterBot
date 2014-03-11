@@ -108,8 +108,15 @@ namespace WinterBot
                 }
                 else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
                 {
-                    m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
-                    m_winterBot.ClearChat(user);
+                    if (m_permit.Contains(user.Name))
+                    {
+                        m_permit.Remove(user.Name);
+                    }
+                    else
+                    {
+                        m_winterBot.SendMessage(string.Format("{0}: Only subscribers are allowed to post links. (This is not a timeout.)", user.Name));
+                        m_winterBot.ClearChat(user);
+                    }
                 }
             }
 
