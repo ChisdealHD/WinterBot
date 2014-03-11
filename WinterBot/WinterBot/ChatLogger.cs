@@ -19,7 +19,7 @@ namespace WinterBot
 
         public ChatEvent(TwitchUser user)
         {
-            Timestamp = DateTime.UtcNow;
+            Timestamp = DateTime.Now;
             User = user.Name;
         }
 
@@ -207,13 +207,16 @@ namespace WinterBot
                 if (events.Count == 0)
                     return;
 
+                string path = Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), "logs");
+                Directory.CreateDirectory(path);
+
                 var now = DateTime.Now;
                 string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", m_stream, now.Year, now.Month, now.Day);
 
                 if (m_saveReadableLog)
-                    File.AppendAllLines(filename, events.Select(evt=>evt.ToString()));
+                    File.AppendAllLines(Path.Combine(path, filename), events.Select(evt=>evt.ToString()));
 
-                filename = filename = string.Format("{0}_{1:00}_{2:00}_{3:00}_{4:00}_{5:00}_{6:00}.dat", m_stream, now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
+                filename = Path.Combine(path, string.Format("{0}_{1:00}_{2:00}_{3:00}_{4:00}_{5:00}_{6:00}.dat", m_stream, now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second));
                 if (m_saveCompressedLog)
                 {
                     using (FileStream stream = File.Create(filename))
