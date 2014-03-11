@@ -399,11 +399,6 @@ namespace WinterBot
         private bool Connect()
         {
             bool connected = m_twitch.Connect(m_channel, m_options.Username, m_options.Password);
-
-            if (connected)
-                Console.WriteLine("Connected to {0}...", m_channel);
-            else
-                Console.WriteLine("Failed to connect!");
             return connected;
         }
         #endregion

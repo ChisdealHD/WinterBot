@@ -442,7 +442,6 @@ namespace WinterBot
 
         void m_channel_UsersListReceived(object sender, EventArgs e)
         {
-            Console.WriteLine("User list received.");
             foreach (var user in m_channel.Users)
             {
                 CheckModeratorStatus(user);
