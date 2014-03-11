@@ -54,7 +54,7 @@ namespace WinterBot
         /// <summary>
         /// Fired when twitch informs us that a user is a moderator in this channel.
         /// </summary>
-        public event UserEventHandler InformModerator;
+        public event ModeratorEventHandler InformModerator;
 
         /// <summary>
         /// Fired when a user subscribes to the channel.
@@ -77,6 +77,14 @@ namespace WinterBot
         /// <param name="user">The user in question.</param>
         public delegate void UserEventHandler(TwitchClient sender, TwitchUser user);
 
+        /// <summary>
+        /// Event fired when moderator status changes for a user.
+        /// </summary>
+        /// <param name="sender">This object.</param>
+        /// <param name="user">The user whos status is changing.</param>
+        /// <param name="moderator">The moderator in question.</param>
+        public delegate void ModeratorEventHandler(TwitchClient sender, TwitchUser user, bool moderator);
+        
         /// <summary>
         /// Event handler for when users are timed out.
         /// </summary>
@@ -126,6 +134,7 @@ namespace WinterBot
             Task t = new Task(CheckAliveWorker);
             t.Start();
 
+            user = user.ToLower();
             m_stream = stream.ToLower();
             m_data = new TwitchData(this, m_stream);
 
@@ -224,8 +233,6 @@ namespace WinterBot
         /// <param name="e">The user.</param>
         void channel_MessageReceived(object sender, IrcMessageEventArgs e)
         {
-            CheckModeratorStatus(e.Source);
-
             // Twitchnotify is how subscriber messages "Soandso just subscribed!" comes in:
             if (e.Source.Name.Equals("twitchnotify", StringComparison.CurrentCultureIgnoreCase))
             {
@@ -385,35 +392,6 @@ namespace WinterBot
             }
         }
 
-
-        private void CheckModeratorStatus(IIrcMessageSource msgSource)
-        {
-            IrcUser ircuser = msgSource as IrcUser;
-
-
-            if (ircuser != null)
-            {
-                IrcChannelUser chanUser = m_channel.GetChannelUser(ircuser);
-                if (chanUser != null)
-                    CheckModeratorStatus(chanUser);
-            }
-        }
-
-        private bool CheckModeratorStatus(IrcChannelUser chanUser)
-        {
-            if (chanUser.Modes.Contains('o'))
-            {
-                var user = m_data.GetUser(chanUser.User.NickName.ToLower());
-
-                user.IsModerator = true;
-                OnInformModerator(user);
-                
-                return true;
-            }
-
-            return false;
-        }
-
         #endregion
 
         #region IrcDotNet Event Handlers
@@ -457,16 +435,21 @@ namespace WinterBot
         {
             s_joinedEvent.Set();
             m_channel = e.Channel;
-            m_channel.UsersListReceived += m_channel_UsersListReceived;
             m_channel.UserJoined += m_channel_UserJoined;
+            m_channel.UsersListReceived += m_channel_UsersListReceived;
             m_channel.MessageReceived += channel_MessageReceived;
         }
 
-        void m_channel_UserJoined(object sender, IrcChannelUserEventArgs e)
+        void m_channel_UsersListReceived(object sender, EventArgs e)
         {
-            CheckModeratorStatus(e.ChannelUser);
-            e.ChannelUser.ModesChanged += ChannelUser_ModesChanged;
+            Console.WriteLine("User list received.");
+            foreach (var user in m_channel.Users)
+            {
+                CheckModeratorStatus(user);
+                user.ModesChanged += ChannelUser_ModesChanged;
+            }
         }
+
 
         void ChannelUser_ModesChanged(object sender, EventArgs e)
         {
@@ -475,15 +458,27 @@ namespace WinterBot
                 CheckModeratorStatus(user);
         }
 
-        void m_channel_UsersListReceived(object sender, EventArgs e)
+
+        void m_channel_UserJoined(object sender, IrcChannelUserEventArgs e)
         {
-            foreach (var user in m_channel.Users)
-            {
-                CheckModeratorStatus(user);
-                user.ModesChanged += ChannelUser_ModesChanged;
-            }
+            CheckModeratorStatus(e.ChannelUser);
+            e.ChannelUser.ModesChanged += ChannelUser_ModesChanged;
         }
 
+
+        private void CheckModeratorStatus(IrcChannelUser chanUser)
+        {
+            string username = chanUser.User.NickName;
+
+            bool op = chanUser.Modes.Contains('o');
+            TwitchUser user = m_data.GetUser(username, op);
+
+            if (user != null && user.IsModerator != op)
+            {
+                user.IsModerator = op;
+                OnInformModerator(user, op);
+            }
+        }
 
         private void client_Connected(object sender, EventArgs e)
         {
@@ -515,11 +510,11 @@ namespace WinterBot
                 msgRcv(this, user, e.Text);
         }
 
-        protected void OnInformModerator(TwitchUser user)
+        protected void OnInformModerator(TwitchUser user, bool moderator)
         {
             var evt = InformModerator;
             if (evt != null)
-                evt(this, user);
+                evt(this, user, moderator);
         }
 
         protected void OnInformSubscriber(string username)

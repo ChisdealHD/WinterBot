@@ -29,14 +29,14 @@ namespace WinterBot
             m_userMap = new Dictionary<string, TwitchUser>();
         }
 
-        public TwitchUser GetUser(string username)
+        public TwitchUser GetUser(string username, bool create=true)
         {
             username = username.ToLower();
             TwitchUser user;
 
             lock (m_sync)
             {
-                if (!m_userMap.TryGetValue(username, out user))
+                if (!m_userMap.TryGetValue(username, out user) && create)
                 {
                     user = new TwitchUser(m_client, username, m_users.Count);
                     m_users.Add(user);

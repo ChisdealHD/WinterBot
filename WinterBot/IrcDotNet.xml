@@ -3494,17 +3494,17 @@
             </summary>
             <param name="e">The <see cref="T:System.EventArgs"/> instance containing the event data.</param>
         </member>
-        <member name="M:IrcDotNet.IrcChannel.OnModesChanged(System.EventArgs)">
+        <member name="M:IrcDotNet.IrcChannel.OnModesChanged(IrcDotNet.IrcUserEventArgs)">
             <summary>
             Raises the <see cref="E:IrcDotNet.IrcChannel.ModesChanged"/> event.
             </summary>
-            <param name="e">The <see cref="T:System.EventArgs"/> instance containing the event data.</param>
+            <param name="e">The <see cref="T:IrcDotNet.IrcUserEventArgs"/> instance containing the event data.</param>
         </member>
-        <member name="M:IrcDotNet.IrcChannel.OnTopicChanged(System.EventArgs)">
+        <member name="M:IrcDotNet.IrcChannel.OnTopicChanged(IrcDotNet.IrcUserEventArgs)">
             <summary>
             Raises the <see cref="E:IrcDotNet.IrcChannel.TopicChanged"/> event.
             </summary>
-            <param name="e">The <see cref="T:System.EventArgs"/> instance containing the event data.</param>
+            <param name="e">The <see cref="T:IrcDotNet.IrcUserEventArgs"/> instance containing the event data.</param>
         </member>
         <member name="M:IrcDotNet.IrcChannel.OnUserJoined(IrcDotNet.IrcChannelUserEventArgs)">
             <summary>
@@ -3959,7 +3959,7 @@
             <summary>
             Initializes a new instance of the <see cref="T:IrcDotNet.IrcUserEventArgs"/> class.
             </summary>
-            <param name="user">The user that the event concerns.</param>
+            <param name="user">The user that the event concerns, or <see langword="null"/> for no user.</param>
         </member>
         <member name="P:IrcDotNet.IrcUserEventArgs.User">
             <summary>
@@ -4002,6 +4002,18 @@
             Gets the name of the server that is the source of the ping or pong.
             </summary>
             <value>The name of the server.</value>
+        </member>
+        <member name="T:IrcDotNet.IrcPingReceivedEventArgs">
+            <summary>
+            Provides data for the <see cref="E:IrcDotNet.IrcClient.PingReceived"/> events.
+            </summary>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="P:IrcDotNet.IrcPingReceivedEventArgs.SendPong">
+            <summary>
+            Gets or sets if we should send a Pong back
+            </summary>
+            <value>A value indicating sending a Pong.</value>
         </member>
         <member name="T:IrcDotNet.IrcServerInfoEventArgs">
             <summary>
@@ -4159,6 +4171,627 @@
             Gets the error encountered by the client.
             </summary>
             <value>The error encountered by the client.</value>
+        </member>
+        <member name="T:Yaaf.Utils.Extensions.DictionaryExtensions">
+            <summary>
+            The dictionary extensions.
+            </summary>
+        </member>
+        <member name="M:Yaaf.Utils.Extensions.DictionaryExtensions.TryGetOrCreateValue``2(System.Collections.Generic.IDictionary{``0,``1},System.Func{``1},``0)">
+            <summary>
+            The try get or create value.
+            </summary>
+            <param name="dictionary">
+            The dictionary.
+            </param>
+            <param name="createValue">
+            The create value.
+            </param>
+            <param name="key">
+            The key.
+            </param>
+            <typeparam name="TKey">
+            </typeparam>
+            <typeparam name="TValue">
+            </typeparam>
+            <returns>
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Extensions.DictionaryExtensions.TryGetOrCreateValue``2(System.Collections.Generic.IDictionary{``0,``1},System.Func{``0,``1},``0,System.Boolean)">
+            <summary>
+            The try get or create value.
+            </summary>
+            <param name="dictionary">
+            The dictionary.
+            </param>
+            <param name="createValue">
+            The create value.
+            </param>
+            <param name="key">
+            The key.
+            </param>
+            <param name="ensureSingleCallForKey">
+            ensures createValue gets only called once for every key (will nest the call into the lock statement so be carefull!)
+            this flag should be false! If this flag is true a deadlock is possible due user code!
+            </param>
+            <typeparam name="TKey">
+            </typeparam>
+            <typeparam name="TValue">
+            </typeparam>
+            <returns>
+            </returns>
+        </member>
+        <member name="T:Yaaf.Utils.Logging.TraceActivity">
+            <summary>
+            The trace activity.
+            </summary>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.TraceActivity.#ctor(System.Guid,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Yaaf.Utils.Logging.TraceActivity"/> class.
+            </summary>
+            <param name="activity">
+            The activity.
+            </param>
+            <param name="switchInfo">
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.TraceActivity.Equals(Yaaf.Utils.Logging.TraceActivity)">
+            <summary>
+            The equals.
+            </summary>
+            <param name="other">
+            The other.
+            </param>
+            <returns>
+            The equals.
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.TraceActivity.Equals(System.Object)">
+            <summary>
+            The equals.
+            </summary>
+            <param name="obj">
+            The obj.
+            </param>
+            <returns>
+            The equals.
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.TraceActivity.GetHashCode">
+            <summary>
+            The get hash code.
+            </summary>
+            <returns>
+            The get hash code.
+            </returns>
+        </member>
+        <member name="P:Yaaf.Utils.Logging.TraceActivity.Activity">
+            <summary>
+              Gets Activity.
+            </summary>
+        </member>
+        <member name="P:Yaaf.Utils.Logging.TraceActivity.SwitchInfo">
+            <summary>
+              Gets or sets SwitchInfo.
+            </summary>
+        </member>
+        <member name="T:Yaaf.Utils.Logging.Logger">
+            <summary>
+            A logger helper
+              use this class to log your things
+            </summary>
+            <remarks>
+            Use this to add a global listener
+              <![CDATA[
+            <configuration>
+                <system.diagnostics>
+                   <trace autoflush="false" indentsize="4">
+                       <listeners>
+                           <add name="myListener" type="System.Diagnostics.TextWriterTraceListener" initializeData="logfiles\global.log"/>
+                       </listeners>
+                   </trace>
+               </system.diagnostics>
+            </configuration>
+            ]]>
+              or use this to add a assembly specific listener
+              <![CDATA[
+            <configuration>
+                <system.diagnostics>
+                   <sources>
+                       <source name="AssemblyName" switchValue="All">
+                           <listeners>
+                               <add name="console" type="System.Diagnostics.ConsoleTraceListener"/>
+                               <add name="myListener"
+                                    type="System.Diagnostics.TextWriterTraceListener"
+                                    initializeData="logfiles\AssemblyName.log"/>
+                           </listeners>
+                       </source>
+                   </sources>
+               </system.diagnostics>
+            </configuration>
+            ]]>
+            </remarks>
+        </member>
+        <member name="F:Yaaf.Utils.Logging.Logger.Counter">
+            <summary>
+              The counter (to indicate the nested method size (callstack)).
+            </summary>
+        </member>
+        <member name="F:Yaaf.Utils.Logging.Logger.GlobalTrace">
+            <summary>
+              The global Trace source
+            </summary>
+        </member>
+        <member name="F:Yaaf.Utils.Logging.Logger.ThreadActivityStack">
+            <summary>
+              The thread activity stack.
+            </summary>
+        </member>
+        <member name="F:Yaaf.Utils.Logging.Logger.TopThreadActivity">
+            <summary>
+              The top thread activity.
+            </summary>
+        </member>
+        <member name="F:Yaaf.Utils.Logging.Logger.TraceList">
+            <summary>
+              The trace list, to enable Assembly seperated Logging.
+            </summary>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.BeginAction(System.String)">
+            <summary>
+            Indicates that an Action has started.
+              Consider using TraceAction instead.
+            </summary>
+            <param name="actionName">
+            The action name.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.BeginMethod(System.Object[])">
+            <summary>
+            Indicates that an Method has started.
+              Consider using TraceMethod instead.
+            </summary>
+            <param name="parameters">
+            The parameters.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.CreateAndLinkActivity(System.String,System.Object[])">
+            <summary>
+            Creates an activity and links the current point in the Tracing with this activity
+              use this if you start an async process so you can jump right to this activity
+              (This overload is provided so that string.Format has not to be executed when TRACE is disabled)
+            </summary>
+            <param name="switchInfoFormat">
+            the switch info format string
+            </param>
+            <param name="args">
+            the switch info format string arguments
+            </param>
+            <returns>
+            the activity to use with TraceActivity later on
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.CreateAndLinkActivity(System.String)">
+            <summary>
+            Creates an activity and links the current point in the Tracing with this activity
+              use this if you start an async process so you can jump right to this activity
+            </summary>
+            <param name="switchInfo">
+            the switch info
+            </param>
+            <returns>
+            the activity to use with TraceActivity later on
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.EndAction(System.String)">
+            <summary>
+            Indicates that an Action has been performed.
+              Consider using TraceAction instead.
+            </summary>
+            <param name="actionName">
+            The action name.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.EndMethod">
+            <summary>
+            Indicates that an Method has finished.
+              Consider using TraceMethod instead.
+            </summary>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.SetTopThreadActivity(System.String)">
+            <summary>
+            Sets the name of the Activity for the current Thread
+              NOTE: DOES ONLY WORK IF IT IS THE FIRST CALL IN A THREAD OF ANY LOGGER METHODS
+            </summary>
+            <param name="threadInfo">
+            The activity name
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.SetTopThreadActivity(System.String,System.Object[])">
+            <summary>
+            Sets the name of the Activity for the current Thread
+              NOTE: DOES ONLY WORK IF IT IS THE FIRST CALL IN A THREAD OF ANY LOGGER METHODS
+            </summary>
+            <param name="threadInfoFormat">
+            The activity name
+            </param>
+            <param name="args">
+            The parameter to replace in threadInfoFormat
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceAction(System.String,System.Object[])">
+            <summary>
+            Traces an action from start to finish see example for an use example.
+              (This overload is provided so that string.Format has not to be executed when TRACE is disabled)
+            </summary>
+            <param name="actionNameFormat">
+            The action Name Format.
+            </param>
+            <param name="args">
+            The arguments for the format.
+            </param>
+            <example>
+            <![CDATA[
+            using(Logger.TraceAction("Sending Message to {0}", message))
+            {
+                // Do my action here     
+            } 
+            ]]>
+            </example>
+            <returns>
+            a trace helper object, when disposed signaling the Stop event
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceAction(System.String)">
+            <summary>
+            Traces an action from start to finish see example for an use example.
+            </summary>
+            <param name="actionName">
+            The action name.
+            </param>
+            <example>
+            <![CDATA[
+            using(Logger.TraceAction("MyAction"))
+            {
+                // Do my action here     
+            } 
+            ]]>
+            </example>
+            <returns>
+            a trace helper object, when disposed signaling the Stop event
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceActivity(Yaaf.Utils.Logging.TraceActivity)">
+            <summary>
+            Traces an async activity from start to finish, you get a TraceActivity object from CreateAndLinkActivity
+            </summary>
+            <param name="activity">
+            The activity you want to trace.
+            </param>
+            <example>
+            <![CDATA[
+            using(Logger.TraceActivity(myActivity))
+            {
+                // Do my async action here     
+            } 
+            ]]>
+            </example>
+            <returns>
+            an object designed to be used in an using statement
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceActivity(System.String,System.Object[])">
+            <summary>
+            Allows you to trace an activity from start to end with an using block
+              (This overload is provided so String.Format has not to be executed when trace is not enabled)
+            </summary>
+            <param name="switchInfoFormat">
+            The switch info format.
+            </param>
+            <param name="args">
+            The arguments for the format.
+            </param>
+            <returns>
+            an object to trace within an using block
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceActivity(System.String)">
+            <summary>
+            Traces a new Activity and adds some tracelines to track this activity
+            </summary>
+            <param name="switchInfo">
+            The switch info. (You will see this when you click on the activity)
+            </param>
+            <returns>
+            An object to trace the activity with a using block (null if Trace is deaktivated)
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceMethod(System.Object[])">
+            <summary>
+            Traces an method from start to finish see example for an use example.
+            </summary>
+            <param name="parameters">
+            (Optional) the parameter to trace.
+            </param>
+            <example>
+            <![CDATA[
+            public static bool MyTracedMethod(string param1, int param2)
+            {
+                using(Logger.TraceMethod(param1, param2))
+                {
+                    if (param2 == 0) return true; 
+                    else return param1 == "Hide";
+                }
+            }
+            ]]>
+            </example>
+            <returns>
+            a trace helper object, when disposed signaling the Stop event
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.WriteLine(System.String,System.Diagnostics.TraceEventType,System.Object[])">
+            <summary>
+            Writes a given line to the event listeners
+            </summary>
+            <param name="format">
+            The format.
+            </param>
+            <param name="type">
+            The type of the message.
+            </param>
+            <param name="args">
+            The args.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.BeginMethodPrivate(System.Reflection.Assembly,System.Reflection.MethodBase,System.Object[])">
+            <summary>
+            private little helper to begin tracing a method
+            </summary>
+            <param name="calling">
+            the calling assembly
+            </param>
+            <param name="method">
+            the calling method
+            </param>
+            <param name="parameters">
+            the given parameters
+            </param>
+            <returns>
+            the method line
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.CheckThread(System.Reflection.Assembly)">
+            <summary>
+            The check thread.
+            </summary>
+            <param name="calling">
+            The calling.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.CreateActivity">
+            <summary>
+            The create activity.
+            </summary>
+            <returns>
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.CreateAndLinkActivity(System.Reflection.Assembly,System.String)">
+            <summary>
+            Creates an activity and links the current point in the Tracing with this activity
+              use this if you start an async process so you can jump right to this activity
+            </summary>
+            <param name="calling">
+            The calling assembly.
+            </param>
+            <param name="switchInfo">
+            The switch Info.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.CreateFirstActivityStack">
+            <summary>
+            The create first activity stack.
+            </summary>
+            <returns>
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.EndMethodPrivate(System.Reflection.Assembly,System.String)">
+            <summary>
+            The end method private.
+            </summary>
+            <param name="calling">
+            The calling.
+            </param>
+            <param name="line">
+            The line.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.EscapeValues(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            The escape values.
+            </summary>
+            <param name="toEscape">
+            The to escape.
+            </param>
+            <returns>
+            The escape values.
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.GetTraceSourceFromAssembly(System.Reflection.Assembly)">
+            <summary>
+            The get local trace from assembly.
+            </summary>
+            <param name="assembly">
+            The calling.
+            </param>
+            <returns>
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.GetMethodLine(System.Reflection.MethodBase)">
+            <summary>
+            Gets the method line from the given method
+            </summary>
+            <param name="method">
+            the method
+            </param>
+            <returns>
+            the method line
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.InitializeUnknownThread(System.Reflection.Assembly)">
+            <summary>
+            The initialize unknown thread.
+            </summary>
+            <param name="calling">
+            The calling.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.ParameterToString(System.Object)">
+            <summary>
+            The parameter to string.
+            </summary>
+            <param name="p">
+            The p.
+            </param>
+            <returns>
+            The parameter to string.
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.SetTopThreadActivity(System.Reflection.Assembly,System.String)">
+            <summary>
+            The set top thread activity.
+            </summary>
+            <param name="calling">
+            The calling.
+            </param>
+            <param name="switchInfo">
+            The switch info.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.SwitchToActivity(System.Guid,System.String,System.Diagnostics.TraceSource)">
+            <summary>
+            The switch to activity.
+            </summary>
+            <param name="activityId">
+            The activity id.
+            </param>
+            <param name="activityInfo">
+            The activity info.
+            </param>
+            <param name="localTrace">
+            The local trace.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceAction(System.Reflection.Assembly,System.String)">
+            <summary>
+            The trace action.
+            </summary>
+            <param name="calling">
+            The calling.
+            </param>
+            <param name="actionName">
+            The action name.
+            </param>
+            <returns>
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.TraceActivity(System.Reflection.Assembly,System.Guid,System.String)">
+            <summary>
+            The trace activity.
+            </summary>
+            <param name="calling">
+            The calling.
+            </param>
+            <param name="activity">
+            The activity.
+            </param>
+            <param name="switchInfo">
+            The switch info.
+            </param>
+            <returns>
+            </returns>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.Logger.WriteLinePrivate(System.Reflection.Assembly,System.String,System.Diagnostics.TraceEventType)">
+            <summary>
+            Writes a given line to the event listeners
+            </summary>
+            <param name="calling">
+            The calling.
+            </param>
+            <param name="lineToPrint">
+            The line To Print.
+            </param>
+            <param name="type">
+            The type.
+            </param>
+        </member>
+        <member name="T:Yaaf.Utils.Logging.DoAfterUsing">
+            <summary>
+            Allowes advanced usage of the using statement
+            </summary>
+        </member>
+        <member name="F:Yaaf.Utils.Logging.DoAfterUsing.action">
+            <summary>
+              the action.
+            </summary>
+        </member>
+        <member name="F:Yaaf.Utils.Logging.DoAfterUsing.disposed">
+            <summary>
+              The disposed.
+            </summary>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.DoAfterUsing.#ctor(System.Action)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Yaaf.Utils.Logging.DoAfterUsing"/> class.
+            </summary>
+            <param name="action">
+            the action.
+            </param>
+        </member>
+        <member name="M:Yaaf.Utils.Logging.DoAfterUsing.Dispose">
+            <summary>
+            The dispose.
+            </summary>
+        </member>
+        <member name="T:Yaaf.Utils.Helper.ThreadStaticField`1">
+            <summary>
+            Helperclass to make a field threadsafe like [ThreadStatic] does
+            </summary>
+            <typeparam name="T">
+            the type of the field
+            </typeparam>
+            <remarks>
+            NOTE: add no logging (dependency of Logger)
+            See http://msdn.microsoft.com/en-us/library/system.threadstaticattribute%28v=vs.90%29.aspx
+            </remarks>
+        </member>
+        <member name="F:Yaaf.Utils.Helper.ThreadStaticField`1.createField">
+            <summary>
+              The create field.
+            </summary>
+        </member>
+        <member name="F:Yaaf.Utils.Helper.ThreadStaticField`1.fieldValues">
+            <summary>
+              The field values.
+            </summary>
+        </member>
+        <member name="M:Yaaf.Utils.Helper.ThreadStaticField`1.#ctor">
+            <summary>
+              Initializes a new instance of the <see cref="T:Yaaf.Utils.Helper.ThreadStaticField`1"/> class.
+            </summary>
+        </member>
+        <member name="M:Yaaf.Utils.Helper.ThreadStaticField`1.#ctor(System.Func{`0})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Yaaf.Utils.Helper.ThreadStaticField`1"/> class.
+            </summary>
+            <param name="createField">
+            The create field.
+            </param>
+        </member>
+        <member name="P:Yaaf.Utils.Helper.ThreadStaticField`1.Value">
+            <summary>
+              Gets or sets Value.
+            </summary>
         </member>
         <member name="T:IrcDotNet.Properties.Resources">
             <summary>

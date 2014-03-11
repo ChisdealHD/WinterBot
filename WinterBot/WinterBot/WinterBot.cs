@@ -37,6 +37,18 @@ namespace WinterBot
 
         #region Events
         /// <summary>
+        /// Fired when a user gains moderator status.  This happens when the
+        /// streamer promotes a user to a moderator, or simply when a moderator
+        /// joins the chat.
+        /// </summary>
+        public event UserEventHandler ModeratorAdded;
+
+        /// <summary>
+        /// Fired when a moderator's status has been downgraded to normal user.
+        /// </summary>
+        public event UserEventHandler ModeratorRemoved;
+
+        /// <summary>
         /// Fired when a user subscribes to the channel.
         /// </summary>
         public event UserEventHandler UserSubscribed;
@@ -128,6 +140,7 @@ namespace WinterBot
             m_twitch.InformChatClear += ClearChatHandler;
             m_twitch.MessageReceived += ChatMessageReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
+            m_twitch.InformModerator += InformModerator;
 
             LoadRegulars();
             LoadExtensions();
@@ -261,12 +274,21 @@ namespace WinterBot
             }
         }
 
+        void InformModerator(TwitchClient sender, TwitchUser user, bool moderator)
+        {
+            var evt = moderator ? ModeratorAdded : ModeratorRemoved;
+            if (evt != null)
+            {
+                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
+                m_event.Set();
+            }
+        }
+
         public void Go()
         {
             if (!Connect())
                 return;
 
-            LoadModerators();
             Stopwatch timer = new Stopwatch();
             timer.Start();
 
@@ -413,21 +435,6 @@ namespace WinterBot
             {
                 m_regulars.Remove(value);
                 SaveRegulars();
-            }
-        }
-
-        void LoadModerators()
-        {
-            var channelData = m_twitch.ChannelData;
-            var stream = m_options.RawIniData.GetSectionByName("stream");
-            if (stream != null)
-            {
-                string moderators = stream.GetValue("moderators");
-                if (moderators != null)
-                {
-                    foreach (string moderator in moderators.Split(','))
-                        channelData.GetUser(moderator).IsModerator = true;
-                }
             }
         }
 
