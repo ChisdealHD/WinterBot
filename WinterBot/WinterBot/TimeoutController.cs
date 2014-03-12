@@ -152,8 +152,11 @@ namespace WinterBot
 
                 int curr = timeout.Count;
                 int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 10;
-                    if (diff > 0)
-                        curr -= diff;
+                if (diff > 0)
+                    curr -= diff;
+
+                if (curr < 0)
+                    curr = 0;
 
                 timeout.Count = curr + 1;
             }
