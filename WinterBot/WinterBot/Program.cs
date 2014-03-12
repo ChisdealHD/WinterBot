@@ -31,6 +31,8 @@ namespace WinterBot
             bot.ModeratorAdded += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator added: {0}", user.Name); };
             bot.MessageReceived += delegate(WinterBot b, TwitchUser user, string text) { s_messages++; };
             bot.ChatClear += delegate(WinterBot b, TwitchUser user) { WriteLine("Chat Clear: {0}", user.Name); };
+            bot.UserBanned += delegate(WinterBot b, TwitchUser user) { WriteLine("Banned: {0}", user.Name); };
+            bot.UserTimedOut += delegate(WinterBot b, TwitchUser user, int duration) { WriteLine("Timeout: {0} for {1} seconds", user.Name, duration); };
             bot.Tick += bot_Tick;
 
             bot.Go();
@@ -40,7 +42,7 @@ namespace WinterBot
         {
             m_lastHeartbeat += timeSinceLastUpdate;
 
-            if (s_messages > 0 && m_lastHeartbeat.TotalMinutes >= 2)
+            if (s_messages > 0 && m_lastHeartbeat.TotalMinutes >= 5)
             {
                 WriteLine("Messsages: {0}", s_messages);
                 s_messages = 0;
