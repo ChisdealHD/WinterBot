@@ -285,7 +285,7 @@ namespace WinterBot
             }
 
             int total = lower + upper;
-            if (m_maxCaps > 0 && total >= m_maxCaps)
+            if (m_maxCaps > 0 && upper >= m_maxCaps)
                 return true;
 
             int percent = 100 * upper / total;
