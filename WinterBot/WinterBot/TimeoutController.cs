@@ -285,14 +285,14 @@ namespace WinterBot
             }
 
             int total = lower + upper;
-            if (m_maxCaps > 0 && total < m_maxCaps)
-                return false;
+            if (m_maxCaps > 0 && total >= m_maxCaps)
+                return true;
 
             int percent = 100 * upper / total;
-            if (m_capsPercent > 0 && percent < m_capsPercent)
-                return false;
+            if (m_capsPercent > 0 && percent >= m_capsPercent)
+                return true;
 
-            return true;
+            return false;
         }
 
 
