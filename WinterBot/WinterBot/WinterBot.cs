@@ -385,7 +385,7 @@ namespace Winter
                     function.DynamicInvoke(args);
                 }
 
-                if (timer.Elapsed.TotalSeconds >= 15)
+                if (timer.Elapsed.TotalSeconds >= 5)
                 {
                     timer.Stop();
                     OnTick(timer.Elapsed);
