@@ -27,14 +27,13 @@ namespace WinterExtensions
             if (!user.Name.Equals("frostysc", StringComparison.CurrentCultureIgnoreCase))
                 return;
 
-            DateTime now = DateTime.Now;
-            if ((now - m_lastMessage).TotalDays < 1)
+            if (m_lastMessage.Elapsed().TotalDays < 1)
                 return;
 
             if (m_random.Next(0, 25) != 10)
                 return;
 
-            m_lastMessage = now;
+            m_lastMessage = DateTime.Now;
             sender.SendMessage(m_messages[m_random.Next(0, m_messages.Length - 1)]);
         }
     }
