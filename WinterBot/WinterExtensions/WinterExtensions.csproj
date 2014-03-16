@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Betting.cs" />
     <Compile Include="JukeBox.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
