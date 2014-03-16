@@ -36,7 +36,7 @@ namespace WinterExtensions
         }
         
         [BotCommand(AccessLevel.Normal, "jukebox")]
-        public void ListCommands(WinterBot sender, TwitchUser user, string cmd, string value)
+        public void JukeBoxCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
             if (!m_enabled)
             {
