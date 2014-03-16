@@ -490,7 +490,6 @@ namespace Winter
         private ManualResetEventSlim m_disconnectedEvent = new ManualResetEventSlim(false);
         private IrcClient m_client;
         private string m_stream;
-        DateTime m_lastCheck = DateTime.Now;
         TwitchData m_data;
         private IrcChannel m_channel;
         #endregion
