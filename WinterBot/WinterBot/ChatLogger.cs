@@ -112,7 +112,9 @@ namespace WinterBot
         HashSet<TwitchUser> m_timeouts = new HashSet<TwitchUser>();
         bool m_saveReadableLog = true;
         bool m_saveCompressedLog = true;
-        TimeSpan m_lastSave = new TimeSpan();
+        Thread m_saveThread;
+        volatile bool m_shutdown;
+
         string m_stream;
 
         public ChatLogger(WinterBot bot)
@@ -133,8 +135,17 @@ namespace WinterBot
                 bot.UserSubscribed += bot_UserSubscribed;
                 bot.UserBanned += bot_UserBanned;
                 bot.UserTimedOut += bot_UserTimedOut;
-                bot.Tick += bot_Tick;
+                bot.BeginShutdown += bot_Shutdown;
+
+                m_saveThread = new Thread(SaveThreadProc);
+                m_saveThread.Start();
             }
+        }
+
+        private void bot_Shutdown(WinterBot sender)
+        {
+            m_shutdown = true;
+            m_saveThread.Join();
         }
 
         void bot_UserTimedOut(WinterBot sender, TwitchUser user, int duration)
@@ -182,49 +193,52 @@ namespace WinterBot
                 m_queue.Add(evt);
         }
 
-        void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
+        List<ChatEvent> m_binaryEvents = new List<ChatEvent>();
+
+        private void SaveThreadProc()
         {
-            m_lastSave += timeSinceLastUpdate;
+            DateTime lastBinaryDump = DateTime.Now;
+            Stopwatch timer = new Stopwatch();
 
-            if (m_lastSave.TotalMinutes >= 5)
+            while (!m_shutdown)
             {
-                ThreadPool.QueueUserWorkItem(SaveToDisk);
-                m_lastSave = new TimeSpan();
-            }
-        }
+                timer.Restart();
+                while (!m_shutdown && timer.Elapsed.TotalMinutes < 1)
+                    Thread.Sleep(250);
 
-        private void SaveToDisk(object state)
-        {
-            lock (m_saveSync)
-            {
-                List<ChatEvent> events;
-                lock (m_sync)
+                lock (m_saveSync)
                 {
-                    events = m_queue;
-                    m_queue = new List<ChatEvent>();
-                }
-
-                if (events.Count == 0)
-                    return;
-
-                string path = Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), "logs");
-                Directory.CreateDirectory(path);
-
-                var now = DateTime.Now;
-                string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", m_stream, now.Year, now.Month, now.Day);
-
-                if (m_saveReadableLog)
-                    File.AppendAllLines(Path.Combine(path, filename), events.Select(evt=>evt.ToString()));
-
-                filename = Path.Combine(path, string.Format("{0}_{1:00}_{2:00}_{3:00}_{4:00}_{5:00}_{6:00}.dat", m_stream, now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second));
-                if (m_saveCompressedLog)
-                {
-                    using (FileStream stream = File.Create(filename))
+                    List<ChatEvent> events;
+                    lock (m_sync)
                     {
-                        using (GZipStream gzStream = new GZipStream(stream, CompressionLevel.Optimal))
+                        events = m_queue;
+                        m_queue = new List<ChatEvent>();
+                    }
+
+                    if (events.Count == 0)
+                        continue;
+
+                    var now = DateTime.Now;
+                    string logPath = Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), "logs");
+                    string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", m_stream, now.Year, now.Month, now.Day);
+
+                    if (m_saveReadableLog)
+                    {
+                        Directory.CreateDirectory(logPath);
+                        File.AppendAllLines(Path.Combine(logPath, filename), events.Select(evt => evt.ToString()));
+                    }
+
+                    if (m_saveCompressedLog)
+                    {
+                        filename = Path.ChangeExtension(filename, "dat");
+
+                        using (var stream = new FileStream(Path.Combine(logPath, filename), FileMode.Append, FileAccess.Write, FileShare.None))
                         {
-                            BinaryFormatter fmt = new BinaryFormatter();
-                            fmt.Serialize(gzStream, events);
+                            using (GZipStream gzStream = new GZipStream(stream, CompressionLevel.Optimal))
+                            {
+                                BinaryFormatter fmt = new BinaryFormatter();
+                                fmt.Serialize(gzStream, events);
+                            }
                         }
                     }
                 }

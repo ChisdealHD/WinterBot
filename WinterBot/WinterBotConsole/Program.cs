@@ -31,7 +31,22 @@ namespace WinterBot
             bot.UserTimedOut += delegate(WinterBot b, TwitchUser user, int duration) { WriteLine("Timeout: {0} for {1} seconds", user.Name, duration); };
             bot.Tick += bot_Tick;
 
-            bot.Go();
+            Thread t = new Thread(bot.Go);
+            t.Start();
+
+            Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { bot.Shutdown(); Environment.Exit(0); };
+
+            while (true)
+            {
+                ConsoleKeyInfo key = Console.ReadKey(true);
+                if (key.Key == ConsoleKey.Q)
+                {
+                    bot.Shutdown();
+                    Environment.Exit(0);
+                    break;
+                }
+            }
+
         }
 
         static void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)

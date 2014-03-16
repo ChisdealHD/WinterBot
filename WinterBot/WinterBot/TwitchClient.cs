@@ -153,7 +153,7 @@ namespace WinterBot
             m_client.Error += client_Error;
             m_client.Registered += client_Registered;
             m_client.ErrorMessageReceived += client_ErrorMessageReceived;
-
+            
             // Connect to server.
             IPHostEntry hostEntry = Dns.GetHostEntry(server);
             m_client.Connect(new IPEndPoint(hostEntry.AddressList[0], port), false, new IrcUserRegistrationInfo()
@@ -173,7 +173,7 @@ namespace WinterBot
             }
 
             /// Wait for the client to be registered.
-            if (!s_registeredEvent.Wait(10000))
+            if (!m_registeredEvent.Wait(10000))
             {
                 WriteDiagnosticMessage("Registration timed out.", server);
                 return false;
@@ -182,7 +182,7 @@ namespace WinterBot
             // Attempt to join the channel.  We'll try for roughly 10 seconds to join.  This really shouldn't ever fail.
             m_client.Channels.Join("#" + m_stream);
             int max = 40;
-            while (m_client.Channels.Count == 0 && !s_joinedEvent.Wait(250))
+            while (m_client.Channels.Count == 0 && !m_joinedEvent.Wait(250))
             {
                 max--;
                 if (max < 0)
@@ -201,6 +201,12 @@ namespace WinterBot
             return true;
         }
 
+
+        internal void Disconnect()
+        {
+            m_client.Disconnect();
+            m_disconnectedEvent.Wait(1000);
+        }
 
         public void SendMessage(string fmt, params object[] param)
         {
@@ -381,17 +387,6 @@ namespace WinterBot
             }
         }
 
-
-        internal void Dispose()
-        {
-            if (m_client != null)
-            {
-                m_client.Disconnect();
-                m_client.Dispose();
-                m_client = null;
-            }
-        }
-
         #endregion
 
         #region IrcDotNet Event Handlers
@@ -414,7 +409,7 @@ namespace WinterBot
 
         void client_Disconnected(object sender, EventArgs e)
         {
-            WriteDiagnosticMessage("Disconnected: {0}", e.ToString());
+            m_disconnectedEvent.Set();
         }
 
         private void client_Registered(object sender, EventArgs e)
@@ -423,7 +418,7 @@ namespace WinterBot
             client.LocalUser.MessageReceived += client_LocalUser_MessageReceived;
             client.LocalUser.JoinedChannel += client_LocalUser_JoinedChannel;
             client.LocalUser.LeftChannel += client_LocalUser_LeftChannel;
-            s_registeredEvent.Set();
+            m_registeredEvent.Set();
         }
 
         private void client_LocalUser_LeftChannel(object sender, IrcChannelEventArgs e)
@@ -433,7 +428,7 @@ namespace WinterBot
 
         private void client_LocalUser_JoinedChannel(object sender, IrcChannelEventArgs e)
         {
-            s_joinedEvent.Set();
+            m_joinedEvent.Set();
             m_channel = e.Channel;
             m_channel.UserJoined += m_channel_UserJoined;
             m_channel.UsersListReceived += m_channel_UsersListReceived;
@@ -545,9 +540,10 @@ namespace WinterBot
 
 
         #region Private Variables
-        private ManualResetEventSlim s_joinedEvent = new ManualResetEventSlim(false);
+        private ManualResetEventSlim m_joinedEvent = new ManualResetEventSlim(false);
         private ManualResetEventSlim m_connectedEvent = new ManualResetEventSlim(false);
-        private ManualResetEventSlim s_registeredEvent = new ManualResetEventSlim(false);
+        private ManualResetEventSlim m_registeredEvent = new ManualResetEventSlim(false);
+        private ManualResetEventSlim m_disconnectedEvent = new ManualResetEventSlim(false);
         private IrcClient m_client;
         private string m_stream;
         private volatile bool m_alive;

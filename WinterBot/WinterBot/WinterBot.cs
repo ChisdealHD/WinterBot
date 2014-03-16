@@ -86,6 +86,19 @@ namespace WinterBot
         public event UnknownCommandHandler UnknownCommandReceived;
 
         /// <summary>
+        /// Called when the bot begins a clean shutdown (you may not get this event
+        /// if the process is rudely killed).
+        /// </summary>
+        public event BotEventHandler BeginShutdown;
+
+
+        /// <summary>
+        /// Called when a global event for the bot occurs.
+        /// </summary>
+        /// <param name="sender">The winterbot instance sending the event.</param>
+        public delegate void BotEventHandler(WinterBot sender);
+
+        /// <summary>
         /// Event handler for when messages are received from the chat channel.
         /// </summary>
         /// <param name="msg">The message received.</param>
@@ -283,6 +296,16 @@ namespace WinterBot
                 m_event.Set();
             }
         }
+
+        public void Shutdown()
+        {
+            var evt = BeginShutdown;
+            if (evt != null)
+                BeginShutdown(this);
+
+            m_twitch.Disconnect();
+        }
+
 
         public void Go()
         {
