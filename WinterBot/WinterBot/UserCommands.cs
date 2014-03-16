@@ -58,6 +58,7 @@ namespace Winter
         string m_removeCommandUsage = "Usage:  !removecommand !command";
         string m_stream, m_dataDirectory;
         Dictionary<string, UserCommand> m_commands = new Dictionary<string, UserCommand>();
+        DateTime m_lastMessage = DateTime.Now;
 
         public UserCommands(WinterBot bot)
         {
@@ -215,8 +216,17 @@ namespace Winter
             UserCommand command;
 
             if (m_commands.TryGetValue(cmd, out command))
+            {
                 if (sender.CanUseCommand(user, command.AccessRequired))
-                    sender.SendMessage(command.Value);
+                {
+                    // Keep user commands from spamming chat, only one once every 20 seconds (unless you are a mod).
+                    if (m_lastMessage.Elapsed().TotalSeconds >= 10 || sender.CanUseCommand(user, AccessLevel.Mod))
+                    {
+                        sender.SendMessage(command.Value);
+                        m_lastMessage = DateTime.Now;
+                    }
+                }
+            }
         }
 
         private void LoadCommands()
