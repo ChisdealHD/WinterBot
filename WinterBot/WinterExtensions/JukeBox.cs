@@ -70,7 +70,7 @@ namespace WinterExtensions
                     }
                     else if (value == "off")
                     {
-                        sender.SendMessage("Jukebox mode disabled.");
+                        sender.SendMessage("Winter jukebox time is done for the night!  No more donations for songs until next time.");
                         m_lastMessage.Stop();
                         m_enabled = false;
                     }
