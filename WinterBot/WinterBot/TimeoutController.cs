@@ -273,6 +273,9 @@ namespace WinterBot
 
         private bool TooManyCaps(string message)
         {
+            if (m_maxCaps <= 0 || m_capsPercent <= 0)
+                return false;
+
             int upper = 0;
             int lower = 0;
 
@@ -285,14 +288,16 @@ namespace WinterBot
             }
 
             int total = lower + upper;
-            if (m_maxCaps > 0 && upper >= m_maxCaps)
-                return true;
+            
+            if (m_maxCaps > 0 && total < m_maxCaps)
+                return false;
 
             int percent = 100 * upper / total;
-            if (m_capsPercent > 0 && percent >= m_capsPercent)
-                return true;
+            if (m_capsPercent > 0 && percent < m_capsPercent)
+                return false;
 
-            return false;
+            return true;
+
         }
 
 
