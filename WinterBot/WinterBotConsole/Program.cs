@@ -8,8 +8,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using WinterExtensions;
 
-namespace WinterBot
+namespace Winter
 {
     class Program
     {
@@ -22,6 +23,7 @@ namespace WinterBot
             Options options = new Options(iniFile);
 
             WinterBot bot = new WinterBot(options, options.Channel, options.Username, options.Password);
+            bot.AddCommands(new JukeBox(bot));
 
             bot.ModeratorRemoved += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator removed: {0}", user.Name); };
             bot.ModeratorAdded += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator added: {0}", user.Name); };

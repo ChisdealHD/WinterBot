@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 
-namespace WinterBot
+namespace Winter
 {
     public delegate void WinterBotCommand(WinterBot sender, TwitchUser user, string cmd, string value);
 
@@ -24,7 +25,7 @@ namespace WinterBot
         Error
     }
 
-    public class WinterBot
+    public class WinterBot : IDisposable
     {
         private TwitchClient m_twitch;
         ConcurrentQueue<Tuple<Delegate, object[]>> m_events = new ConcurrentQueue<Tuple<Delegate, object[]>>();
@@ -34,6 +35,11 @@ namespace WinterBot
         Dictionary<string, CmdValue> m_commands = new Dictionary<string, CmdValue>();
         private Options m_options;
         HashSet<string> m_regulars = new HashSet<string>();
+
+        volatile bool m_checkUpdates = true;
+
+        bool m_live;
+        Thread m_streamLiveThread;
 
         #region Events
         /// <summary>
@@ -91,7 +97,6 @@ namespace WinterBot
         /// </summary>
         public event BotEventHandler BeginShutdown;
 
-
         /// <summary>
         /// Called when a global event for the bot occurs.
         /// </summary>
@@ -132,6 +137,38 @@ namespace WinterBot
         public delegate void UnknownCommandHandler(WinterBot sender, TwitchUser user, string cmd, string value);
         #endregion
 
+        /// <summary>
+        /// Returns true if the stream is live, false otherwise (updates every 60 seconds).
+        /// </summary>
+        public bool IsStreamLive
+        {
+            get
+            {
+                return m_live;
+            }
+        }
+
+        /// <summary>
+        /// Returns the total number of viewers who have ever watched the stream (updates every 60 seconds).
+        /// </summary>
+        public int TotalViewers { get; set; }
+
+        /// <summary>
+        /// Returns the number of viewers currently watching the stream (updates every 60 seconds).
+        /// </summary>
+        public int CurrentViewers { get; set; }
+
+        /// <summary>
+        /// Returns the name of the game being played (updates every 60 seconds).
+        /// </summary>
+        public string Game { get; set; }
+
+        /// <summary>
+        /// Returns the stream title (updates every 60 seconds).
+        /// </summary>
+        public string Title { get; set; }
+
+
         public Options Options { get { return m_options; } }
 
         public TwitchData UserData
@@ -157,6 +194,19 @@ namespace WinterBot
 
             LoadRegulars();
             LoadExtensions();
+        }
+
+        ~WinterBot()
+        {
+            if (m_streamLiveThread != null)
+            {
+                Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            m_checkUpdates = false;
         }
 
         public void Ban(TwitchUser user)
@@ -196,7 +246,7 @@ namespace WinterBot
             AddCommands(new ChatLogger(this));
         }
 
-        private void AddCommands(object commands)
+        public void AddCommands(object commands)
         {
             var methods = from m in commands.GetType().GetMethods()
                           where m.IsPublic
@@ -213,7 +263,7 @@ namespace WinterBot
                     AddCommand(cmd, method.Method, method.Attribute.AccessRequired);
         }
 
-        public void AddCommand(string cmd, WinterBotCommand command, AccessLevel requiredAccess)
+        private void AddCommand(string cmd, WinterBotCommand command, AccessLevel requiredAccess)
         {
             m_commands[cmd] = new CmdValue(command, requiredAccess);
         }
@@ -309,6 +359,12 @@ namespace WinterBot
 
         public void Go()
         {
+            if (m_streamLiveThread == null)
+            {
+                m_streamLiveThread = new Thread(StreamLiveWoker);
+                m_streamLiveThread.Start();
+            }
+
             if (!Connect())
                 return;
 
@@ -479,9 +535,53 @@ namespace WinterBot
             return Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), m_channel + "_regulars.txt");
         }
 
-        internal bool IsRegular(TwitchUser user)
+        public bool IsRegular(TwitchUser user)
         {
             return m_regulars.Contains(user.Name.ToLower());
+        }
+
+        private void StreamLiveWoker()
+        {
+            m_live = true;
+
+            while (m_checkUpdates)
+            {
+                try
+                {
+                    var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(@"http://api.justin.tv/api/stream/list.json?channel=" + m_channel);
+                    req.UserAgent = "WinterBot/0.0.0.1";
+                    var response = req.GetResponse();
+                    var fromStream = response.GetResponseStream();
+
+                    StreamReader reader = new StreamReader(fromStream);
+                    string result = reader.ReadToEnd();
+
+                    var channels = JsonConvert.DeserializeObject<List<TwitchChannelResponse>>(result);
+                    m_live = channels.Count > 0;
+
+                    if (channels.Count > 0)
+                    {
+                        var channel = channels[0];
+                        TotalViewers = channel.channel_view_count;
+                        CurrentViewers = channel.channel_count;
+                        Game = channel.meta_game;
+                        Title = channel.title;
+
+                        // TODO: Uptime = channel.up_time;
+                    }
+                    else
+                    {
+                        CurrentViewers = 0;
+                    }
+                }
+                catch (Exception)
+                {
+                    // We ignore exceptions (mostly network issues), just leave the values alone for this iteration
+                }
+
+                // 1 minute between updates.
+                Thread.Sleep(60000);
+            }
         }
     }
 

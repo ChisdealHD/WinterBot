@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace WinterBot
+namespace Winter
 {
     [Serializable]
     abstract class ChatEvent

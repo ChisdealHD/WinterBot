@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace WinterBot
+namespace Winter
 {
     /// <summary>
     /// A Twitch.tv IRC client.
@@ -104,19 +104,6 @@ namespace WinterBot
         /// </summary>
         public string Stream { get { return m_stream; } }
 
-        /// <summary>
-        /// Returns true if the stream is alive, false otherwise.  Note that this
-        /// property is asynchronously updated, and the value may be out of date
-        /// by up to two minutes.  
-        /// </summary>
-        public bool IsStreamLive
-        {
-            get
-            {
-                CheckAlive();
-                return m_alive;
-            }
-        }
 
         /// <summary>
         /// Connect to the given stream, returns true if we successfully connected.  Note
@@ -128,12 +115,6 @@ namespace WinterBot
         /// <param name="auth">The twitch API token used to log in.  This must begin with 'oauth:'.</param>
         public bool Connect(string stream, string user, string auth)
         {
-            // We'll set the stream status to alive initially, but we'll immediately go check
-            // the status on a background thread.
-            m_alive = true;
-            Task t = new Task(CheckAliveWorker);
-            t.Start();
-
             user = user.ToLower();
             m_stream = stream.ToLower();
             m_data = new TwitchData(this, m_stream);
@@ -352,43 +333,6 @@ namespace WinterBot
         public delegate void ErrorHandler(TwitchClient sender, IrcErrorEventArgs error);
         #endregion
 
-        #region Helpers
-        /// <summary>
-        /// Checks whether the stream is alive, updating m_alive every two minutes.
-        /// Note this is done on a background thread to avoid blocking on the UI
-        /// thread.
-        /// </summary>
-        void CheckAlive()
-        {
-            TimeSpan diff = DateTime.Now - m_lastCheck;
-            if (diff.Minutes < 2)
-                return;
-
-            Task t = new Task(CheckAliveWorker);
-            t.Start();
-        }
-
-        void CheckAliveWorker()
-        {
-            try
-            {
-                var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(@"http://api.justin.tv/api/stream/list.json?channel=" + m_stream);
-                req.UserAgent = "Question Grabber Bot/0.0.0.1";
-                var response = req.GetResponse();
-                var fromStream = response.GetResponseStream();
-
-                StreamReader reader = new StreamReader(fromStream);
-                string result = reader.ReadToEnd();
-                m_alive = result != "[]";
-            }
-            catch (Exception)
-            {
-                m_alive = false;
-            }
-        }
-
-        #endregion
-
         #region IrcDotNet Event Handlers
         void client_ErrorMessageReceived(object sender, IrcErrorMessageEventArgs e)
         {
@@ -546,7 +490,6 @@ namespace WinterBot
         private ManualResetEventSlim m_disconnectedEvent = new ManualResetEventSlim(false);
         private IrcClient m_client;
         private string m_stream;
-        private volatile bool m_alive;
         DateTime m_lastCheck = DateTime.Now;
         TwitchData m_data;
         private IrcChannel m_channel;

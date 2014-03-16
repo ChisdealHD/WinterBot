@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{079AFCFD-FE1C-44AB-87CC-1E23E8D3BA1A}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{9D1E431F-A8CB-43AB-8486-ED18313B8582}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>WinterBotConsole</RootNamespace>
-    <AssemblyName>WinterBotConsole</AssemblyName>
+    <RootNamespace>WinterExtensions</RootNamespace>
+    <AssemblyName>WinterExtensions</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -31,6 +31,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -41,7 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="JukeBox.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -51,10 +54,6 @@
     <ProjectReference Include="..\WinterBot\WinterBot.csproj">
       <Project>{7463a6b3-6c12-4d9d-83ab-652c11db0f51}</Project>
       <Name>WinterBot</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WinterExtensions\WinterExtensions.csproj">
-      <Project>{9d1e431f-a8cb-43ab-8486-ed18313b8582}</Project>
-      <Name>WinterExtensions</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

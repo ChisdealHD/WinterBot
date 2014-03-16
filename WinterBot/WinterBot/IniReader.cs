@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace WinterBot
+namespace Winter
 {
 
     public struct IniValue
