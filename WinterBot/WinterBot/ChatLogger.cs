@@ -114,13 +114,15 @@ namespace Winter
         bool m_saveCompressedLog = true;
         Thread m_saveThread;
         volatile bool m_shutdown;
+        string m_dataDirectory;
 
         string m_stream;
 
         public ChatLogger(WinterBot bot)
         {
-            var options = bot.Options.RawIniData;
-            m_stream = bot.Options.Channel;
+            var options = bot.Options;
+            m_stream = options.Channel;
+            m_dataDirectory = options.Data;
             var section = options.GetSectionByName("logging");
             if (section != null)
             {
@@ -219,7 +221,7 @@ namespace Winter
                         continue;
 
                     var now = DateTime.Now;
-                    string logPath = Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), "logs");
+                    string logPath = Path.Combine(m_dataDirectory, "logs");
                     string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", m_stream, now.Year, now.Month, now.Day);
 
                     if (m_saveReadableLog)

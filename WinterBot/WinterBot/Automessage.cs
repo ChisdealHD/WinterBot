@@ -19,7 +19,7 @@ namespace Winter
 
         public AutoMessage(WinterBot bot)
         {
-            var options = bot.Options.RawIniData;
+            var options = bot.Options;
             var autoMessage = options.GetSectionByName("automessage");
             var messages = options.GetSectionByName("messages");
 

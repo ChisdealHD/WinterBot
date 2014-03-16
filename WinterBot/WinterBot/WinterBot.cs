@@ -534,7 +534,7 @@ namespace Winter
 
         private string GetRegularFile()
         {
-            return Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), m_channel + "_regulars.txt");
+            return Path.Combine(Options.Data, m_channel + "_regulars.txt");
         }
 
         public bool IsRegular(TwitchUser user)

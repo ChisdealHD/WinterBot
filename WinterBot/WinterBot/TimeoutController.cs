@@ -35,7 +35,7 @@ namespace Winter
         public TimeoutController(WinterBot bot)
         {
             ThreadPool.QueueUserWorkItem(LoadEmoticons);
-            LoadOptions(bot.Options.RawIniData);
+            LoadOptions(bot.Options);
 
             m_winterBot = bot;
             m_winterBot.MessageReceived += CheckMessage;

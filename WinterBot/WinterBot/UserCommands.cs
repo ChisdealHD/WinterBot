@@ -56,12 +56,13 @@ namespace Winter
     {
         string m_addCommandUsage = "Usage:  !addcommand -ul=[user|regular|sub|mod] !command [text]";
         string m_removeCommandUsage = "Usage:  !removecommand !command";
-        string m_stream;
+        string m_stream, m_dataDirectory;
         Dictionary<string, UserCommand> m_commands = new Dictionary<string, UserCommand>();
 
         public UserCommands(WinterBot bot)
         {
             m_stream = bot.Options.Channel;
+            m_dataDirectory = bot.Options.Data;
             bot.UnknownCommandReceived += UnknownCommandReceived;
 
             LoadCommands();
@@ -241,7 +242,7 @@ namespace Winter
 
         private string GetFileName()
         {
-            return Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), m_stream + "_commands.txt");
+            return Path.Combine(m_dataDirectory, m_stream + "_commands.txt");
         }
     }
 }

@@ -51,6 +51,7 @@ namespace WinterExtensions
     {
         public Betting(WinterBot bot)
         {
+            m_dataDirectory = bot.Options.Data;
             m_stream = bot.Options.Channel;
             LoadPoints();
             bot.Tick += bot_Tick;
@@ -64,6 +65,7 @@ namespace WinterExtensions
         string m_stream;
         bool m_confirm;
         DateTime m_lastMessage = DateTime.Now;
+        string m_dataDirectory;
 
         [BotCommand(AccessLevel.Mod, "openbetting", "openbet", "startbet", "startbetting")]
         public void OpenBetting(WinterBot sender, TwitchUser user, string cmd, string value)
@@ -250,10 +252,12 @@ namespace WinterExtensions
 
         private void LoadPoints()
         {
+            string fullPath = Path.Combine(m_dataDirectory, m_stream + "_points.txt");
+
             m_points.Clear();
-            if (File.Exists(m_stream + "_points.txt"))
+            if (File.Exists(fullPath))
             {
-                foreach (string line in File.ReadLines("points.txt"))
+                foreach (string line in File.ReadLines(fullPath))
                 {
                     string[] values = line.Split(' ');
                     m_points[values[0].ToLower()] = int.Parse(values[1]);
@@ -263,7 +267,8 @@ namespace WinterExtensions
 
         private void SavePoints()
         {
-            File.WriteAllLines(m_stream + "_points.txt", from item in m_points select string.Format("{0} {1}", item.Key, item.Value));
+            string fullPath = Path.Combine(m_dataDirectory, m_stream + "_points.txt");
+            File.WriteAllLines(fullPath, from item in m_points select string.Format("{0} {1}", item.Key, item.Value));
         }
 
         void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)

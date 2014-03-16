@@ -84,6 +84,16 @@ namespace Winter
                 m_pairs[name] = value;
             }
         }
+        public bool GetValue(string key, ref string value)
+        {
+            string data = GetValue(key);
+
+            if (data != null)
+                value = data;
+
+            return data != null;
+        }
+
 
         public bool GetValue(string key, ref int value)
         {
