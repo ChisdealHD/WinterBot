@@ -10,8 +10,21 @@ namespace Winter
     class UserCommand
     {
         public AccessLevel AccessRequired { get; set; }
+        string m_cmd;
 
-        public string Command { get; set; }
+        public string Command
+        {
+            get
+            {
+                return m_cmd;
+            }
+            
+            set
+            {
+                value = value.ToLower();
+                m_cmd = value;
+            }
+        }
 
         public string Value { get; set; }
 
@@ -96,6 +109,7 @@ namespace Winter
             if (value[0] == '!')
                 value = value.Substring(1);
 
+            value = value.ToLower();
             if (m_commands.ContainsKey(value))
             {
                 m_commands.Remove(value);
@@ -182,6 +196,7 @@ namespace Winter
             userCommand.AccessRequired = level;
             userCommand.Command = cmdName;
 
+            cmdName = cmdName.ToLower();
             bool exists = m_commands.ContainsKey(cmdName);
             m_commands[cmdName] = userCommand;
 

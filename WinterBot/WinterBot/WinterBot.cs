@@ -265,6 +265,7 @@ namespace Winter
 
         private void AddCommand(string cmd, WinterBotCommand command, AccessLevel requiredAccess)
         {
+            cmd = cmd.ToLower();
             m_commands[cmd] = new CmdValue(command, requiredAccess);
         }
 
@@ -407,6 +408,7 @@ namespace Winter
             Debug.Assert(cmd != null);
             Debug.Assert(value != null);
 
+            cmd = cmd.ToLower();
             CmdValue command;
             if (m_commands.TryGetValue(cmd, out command))
             {
