@@ -82,7 +82,7 @@ namespace Winter
         {
             Debug.Assert(client != null);
 
-            Name = name;
+            Name = name.ToLower();
             Id = id;
             m_client = client;
         }

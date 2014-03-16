@@ -1,172 +1,105 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Winter;
 
 namespace WinterExtensions
 {
-    class Bet
-    {
-        public string User { get; set; }
-        public int Amount { get; set; }
-
-        public Bet(string user, int amount)
-        {
-            User = user;
-            Amount = amount;
-        }
-    }
-
-    class BetTracker
-    {
-        public string Value { get; set; }
-
-        public Dictionary<string, Bet> m_bets = new Dictionary<string, Bet>();
-
-        public IEnumerable<Bet> Bets { get { return m_bets.Values; } }
-
-        public BetTracker(string value)
-        {
-            Value = value;
-        }
-
-        public void AddBet(TwitchUser u, int bet)
-        {
-            string user = u.Name;
-            m_bets[user] = new Bet(user, bet);
-        }
-
-        internal void RemoveBet(TwitchUser user)
-        {
-            if (m_bets.ContainsKey(user.Name))
-                m_bets.Remove(user.Name);
-        }
-    }
-
     public class Betting
     {
+        string m_stream;
+        string m_dataDirectory;
+
+        Dictionary<string, int> m_points = new Dictionary<string, int>();
+        HashSet<TwitchUser> m_pointsRequest = new HashSet<TwitchUser>();
+        Dictionary<TwitchUser, Tuple<string, int>> m_confirmRequest = new Dictionary<TwitchUser, Tuple<string, int>>();
+
+        DateTime m_lastMessage = DateTime.Now;
+        DateTime m_lastOpenUpdate = DateTime.Now;
+        BettingRound m_currentRound, m_lastRound;
+        ConcurrentQueue<BettingRound> m_toSave = new ConcurrentQueue<BettingRound>();
+        
+        Thread m_saveThread;
+        bool m_shutdown;
+        object m_sync = new object();
+
         public Betting(WinterBot bot)
         {
             m_dataDirectory = bot.Options.Data;
             m_stream = bot.Options.Channel;
             LoadPoints();
             bot.Tick += bot_Tick;
+            bot.BeginShutdown += bot_BeginShutdown;
         }
 
-        Dictionary<string, BetTracker> m_bets = new Dictionary<string, BetTracker>();
-        bool m_open, m_waitingResult;
-        Stopwatch m_timer = new Stopwatch();
-        Dictionary<string, int> m_points = new Dictionary<string, int>();
-        HashSet<TwitchUser> m_pointsRequest = new HashSet<TwitchUser>();
-        string m_stream;
-        bool m_confirm;
-        DateTime m_lastMessage = DateTime.Now;
-        string m_dataDirectory;
+        bool IsBettingOpen { get { return m_currentRound != null && m_currentRound.Open; } }
+
+        bool WaitingResult { get { return m_currentRound != null && m_currentRound.Result == null; } }
+
 
         [BotCommand(AccessLevel.Mod, "openbetting", "openbet", "startbet", "startbetting")]
         public void OpenBetting(WinterBot sender, TwitchUser user, string cmd, string value)
         {
-            if (m_open || m_waitingResult)
+            if (IsBettingOpen || WaitingResult)
             {
                 sender.SendMessage("Betting is currently ongoing.  Use !result to award points, use !cancelbet to cancel the current bet.");
                 return;
             }
 
-            string[] values = value.Split(' ', ',');
-            
-            m_confirm = values.Contains("-confirm");
-            if (m_confirm)
-                values = (from s in values where !s.StartsWith("-") select s.ToLower()).ToArray();
+            bool confirm;
+            int time;
+            HashSet<string> values = ParseOpenBet(sender, value, out confirm, out time);
+            if (values == null)
+                return;
 
-            if (values.Length < 2)
+            if (values.Count < 2)
             {
                 sender.SendMessage("Usage: '!openbetting option1 option2'.");
                 return;
             }
 
-            m_bets.Clear();
-            foreach (var val in from v in values where !v.StartsWith("-") select v)
-                m_bets[val] = new BetTracker(val);
-
-            string confirm = "";
-            if (m_confirm)
-                confirm = " (Bets will be confirmed by the bot.)";
-
-            sender.SendMessage("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  You may bet up to 100 points, betting closes in 60 seconds.{1}", string.Join(", ", m_bets.Keys), confirm);
-            m_open = true;
-            m_waitingResult = true;
-            m_timer.Restart();
+            m_currentRound = new BettingRound(this, user, values, confirm, time);
+            WriteOpenBetMessage(sender);
         }
 
         [BotCommand(AccessLevel.Mod, "cancelbetting", "cancelbet")]
         public void CancelBetting(WinterBot sender, TwitchUser user, string cmd, string value)
         {
-            if (!m_open && !m_waitingResult)
+            if (m_currentRound == null)
             {
                 sender.SendMessage("Betting is not currently open.");
                 return;
             }
 
-            m_open = false;
-            m_waitingResult = false;
-
-            sender.SendMessage("Betting is cancelled.");
-            m_bets.Clear();
+            CancelBetting(sender);
         }
-        
+
         [BotCommand(AccessLevel.Normal, "bet")]
         public void BetCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
-            if (!m_open)
+            if (!IsBettingOpen)
             {
                 SendMessage(sender, "{0}: Betting is not currently open.", user.Name);
                 return;
             }
 
-            string[] args = value.Split(new char[] { ' ' }, 2);
-            string who = args[0].ToLower();
-
-            if (args.Length != 2)
-            {
-                SendMessage(sender, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
-                return;
-            }
-
-            if (!m_bets.ContainsKey(who))
-            {
-                SendMessage(sender, "{0}: {1} is not a valid option.  Options are: {2}.", user.Name, who, string.Join(", ", m_bets.Keys));
-                return;
-            }
-
+            string who;
             int bet;
-            if (!int.TryParse(args[1], out bet))
-            {
-                SendMessage(sender, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
+
+            if (!ParseBet(sender, user, value, out who, out bet))
                 return;
-            }
 
-            if (bet <= 0)
-                bet = 1;
-            else if (bet > 100)
-                bet = 100;
+            m_currentRound.PlaceBet(user, who, bet);
 
-            if (m_confirm)
-                SendMessage(sender, "{0}: Bet for {1}, {2} points confirmed.", user.Name, who, bet);
-
-            ClearBet(user);
-            m_bets[who].AddBet(user, bet);
+            if (m_currentRound.Confirm)
+                m_confirmRequest[user] = new Tuple<string, int>(who, bet);
         }
-
-        private void ClearBet(TwitchUser user)
-        {
-            foreach (var bet in m_bets)
-                bet.Value.RemoveBet(user);
-        }
-
 
         [BotCommand(AccessLevel.Normal, "points")]
         public void PointsCommand(WinterBot sender, TwitchUser user, string cmd, string value)
@@ -175,60 +108,188 @@ namespace WinterExtensions
         }
         
         [BotCommand(AccessLevel.Mod, "result", "winner")]
-        public void ResultCommand(WinterBot sender, TwitchUser user, string cmd, string value)
+        public void ResultCommand(WinterBot sender, TwitchUser user, string cmd, string result)
         {
-            if (!m_waitingResult)
+            var round = m_currentRound != null ? m_currentRound : m_lastRound;
+            if (round == null)
             {
                 sender.SendMessage("Not currently waiting for results.");
                 return;
             }
 
-            value = value.Trim().ToLower();
-            if (!m_bets.ContainsKey(value))
+            result = result.Trim().ToLower();
+            if (!round.Values.Contains(result))
             {
-                sender.SendMessage("{0}: '{1}' is not a voting option, options are: {3}", user.Name, value, string.Join(", ", m_bets.Keys));
+                sender.SendMessage("{0}: '{1}' is not a voting option, options are: {3}", user.Name, result, string.Join(", ", round.Values));
                 return;
             }
 
-            m_open = false;
-            m_waitingResult = false;
+            string oldResult = round.Result;
+            if (round.Result == result)
+                return;
 
-            int winners = 0, losers = 0;
+            round.ReportResult(user, result);
 
-            foreach (var item in m_bets)
+            if (oldResult == null)
             {
-                if (item.Key == value)
-                {
-                    // Winners
-                    foreach (var bet in item.Value.Bets)
-                    {
-                        AddPoints(bet.User, bet.Amount);
-                        winners++;
-                    }
-                }
+                if (round.Winners > 0 || round.Losers > 0)
+                    sender.SendMessage("Bet complete, results are tallied.  {0} people won, {1} people lost.", round.Winners, round.Losers);
                 else
+                    sender.SendMessage("Bet complete (no bets).");
+            }
+            else
+            {
+                sender.SendMessage("Rolled back betting result '{0}', new result '{1}'.", oldResult, result);
+            }
+
+            lock (m_sync)
+            {
+                if (m_currentRound != null)
                 {
-                    // Losers
-                    foreach (var bet in item.Value.Bets)
-                    {
-                        AddPoints(bet.User, -bet.Amount);
-                        losers++;
-                    }
+                    if (m_lastRound != null)
+                        m_toSave.Enqueue(m_lastRound);
+
+                    m_lastRound = m_currentRound;
+                    m_currentRound = null;
                 }
             }
 
-            if (winners > 0 || losers > 0)
-                sender.SendMessage("Bet complete, results are tallied.  {0} people won, {1} people lost.", winners, losers);
-            else
-                sender.SendMessage("Bet complete (no bets).");
-
-            m_bets.Clear();
             SavePoints();
         }
 
-        private void AddPoints(string user, int points)
+        void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
         {
-            m_points[user] = GetPoints(user) + points;
+            if (IsBettingOpen)
+            {
+                if (m_currentRound.OpenTime.Elapsed().TotalSeconds >= m_currentRound.Time)
+                {
+                    m_currentRound.Open = false;
+                    sender.SendMessage("Betting is now closed.");
+                }
+                else if (m_currentRound.Time > 60 && m_lastOpenUpdate.Elapsed().TotalSeconds > 60)
+                {
+                    WriteOpenBetMessage(sender);
+                }
+            }
+
+            if (m_confirmRequest.Count > 0)
+            {
+                if (m_confirmRequest.Count == 1)
+                {
+                    var item = m_confirmRequest.First();
+                    sender.SendMessage("{0}: Bet {1} points for {2}.", item.Key.Name, item.Value.Item2, item.Value.Item1);
+                    m_confirmRequest.Clear();
+                }
+                else
+                {
+                    StringBuilder sb = new StringBuilder(300);
+                    List<TwitchUser> users = new List<TwitchUser>(32);
+
+                    bool first = true;
+
+                    foreach (var item in m_confirmRequest)
+                    {
+                        if (sb.Length > 255)
+                            break;
+
+                        if (!first)
+                            sb.Append(", ");
+
+                        sb.AppendFormat("{0} bet {1} points for {2}", item.Key.Name, item.Value.Item2, item.Value.Item1);
+                    }
+
+                    sb.Append('.');
+                    sender.SendMessage(sb.ToString());
+
+                    if (users.Count == m_confirmRequest.Count)
+                    {
+                        m_confirmRequest.Clear();
+                    }
+                    else
+                    {
+                        foreach (var user in users)
+                            m_confirmRequest.Remove(user);
+                    }
+                }
+
+                m_lastMessage = DateTime.Now;
+            }
+            else if (m_pointsRequest.Count > 0)
+            {
+                if (m_pointsRequest.Count == 1)
+                {
+                    string user = m_pointsRequest.First().Name;
+                    int points = GetPoints(user);
+
+                    sender.SendMessage("{0}: You have {1} points.", user, points);
+                }
+                else
+                {
+                    sender.SendMessage("Point totals: " + string.Join(", ", from user in m_pointsRequest
+                                                                            let name = user.Name
+                                                                            let points = GetPoints(name)
+                                                                            select string.Format("{0} has {1} points", name, points)));
+                }
+
+                m_pointsRequest.Clear();
+                m_lastMessage = DateTime.Now;
+            }
+
+            if (m_lastRound != null && m_lastRound.CloseTime.Elapsed().TotalMinutes >= 5)
+            {
+                SaveLastRound();
+            }
+        }
+
+        void bot_BeginShutdown(WinterBot sender)
+        {
+            m_shutdown = true;
+            SaveLastRound();
+
+            if (m_saveThread != null)
+                m_saveThread.Join();
+        }
+
+        private void SaveLastRound()
+        {
+            lock (m_sync)
+            {
+                if (m_lastRound != null)
+                {
+                    m_toSave.Enqueue(m_lastRound);
+                    m_lastRound = null;
+
+                    if (m_saveThread == null)
+                    {
+                        m_saveThread = new Thread(SaveThreadProc);
+                        m_saveThread.Start();
+                    }
+                }
+            }
+        }
+
+
+
+        private void SaveThreadProc()
+        {
+            while (!m_shutdown)
+            {
+                DateTime lastSave = DateTime.Now;
+                while (!m_shutdown && lastSave.Elapsed().TotalMinutes < 5)
+                    Thread.Sleep(250);
+
+                if (m_toSave.Count == 0)
+                    continue;
+
+                string filename = Path.Combine(m_dataDirectory, "logs", m_stream + "_pointlog.txt");
+                File.AppendAllLines(filename, m_toSave.Enumerate().Select(o => o.ToString()));
+            }
+        }
+
+        internal void AddPoints(TwitchUser user, int points)
+        {
+            string name = user.Name.ToLower();
+            m_points[name] = GetPoints(name) + points;
         }
 
         private int GetPoints(string user)
@@ -239,14 +300,12 @@ namespace WinterExtensions
             return curr;
         }
 
-
         private void SendMessage(WinterBot bot, string fmt, params object[] args)
         {
-            var now = DateTime.Now;
-            if ((now - m_lastMessage).TotalSeconds >= 7)
+            if (m_lastMessage.Elapsed().TotalSeconds >= 10)
             {
                 bot.SendMessage(fmt, args);
-                m_lastMessage = now;
+                m_lastMessage = DateTime.Now;
             }
         }
 
@@ -271,33 +330,271 @@ namespace WinterExtensions
             File.WriteAllLines(fullPath, from item in m_points select string.Format("{0} {1}", item.Key, item.Value));
         }
 
-        void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
+        HashSet<string> ParseOpenBet(WinterBot bot, string value, out bool confirm, out int time)
         {
-            if (m_open && m_timer.Elapsed.Minutes >= 1)
+            confirm = false;
+            time = 60;
+
+            HashSet<string> result = new HashSet<string>();
+            value = value.ToLower();
+            foreach (string item in value.Split(' ', ','))
             {
-                m_open = false;
-                sender.SendMessage("Betting is now closed.");
+                if (item.StartsWith("-"))
+                {
+                    if (item == "-confirm")
+                    {
+                        confirm = true;
+                    }
+                    else if (item.StartsWith("-time="))
+                    {
+                        string timeStr = item.Substring(6);
+                        if (!int.TryParse(timeStr, out time))
+                        {
+                            bot.SendMessage("Usage: '!openbetting -time=[seconds] option1 option2'.  Minimum of 30 seconds, maximum of 600 seconds.");
+                            return null;
+                        }
+                    }
+                    else
+                    {
+                        bot.SendMessage("!openbetting: unknown option '{0}'", item);
+                        return null;
+                    }
+                }
+
+                result.Add(item);
             }
 
-            if (m_pointsRequest.Count > 0)
-            {
-                if (m_pointsRequest.Count == 1)
-                {
-                    string user = m_pointsRequest.First().Name;
-                    int points = GetPoints(user);
+            return result;
+        }
 
-                    sender.SendMessage("{0}: You have {1} points.", user, points);
+        private bool ParseBet(WinterBot bot, TwitchUser user, string value, out string who, out int bet)
+        {
+            who = null;
+            bet = 0;
+
+            value = value.ToLower();
+            string[] args = value.Split(new char[] { ' ' }, 2);
+            if (args.Length != 2)
+            {
+                SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
+                return false;
+            }
+
+            who = args[0];
+            if (!m_currentRound.IsValidOption(who))
+            {
+                SendMessage(bot, "{0}: {1} is not a valid option.  Options are: {2}.", user.Name, who, string.Join(", ", m_currentRound.Values));
+                return false;
+            }
+
+            string betString = args[1].ToLower();
+            if (!int.TryParse(args[1], out bet))
+            {
+                if (betString == "min")
+                {
+                    bet = 1;
+                }
+                else if (betString == "max")
+                {
+                    bet = 100;
                 }
                 else
                 {
-                    sender.SendMessage("Point totals: " + string.Join(", ", from user in m_pointsRequest
-                                                                            let name = user.Name
-                                                                            let points = GetPoints(name)
-                                                                            select string.Format("{0} has {1} points", name, points)));
+                    SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
+                    return false;
                 }
-
-                m_pointsRequest.Clear();
             }
+
+            if (bet <= 0)
+                bet = 1;
+            else if (bet > 100)
+                bet = 100;
+
+            return true;
+        }
+
+        private void CancelBetting(WinterBot sender)
+        {
+            if (m_currentRound != null)
+            {
+                sender.SendMessage("Betting is cancelled.");
+                m_currentRound = null;
+            }
+        }
+        
+
+        private void WriteOpenBetMessage(WinterBot sender)
+        {
+            sender.SendMessage("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  You may bet up to 100 points, betting closes in {1} seconds.", string.Join(", ", m_currentRound.Values), m_currentRound.Time);
+            m_lastOpenUpdate = m_lastMessage = DateTime.Now;
+        }
+    }
+
+    class BettingRound
+    {
+        Dictionary<string, Dictionary<TwitchUser, int>> m_bets = new Dictionary<string, Dictionary<TwitchUser, int>>();
+        int m_winners, m_losers;
+        private Betting m_betting;
+        private TwitchUser m_createdBy;
+        private TwitchUser m_closedBy;
+
+        public IEnumerable<string> Values { get { return m_bets.Keys; } }
+
+        public bool Confirm { get; set; }
+
+        public int Time { get; set; }
+
+        public string Result { get; private set; }
+
+        public DateTime OpenTime { get; set; }
+
+        public DateTime CloseTime { get; set; }
+
+        public bool Open { get; set; }
+
+        public int Winners { get { return m_winners; } }
+
+        public int Losers { get { return m_losers; } }
+
+        public BettingRound(Betting betting, TwitchUser createdBy, HashSet<string> values, bool confirm, int time)
+        {
+            Debug.Assert(values != null);
+            Debug.Assert(values.Count >= 2);
+
+            if (time < 30)
+                time = 30;
+            else if (time > 600)
+                time = 600;
+
+            m_betting = betting;
+            Confirm = confirm;
+            Time = time;
+            OpenTime = DateTime.Now;
+            Open = true;
+            m_createdBy = createdBy;
+
+            foreach (string value in values)
+                m_bets[value.ToLower()] = new Dictionary<TwitchUser, int>();
+        }
+
+        public void PlaceBet(TwitchUser user, string option, int bet)
+        {
+            Debug.Assert(Values.Contains(option));
+
+            RemoveBet(user);
+
+            Dictionary<TwitchUser, int> bets;
+            if (m_bets.TryGetValue(option, out bets))
+                bets[user] = bet;
+        }
+
+        private void RemoveBet(TwitchUser user)
+        {
+            foreach (Dictionary<TwitchUser, int> bets in m_bets.Values)
+                if (bets.ContainsKey(user))
+                    bets.Remove(user);
+        }
+
+        public bool IsValidOption(string value)
+        {
+            value = value.Trim().ToLower();
+            return m_bets.ContainsKey(value);
+        }
+
+        public void ReportResult(TwitchUser user, string result)
+        {
+            m_closedBy = user;
+            result = result.ToLower();
+
+            if (Result != null)
+                UpdatePoints(Result, true);
+
+            Result = result;
+            UpdatePoints(result);
+            CloseTime = DateTime.Now;
+        }
+
+        public void RollbackResult()
+        {
+            if (Result != null)
+            {
+                UpdatePoints(Result, true);
+                Result = null;
+            }
+        }
+
+        private void UpdatePoints(string result, bool rollback = false)
+        {
+            m_winners = 0;
+            m_losers = 0;
+
+            foreach (var item in m_bets)
+            {
+                if (item.Key == result)
+                {
+                    // Winners
+                    foreach (var bet in item.Value)
+                    {
+                        if (!rollback)
+                        {
+                            m_betting.AddPoints(bet.Key, bet.Value);
+                            m_winners++;
+                        }
+                        else
+                        {
+                            m_betting.AddPoints(bet.Key, -bet.Value);
+                        }
+                    }
+                }
+                else
+                {
+                    // Losers
+                    foreach (var bet in item.Value)
+                    {
+                        if (!rollback)
+                        {
+                            m_betting.AddPoints(bet.Key, -bet.Value);
+                            m_losers++;
+                        }
+                        else
+                        {
+                            m_betting.AddPoints(bet.Key, bet.Value);
+                        }
+                    }
+                }
+            }
+        }
+        
+
+        public override string ToString()
+        {
+            Debug.Assert(!Open);
+            Debug.Assert(Result != null);
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendFormat("Bet on: {0} ran from {1} - {2}, with result {3}\n", string.Join(", ", Values), OpenTime, CloseTime, Result);
+            sb.AppendFormat("Created by: {0}\n", m_createdBy);
+            sb.AppendFormat("Closed by: {0}\n", m_closedBy);
+            if (Result != null && m_bets.ContainsKey(Result))
+                sb.AppendLine("Winners: " + string.Join(", ", from item in m_bets[Result]
+                                                              select item.Key.Name + "=" + item.Value));
+
+            sb.AppendLine("Losers:");
+            foreach (var item in m_bets)
+            {
+                if (item.Key == Result)
+                    continue;
+
+                sb.Append(item.Key);
+                sb.Append(": ");
+
+                sb.AppendLine(string.Join(", ", from i2 in item.Value
+                                                select i2.Key.Name + "=" + i2.Value));
+            }
+
+            sb.AppendLine();
+
+            return sb.ToString();
         }
     }
 }
