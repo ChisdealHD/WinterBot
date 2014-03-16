@@ -31,7 +31,7 @@ namespace WinterExtensions
                 }
             }
 
-            if (m_enabled && m_lastMessage.Elapsed.TotalSeconds >= 5)
+            if (m_enabled && m_lastMessage.Elapsed.TotalMinutes >= 7)
                 SendMessage(sender);
         }
         
