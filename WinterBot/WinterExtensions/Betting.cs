@@ -66,7 +66,8 @@ namespace WinterExtensions
             }
 
             m_currentRound = new BettingRound(this, user, values, confirm, time);
-            WriteOpenBetMessage(sender);
+            WriteOpenBetMessage(sender, true);
+            sender.WriteDiagnostic(DiagnosticLevel.Diagnostic, "Started betting: " + string.Join(", ", values));
         }
 
         [BotCommand(AccessLevel.Mod, "cancelbetting", "cancelbet")]
@@ -363,8 +364,11 @@ namespace WinterExtensions
                         return null;
                     }
                 }
-
-                result.Add(item);
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(item))
+                        result.Add(item);
+                }
             }
 
             return result;
@@ -373,11 +377,11 @@ namespace WinterExtensions
         private bool ParseBet(WinterBot bot, TwitchUser user, string value, out string who, out int bet)
         {
             who = null;
-            bet = 0;
+            bet = 25;
 
             value = value.ToLower();
             string[] args = value.Split(new char[] { ' ' }, 2);
-            if (args.Length != 2)
+            if (args.Length == 0 || args.Length > 2)
             {
                 SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
                 return false;
@@ -390,21 +394,24 @@ namespace WinterExtensions
                 return false;
             }
 
-            string betString = args[1].ToLower();
-            if (!int.TryParse(args[1], out bet))
+            if (args.Length == 2)
             {
-                if (betString == "min")
+                string betString = args[1].ToLower();
+                if (!int.TryParse(args[1], out bet))
                 {
-                    bet = 1;
-                }
-                else if (betString == "max")
-                {
-                    bet = 100;
-                }
-                else
-                {
-                    SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
-                    return false;
+                    if (betString == "min")
+                    {
+                        bet = 1;
+                    }
+                    else if (betString == "max")
+                    {
+                        bet = 100;
+                    }
+                    else
+                    {
+                        SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
+                        return false;
+                    }
                 }
             }
 
@@ -427,9 +434,10 @@ namespace WinterExtensions
         }
         
 
-        private void WriteOpenBetMessage(WinterBot sender)
+        private void WriteOpenBetMessage(WinterBot sender, bool first = false)
         {
-            sender.SendMessage("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  You may bet up to 100 points, betting closes in {1} seconds.", string.Join(", ", m_currentRound.Values), m_currentRound.Time);
+            int time = first ? m_currentRound.Time : (int)(m_currentRound.Time - m_currentRound.OpenTime.Elapsed().TotalSeconds);
+            sender.SendMessage("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  You may bet up to 100 points, betting closes in {1} seconds.", string.Join(", ", m_currentRound.Values), time);
             m_lastOpenUpdate = m_lastMessage = DateTime.Now;
         }
     }
