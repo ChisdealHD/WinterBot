@@ -129,6 +129,7 @@ namespace WinterExtensions
             if (round.Result == result)
                 return;
 
+            round.Open = false;
             round.ReportResult(user, result);
 
             if (oldResult == null)
@@ -271,8 +272,6 @@ namespace WinterExtensions
                 }
             }
         }
-
-
 
         private void SaveThreadProc()
         {
@@ -422,6 +421,7 @@ namespace WinterExtensions
             if (m_currentRound != null)
             {
                 sender.SendMessage("Betting is cancelled.");
+                m_currentRound.Open = false;
                 m_currentRound = null;
             }
         }
