@@ -59,7 +59,7 @@ namespace Winter
 
         void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
         {
-            if (m_timer.Elapsed.Minutes >= m_delay && m_totalMessages >= m_messageDelay)
+            if (m_timer.Elapsed.Minutes >= m_delay && m_totalMessages >= m_messageDelay && sender.LastMessageSent.Elapsed().TotalSeconds >= 45)
             {
                 m_totalMessages = 0;
                 m_timer.Restart();

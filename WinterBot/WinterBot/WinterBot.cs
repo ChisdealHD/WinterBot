@@ -146,6 +146,8 @@ namespace Winter
         public delegate void UnknownCommandHandler(WinterBot sender, TwitchUser user, string cmd, string value);
         #endregion
 
+        public DateTime LastMessageSent { get; set; }
+
         /// <summary>
         /// Returns true if the stream is live, false otherwise (updates every 60 seconds).
         /// </summary>
@@ -194,6 +196,7 @@ namespace Winter
             m_channel = channel.ToLower();
 
             MessageReceived += TryProcessCommand;
+            LastMessageSent = DateTime.Now;
 
             m_twitch = new TwitchClient();
             m_twitch.InformChatClear += ClearChatHandler;
@@ -291,6 +294,7 @@ namespace Winter
         public void SendMessage(string msg)
         {
             m_twitch.SendMessage(msg);
+            LastMessageSent = DateTime.Now;
         }
 
         public void SendMessage(string fmt, params object[] param)
