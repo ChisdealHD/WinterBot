@@ -69,7 +69,24 @@ namespace Winter
                 section.GetValue("MaxEmotes", ref m_maxEmotes);
             }
         }
+        
+        [BotCommand(AccessLevel.Mod, "deny")]
+        public void Deny(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            value = value.Trim().ToLower();
 
+            if (!TwitchData.IsValidUserName(value))
+                return;
+
+            user = sender.UserData.GetUser(value);
+            if (sender.CanUseCommand(user, AccessLevel.Regular))
+                return;
+
+            if (m_permit.Contains(value))
+                m_permit.Remove(value);
+            else
+                sender.SendMessage("{0}: You are not allowed to post a link.  You couldn't anyway, but a mod thought you could use a reminder.", user.Name);
+        }
 
         [BotCommand(AccessLevel.Mod, "permit")]
         public void Permit(WinterBot sender, TwitchUser user, string cmd, string value)
@@ -78,7 +95,6 @@ namespace Winter
 
             value = value.Trim().ToLower();
 
-            var userData = m_winterBot.UserData;
             if (!TwitchData.IsValidUserName(value))
             {
                 m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
@@ -151,7 +167,7 @@ namespace Winter
                 shouldMessage = (DateTime.Now > timeout.LastTimeout) && (DateTime.Now - timeout.LastTimeout).TotalMinutes > 60;
 
                 int curr = timeout.Count;
-                int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 10;
+                int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 15;
                 if (diff > 0)
                     curr -= diff;
 
