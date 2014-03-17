@@ -93,9 +93,18 @@ namespace Winter
 
         /// <summary>
         /// Called when the bot begins a clean shutdown (you may not get this event
-        /// if the process is rudely killed).
+        /// if the process is rudely killed).  This is followed by EndShutdown.  It
+        /// is expected that BeingShutdown signals that a shutdown is about to occur
+        /// but not block, and EndShutdown blocks until critical work is complete.
         /// </summary>
         public event BotEventHandler BeginShutdown;
+
+        /// <summary>
+        /// Called when the bot is done with a clean shutdown and is about to terminate
+        /// the process.  Note that it is still possible to send and respond to twitch
+        /// messages until EndShutdown has completed.
+        /// </summary>
+        public event BotEventHandler EndShutdown;
 
         /// <summary>
         /// Called when a global event for the bot occurs.
@@ -352,7 +361,11 @@ namespace Winter
         {
             var evt = BeginShutdown;
             if (evt != null)
-                BeginShutdown(this);
+                evt(this);
+
+            evt = EndShutdown;
+            if (evt != null)
+                evt(this);
 
             m_twitch.Disconnect();
         }

@@ -36,6 +36,7 @@ namespace WinterExtensions
             LoadPoints();
             bot.Tick += bot_Tick;
             bot.BeginShutdown += bot_BeginShutdown;
+            bot.EndShutdown += bot_EndShutdown;
         }
 
         bool IsBettingOpen { get { return m_currentRound != null && m_currentRound.Open; } }
@@ -245,7 +246,10 @@ namespace WinterExtensions
         {
             m_shutdown = true;
             SaveLastRound();
+        }
 
+        void bot_EndShutdown(WinterBot sender)
+        {
             if (m_saveThread != null)
                 m_saveThread.Join();
         }

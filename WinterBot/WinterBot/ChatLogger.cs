@@ -137,16 +137,21 @@ namespace Winter
                 bot.UserSubscribed += bot_UserSubscribed;
                 bot.UserBanned += bot_UserBanned;
                 bot.UserTimedOut += bot_UserTimedOut;
-                bot.BeginShutdown += bot_Shutdown;
+                bot.BeginShutdown += bot_BeginShutdown;
+                bot.EndShutdown += bot_EndShutdown;
 
                 m_saveThread = new Thread(SaveThreadProc);
                 m_saveThread.Start();
             }
         }
 
-        private void bot_Shutdown(WinterBot sender)
+        private void bot_BeginShutdown(WinterBot sender)
         {
             m_shutdown = true;
+        }
+
+        private void bot_EndShutdown(WinterBot sender)
+        {
             m_saveThread.Join();
         }
 
@@ -199,13 +204,10 @@ namespace Winter
 
         private void SaveThreadProc()
         {
-            DateTime lastBinaryDump = DateTime.Now;
-            Stopwatch timer = new Stopwatch();
-
             while (!m_shutdown)
             {
-                timer.Restart();
-                while (!m_shutdown && timer.Elapsed.TotalMinutes < 1)
+                DateTime lastSave = DateTime.Now;
+                while (!m_shutdown && lastSave.Elapsed().TotalMinutes < 1)
                     Thread.Sleep(250);
 
                 lock (m_saveSync)
