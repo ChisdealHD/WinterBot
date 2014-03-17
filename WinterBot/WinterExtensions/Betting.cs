@@ -122,7 +122,7 @@ namespace WinterExtensions
             result = result.Trim().ToLower();
             if (!round.Values.Contains(result))
             {
-                sender.SendMessage("{0}: '{1}' is not a voting option, options are: {3}", user.Name, result, string.Join(", ", round.Values));
+                sender.SendMessage("{0}: '{1}' is not a voting option, options are: {2}", user.Name, result, string.Join(", ", round.Values));
                 return;
             }
 
