@@ -82,6 +82,47 @@ namespace WinterExtensions
             CancelBetting(sender);
         }
 
+        [BotCommand(AccessLevel.Mod, "addpoints")]
+        public void AddPoints(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            TwitchUser who;
+            int points;
+            if (!ParsePoints(sender, user, cmd, value, out who, out points))
+                return;
+
+            if (points == 0)
+                return;
+
+            AddPoints(who, points);
+            PointsMessage(sender, user, who, points);
+        }
+
+        private void PointsMessage(WinterBot sender, TwitchUser user, TwitchUser who, int points)
+        {
+            if (points > 0)
+                sender.SendMessage("{0}: Gave {1} points to {2}.  {2} now has {3} points.", user.Name, points, who.Name, GetPoints(who));
+            else
+                sender.SendMessage("{0}: Took {1} points from {2}.  {2} now has {3} points.", user.Name, -points, who.Name, GetPoints(who));
+        }
+
+        [BotCommand(AccessLevel.Mod, "removepoints", "subpoints", "subtractpoints")]
+        public void RemovePoints(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            TwitchUser who;
+            int points;
+            if (!ParsePoints(sender, user, cmd, value, out who, out points))
+                return;
+
+            if (points == 0)
+                return;
+
+            if (points > 0)
+                points = -points;
+
+            AddPoints(who, points);
+            PointsMessage(sender, user, who, points);
+        }
+
         [BotCommand(AccessLevel.Normal, "bet")]
         public void BetCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
@@ -160,6 +201,8 @@ namespace WinterExtensions
             SavePoints();
         }
 
+
+        DateTime m_lastPointMessage = DateTime.Now;
         void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
         {
             if (IsBettingOpen)
@@ -175,67 +218,71 @@ namespace WinterExtensions
                 }
             }
 
-            if (m_confirmRequest.Count > 0)
+            if (m_lastPointMessage.Elapsed().TotalSeconds >= 10)
             {
-                if (m_confirmRequest.Count == 1)
+                m_lastPointMessage = DateTime.Now;
+                if (m_confirmRequest.Count > 0)
                 {
-                    var item = m_confirmRequest.First();
-                    sender.SendMessage("{0}: Bet {1} points for {2}.", item.Key.Name, item.Value.Item2, item.Value.Item1);
-                    m_confirmRequest.Clear();
-                }
-                else
-                {
-                    StringBuilder sb = new StringBuilder(300);
-                    List<TwitchUser> users = new List<TwitchUser>(32);
-
-                    bool first = true;
-
-                    foreach (var item in m_confirmRequest)
+                    if (m_confirmRequest.Count == 1)
                     {
-                        if (sb.Length > 255)
-                            break;
-
-                        if (!first)
-                            sb.Append(", ");
-
-                        sb.AppendFormat("{0} bet {1} points for {2}", item.Key.Name, item.Value.Item2, item.Value.Item1);
-                    }
-
-                    sb.Append('.');
-                    sender.SendMessage(sb.ToString());
-
-                    if (users.Count == m_confirmRequest.Count)
-                    {
+                        var item = m_confirmRequest.First();
+                        sender.SendMessage("{0}: Bet {1} points for {2}.", item.Key.Name, item.Value.Item2, item.Value.Item1);
                         m_confirmRequest.Clear();
                     }
                     else
                     {
-                        foreach (var user in users)
-                            m_confirmRequest.Remove(user);
+                        StringBuilder sb = new StringBuilder(300);
+                        List<TwitchUser> users = new List<TwitchUser>(32);
+
+                        bool first = true;
+
+                        foreach (var item in m_confirmRequest)
+                        {
+                            if (sb.Length > 255)
+                                break;
+
+                            if (!first)
+                                sb.Append(", ");
+
+                            sb.AppendFormat("{0} bet {1} points for {2}", item.Key.Name, item.Value.Item2, item.Value.Item1);
+                        }
+
+                        sb.Append('.');
+                        sender.SendMessage(sb.ToString());
+
+                        if (users.Count == m_confirmRequest.Count)
+                        {
+                            m_confirmRequest.Clear();
+                        }
+                        else
+                        {
+                            foreach (var user in users)
+                                m_confirmRequest.Remove(user);
+                        }
                     }
-                }
 
-                m_lastMessage = DateTime.Now;
-            }
-            else if (m_pointsRequest.Count > 0)
-            {
-                if (m_pointsRequest.Count == 1)
+                    m_lastMessage = DateTime.Now;
+                }
+                else if (m_pointsRequest.Count > 0)
                 {
-                    string user = m_pointsRequest.First().Name;
-                    int points = GetPoints(user);
+                    if (m_pointsRequest.Count == 1)
+                    {
+                        TwitchUser user = m_pointsRequest.First();
+                        int points = GetPoints(user);
 
-                    sender.SendMessage("{0}: You have {1} points.", user, points);
-                }
-                else
-                {
-                    sender.SendMessage("Point totals: " + string.Join(", ", from user in m_pointsRequest
-                                                                            let name = user.Name
-                                                                            let points = GetPoints(name)
-                                                                            select string.Format("{0} has {1} points", name, points)));
-                }
+                        sender.SendMessage("{0}: You have {1} points.", user, points);
+                    }
+                    else
+                    {
+                        sender.SendMessage("Point totals: " + string.Join(", ", from user in m_pointsRequest
+                                                                                let name = user.Name
+                                                                                let points = GetPoints(user)
+                                                                                select string.Format("{0} has {1} points", name, points)));
+                    }
 
-                m_pointsRequest.Clear();
-                m_lastMessage = DateTime.Now;
+                    m_pointsRequest.Clear();
+                    m_lastMessage = DateTime.Now;
+                }
             }
 
             if (m_lastRound != null && m_lastRound.CloseTime.Elapsed().TotalMinutes >= 5)
@@ -293,14 +340,14 @@ namespace WinterExtensions
         internal void AddPoints(TwitchUser user, int points)
         {
             string name = user.Name.ToLower();
-            m_points[name] = GetPoints(name) + points;
+            m_points[name] = GetPoints(user) + points;
         }
 
-        private int GetPoints(string user)
+        private int GetPoints(TwitchUser user)
         {
             int curr;
-            if (!m_points.TryGetValue(user, out curr))
-                curr = 100;
+            if (!m_points.TryGetValue(user.Name, out curr))
+                curr = user.IsSubscriber ? 4000 : 3000;
             return curr;
         }
 
@@ -374,16 +421,52 @@ namespace WinterExtensions
             return result;
         }
 
+
+        private bool ParsePoints(WinterBot bot, TwitchUser user, string cmd, string value, out TwitchUser who, out int points)
+        {
+            who = null;
+            points = 0;
+
+            value = value.ToLower();
+            string[] args = value.Split(new char[] { ' ' }, 2);
+            if (args.Length == 0 || args.Length != 2)
+            {
+                AddPointsUsage(bot, user, cmd);
+                return false;
+            }
+
+            string name = args[0];
+            if (!TwitchData.IsValidUserName(name))
+            {
+                AddPointsUsage(bot, user, cmd);
+                return false;
+            }
+
+            who = bot.UserData.GetUser(name);
+            if (!int.TryParse(args[1], out points))
+            {
+                AddPointsUsage(bot, user, cmd);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void AddPointsUsage(WinterBot bot, TwitchUser user, string cmd)
+        {
+            bot.SendMessage("{0}:  Usage:  {1} [who] [amount].", user.Name, cmd);
+        }
+
         private bool ParseBet(WinterBot bot, TwitchUser user, string value, out string who, out int bet)
         {
             who = null;
-            bet = 25;
+            bet = 50;
 
             value = value.ToLower();
             string[] args = value.Split(new char[] { ' ' }, 2);
             if (args.Length == 0 || args.Length > 2)
             {
-                SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
+                SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 500.)", user.Name);
                 return false;
             }
 
@@ -393,6 +476,14 @@ namespace WinterExtensions
                 SendMessage(bot, "{0}: {1} is not a valid option.  Options are: {2}.", user.Name, who, string.Join(", ", m_currentRound.Values));
                 return false;
             }
+
+            int totalPoints = GetPoints(user);
+            int max = 500;
+            if (totalPoints < max)
+                max = totalPoints;
+            
+            if (max < 50)
+                max = 50;
 
             if (args.Length == 2)
             {
@@ -405,7 +496,7 @@ namespace WinterExtensions
                     }
                     else if (betString == "max")
                     {
-                        bet = 100;
+                        bet = max;
                     }
                     else
                     {
@@ -417,8 +508,8 @@ namespace WinterExtensions
 
             if (bet <= 0)
                 bet = 1;
-            else if (bet > 100)
-                bet = 100;
+            else if (bet > max)
+                bet = max;
 
             return true;
         }
@@ -437,7 +528,7 @@ namespace WinterExtensions
         private void WriteOpenBetMessage(WinterBot sender, bool first = false)
         {
             int time = first ? m_currentRound.Time : (int)(m_currentRound.Time - m_currentRound.OpenTime.Elapsed().TotalSeconds);
-            sender.SendMessage("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  You may bet up to 100 points, betting closes in {1} seconds.", string.Join(", ", m_currentRound.Values), time);
+            sender.SendMessage("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  Max bet is 100 points (or up to 25 if you have none), betting closes in {1} seconds.", string.Join(", ", m_currentRound.Values), time);
             m_lastOpenUpdate = m_lastMessage = DateTime.Now;
         }
     }
