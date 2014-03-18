@@ -436,13 +436,13 @@ namespace WinterExtensions
             }
 
             string name = args[0];
-            if (!TwitchData.IsValidUserName(name))
+            if (!TwitchUsers.IsValidUserName(name))
             {
                 AddPointsUsage(bot, user, cmd);
                 return false;
             }
 
-            who = bot.UserData.GetUser(name);
+            who = bot.Users.GetUser(name);
             if (!int.TryParse(args[1], out points))
             {
                 AddPointsUsage(bot, user, cmd);

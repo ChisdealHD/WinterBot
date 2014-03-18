@@ -75,10 +75,10 @@ namespace Winter
         {
             value = value.Trim().ToLower();
 
-            if (!TwitchData.IsValidUserName(value))
+            if (!TwitchUsers.IsValidUserName(value))
                 return;
 
-            user = sender.UserData.GetUser(value);
+            user = sender.Users.GetUser(value);
             if (sender.CanUseCommand(user, AccessLevel.Regular))
                 return;
 
@@ -95,7 +95,7 @@ namespace Winter
 
             value = value.Trim().ToLower();
 
-            if (!TwitchData.IsValidUserName(value))
+            if (!TwitchUsers.IsValidUserName(value))
             {
                 m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
                 return;

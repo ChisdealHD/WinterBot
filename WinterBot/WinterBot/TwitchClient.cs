@@ -1,6 +1,7 @@
 ﻿using IrcDotNet;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -52,11 +53,6 @@ namespace Winter
         public event UserEventHandler InformSubscriber;
 
         /// <summary>
-        /// Fired when twitch informs us that a user is a moderator in this channel.
-        /// </summary>
-        public event ModeratorEventHandler InformModerator;
-
-        /// <summary>
         /// Fired when a user subscribes to the channel.
         /// </summary>
         public event UserEventHandler UserSubscribed;
@@ -76,14 +72,6 @@ namespace Winter
         /// </summary>
         /// <param name="user">The user in question.</param>
         public delegate void UserEventHandler(TwitchClient sender, TwitchUser user);
-
-        /// <summary>
-        /// Event fired when moderator status changes for a user.
-        /// </summary>
-        /// <param name="sender">This object.</param>
-        /// <param name="user">The user whos status is changing.</param>
-        /// <param name="moderator">The moderator in question.</param>
-        public delegate void ModeratorEventHandler(TwitchClient sender, TwitchUser user, bool moderator);
         
         /// <summary>
         /// Event handler for when users are timed out.
@@ -97,12 +85,22 @@ namespace Winter
         /// and mods, it simply keeps track of every user we've been informed of their
         /// status.
         /// </summary>
-        public TwitchData ChannelData { get { return m_data; } }
+        public TwitchUsers ChannelData { get { return m_data; } }
 
         /// <summary>
         /// Returns the name of the stream we are connected to.
         /// </summary>
         public string Stream { get { return m_stream; } }
+
+
+        public TwitchClient()
+        {
+        }
+
+        public TwitchClient(TwitchUsers data)
+        {
+            m_data = data;
+        }
 
 
         /// <summary>
@@ -117,7 +115,8 @@ namespace Winter
         {
             user = user.ToLower();
             m_stream = stream.ToLower();
-            m_data = new TwitchData(this, m_stream);
+            if (m_data == null)
+                m_data = new TwitchUsers();
 
             // Create client and hook up events.
             string server = "irc.twitch.tv";
@@ -179,6 +178,7 @@ namespace Winter
             // messages.  Without sending this raw command, we would not get that data.
             m_client.SendRawMessage("TWITCHCLIENT 2");
 
+            UpdateMods();
             return true;
         }
 
@@ -220,6 +220,9 @@ namespace Winter
         /// <param name="e">The user.</param>
         void channel_MessageReceived(object sender, IrcMessageEventArgs e)
         {
+            if (m_lastModCheck.Elapsed().TotalMinutes >= 15)
+                UpdateMods();
+
             // Twitchnotify is how subscriber messages "Soandso just subscribed!" comes in:
             if (e.Source.Name.Equals("twitchnotify", StringComparison.CurrentCultureIgnoreCase))
             {
@@ -247,6 +250,7 @@ namespace Winter
         /// <param name="e">IRC message event args.</param>
         private void client_LocalUser_MessageReceived(object sender, IrcMessageEventArgs e)
         {
+            string modMsg = "The moderators of this room are: ";
             if (e.Source.Name.Equals("jtv", StringComparison.CurrentCultureIgnoreCase))
             {
                 string text = e.Text;
@@ -268,6 +272,29 @@ namespace Winter
 
                         var u = m_data.GetUser(user);
                         u.IconSet = iconSet;
+                    }
+                }
+                else if (text.StartsWith(modMsg) && text.Length > modMsg.Length)
+                {
+                    lock (m_modSync)
+                    {
+                        TwitchUser streamer = m_data.GetUser(m_stream);
+
+                        string[] modList = text.Substring(modMsg.Length).Split(new string[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                        HashSet<TwitchUser> mods = new HashSet<TwitchUser>(modList.Select(name => m_data.GetUser(name)));
+                        mods.Add(streamer);
+
+                        foreach (var mod in mods)
+                            mod.IsModerator = true;
+
+                        var demodded = from mod in m_data.ModeratorSet
+                                       where !mods.Contains(mod)
+                                       select mod;
+
+                        foreach (var former in demodded)
+                            former.IsModerator = false;
+
+                        m_data.ModeratorSet = mods;
                     }
                 }
                 else
@@ -305,6 +332,12 @@ namespace Winter
                     }
                 }
             }
+        }
+
+        private void UpdateMods()
+        {
+            m_lastModCheck = DateTime.Now;
+            m_client.LocalUser.SendMessage(m_channel, ".mods");
         }
 
         #region Diagnostic Events
@@ -361,61 +394,14 @@ namespace Winter
             var client = (IrcClient)sender;
             client.LocalUser.MessageReceived += client_LocalUser_MessageReceived;
             client.LocalUser.JoinedChannel += client_LocalUser_JoinedChannel;
-            client.LocalUser.LeftChannel += client_LocalUser_LeftChannel;
             m_registeredEvent.Set();
-        }
-
-        private void client_LocalUser_LeftChannel(object sender, IrcChannelEventArgs e)
-        {
-            WriteDiagnosticMessage("Left Channel: {0}: {1}", e.Channel, e.Comment);
         }
 
         private void client_LocalUser_JoinedChannel(object sender, IrcChannelEventArgs e)
         {
             m_joinedEvent.Set();
             m_channel = e.Channel;
-            m_channel.UserJoined += m_channel_UserJoined;
-            m_channel.UsersListReceived += m_channel_UsersListReceived;
             m_channel.MessageReceived += channel_MessageReceived;
-        }
-
-        void m_channel_UsersListReceived(object sender, EventArgs e)
-        {
-            foreach (var user in m_channel.Users)
-            {
-                CheckModeratorStatus(user);
-                user.ModesChanged += ChannelUser_ModesChanged;
-            }
-        }
-
-
-        void ChannelUser_ModesChanged(object sender, EventArgs e)
-        {
-            IrcChannelUser user = sender as IrcChannelUser;
-            if (user != null)
-                CheckModeratorStatus(user);
-        }
-
-
-        void m_channel_UserJoined(object sender, IrcChannelUserEventArgs e)
-        {
-            CheckModeratorStatus(e.ChannelUser);
-            e.ChannelUser.ModesChanged += ChannelUser_ModesChanged;
-        }
-
-
-        private void CheckModeratorStatus(IrcChannelUser chanUser)
-        {
-            string username = chanUser.User.NickName;
-
-            bool op = chanUser.Modes.Contains('o');
-            TwitchUser user = m_data.GetUser(username, op);
-
-            if (user != null && user.IsModerator != op)
-            {
-                user.IsModerator = op;
-                OnInformModerator(user, op);
-            }
         }
 
         private void client_Connected(object sender, EventArgs e)
@@ -446,13 +432,6 @@ namespace Winter
             var msgRcv = MessageReceived;
             if (msgRcv != null)
                 msgRcv(this, user, e.Text);
-        }
-
-        protected void OnInformModerator(TwitchUser user, bool moderator)
-        {
-            var evt = InformModerator;
-            if (evt != null)
-                evt(this, user, moderator);
         }
 
         protected void OnInformSubscriber(string username)
@@ -490,8 +469,10 @@ namespace Winter
         private ManualResetEventSlim m_disconnectedEvent = new ManualResetEventSlim(false);
         private IrcClient m_client;
         private string m_stream;
-        TwitchData m_data;
+        private TwitchUsers m_data;
         private IrcChannel m_channel;
+        private DateTime m_lastModCheck = DateTime.Now;
+        private object m_modSync = new object();
         #endregion
     }
 }

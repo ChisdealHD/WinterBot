@@ -27,7 +27,8 @@ namespace Winter
 
     public class WinterBot : IDisposable
     {
-        private TwitchClient m_twitch;
+        TwitchClient m_twitch;
+        TwitchUsers m_data = new TwitchUsers();
         ConcurrentQueue<Tuple<Delegate, object[]>> m_events = new ConcurrentQueue<Tuple<Delegate, object[]>>();
         AutoResetEvent m_event = new AutoResetEvent(false);
         string m_channel;
@@ -42,18 +43,6 @@ namespace Winter
         Thread m_streamLiveThread;
 
         #region Events
-        /// <summary>
-        /// Fired when a user gains moderator status.  This happens when the
-        /// streamer promotes a user to a moderator, or simply when a moderator
-        /// joins the chat.
-        /// </summary>
-        public event UserEventHandler ModeratorAdded;
-
-        /// <summary>
-        /// Fired when a moderator's status has been downgraded to normal user.
-        /// </summary>
-        public event UserEventHandler ModeratorRemoved;
-
         /// <summary>
         /// Fired when a user subscribes to the channel.
         /// </summary>
@@ -182,11 +171,11 @@ namespace Winter
 
         public Options Options { get { return m_options; } }
 
-        public TwitchData UserData
+        public TwitchUsers Users
         {
             get
             {
-                return m_twitch.ChannelData;
+                return m_data;
             }
         }
 
@@ -198,11 +187,10 @@ namespace Winter
             MessageReceived += TryProcessCommand;
             LastMessageSent = DateTime.Now;
 
-            m_twitch = new TwitchClient();
+            m_twitch = new TwitchClient(m_data);
             m_twitch.InformChatClear += ClearChatHandler;
             m_twitch.MessageReceived += ChatMessageReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
-            m_twitch.InformModerator += InformModerator;
 
             LoadRegulars();
             LoadExtensions();
@@ -344,16 +332,6 @@ namespace Winter
         private void SubscribeHandler(TwitchClient source, TwitchUser user)
         {
             var evt = UserSubscribed;
-            if (evt != null)
-            {
-                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
-                m_event.Set();
-            }
-        }
-
-        void InformModerator(TwitchClient sender, TwitchUser user, bool moderator)
-        {
-            var evt = moderator ? ModeratorAdded : ModeratorRemoved;
             if (evt != null)
             {
                 m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
