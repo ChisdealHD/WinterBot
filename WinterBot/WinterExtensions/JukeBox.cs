@@ -11,7 +11,9 @@ namespace WinterExtensions
     public class JukeBox
     {
         bool m_enabled;
-        Stopwatch m_lastMessage = new Stopwatch();
+        bool m_streamDead = false;
+        DateTime m_lastOffline = DateTime.Now;
+        DateTime m_lastMessage = DateTime.Now;
         string m_message = " Tonight we are doing song requests! For a $2.50 donation at http://streamdonations.net/c/zlfreebird you can have a single song played! Just link to youtube in the message, and keep it less than 6 minutes.";
 
         public JukeBox(WinterBot bot)
@@ -25,17 +27,30 @@ namespace WinterExtensions
             {
                 if (!sender.IsStreamLive)
                 {
-                    m_enabled = false;
-                    sender.SendMessage("Disabling jukebox mode.");
-                    m_lastMessage.Stop();
+                    if (!m_streamDead)
+                    {
+                        m_streamDead = true;
+                        m_lastOffline = DateTime.Now;
+                    }
+                    else if (m_lastOffline.Elapsed().TotalMinutes >= 10)
+                    {
+                        m_enabled = false;
+                        m_streamDead = false;
+                        sender.SendMessage("Disabling jukebox mode.");
+                    }
+                }
+                else
+                {
+                    m_streamDead = false;
                 }
             }
 
-            if (m_enabled && m_lastMessage.Elapsed.TotalMinutes >= 7)
+            if (m_enabled && m_lastMessage.Elapsed().TotalMinutes >= 7)
                 SendMessage(sender);
         }
         
-        [BotCommand(AccessLevel.Normal, "jukebox")]
+
+        [BotCommand(AccessLevel.Normal, "jukebox", "jukeboxmode")]
         public void JukeBoxCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
             if (!m_enabled)
@@ -48,8 +63,8 @@ namespace WinterExtensions
                 if (value == "on")
                 {
                     m_enabled = true;
-                    m_lastMessage.Restart();
-                    sender.SendMessage("Jukebox mode enabled!  Use '!jukebox off' to turn it off.");
+                    m_lastMessage = DateTime.Now;
+                    sender.SendMessage("Jukebox mode enabled!  Use '!JukeboxMode off' to turn it off.");
                 }
                 else if (value == "off")
                 {
@@ -71,7 +86,6 @@ namespace WinterExtensions
                     else if (value == "off")
                     {
                         sender.SendMessage("Winter jukebox time is done for the night!  No more donations for songs until next time.");
-                        m_lastMessage.Stop();
                         m_enabled = false;
                     }
                     else
@@ -88,7 +102,7 @@ namespace WinterExtensions
 
         private void SendMessage(WinterBot bot)
         {
-            m_lastMessage.Restart();
+            m_lastMessage = DateTime.Now;
             bot.SendMessage(m_message);
         }
     }
