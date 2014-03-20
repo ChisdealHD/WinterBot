@@ -62,8 +62,8 @@ namespace Winter
             if (section != null)
             {
                 section.GetValue("automessage", ref m_autoMessage);
-                section.GetValue("timeoutcaps", ref m_timeoutCaps);
-                section.GetValue("timeoutemotes", ref m_timeoutEmotes);
+                section.GetValue("timeoutcapsspam", ref m_timeoutCaps);
+                section.GetValue("timeoutemotespam", ref m_timeoutEmotes);
                 section.GetValue("timeouturls", ref m_timeoutUrls);
             }
 
