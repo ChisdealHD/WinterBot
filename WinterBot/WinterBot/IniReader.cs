@@ -48,6 +48,7 @@ namespace Winter
 
         public string GetValue(string key)
         {
+            key = key.ToLower();
             InitPairs();
 
             string value;
@@ -78,12 +79,13 @@ namespace Winter
             {
                 int i = line.IndexOf('=');
 
-                string name = line.Substring(0, i).Trim();
+                string name = line.Substring(0, i).Trim().ToLower();
                 string value = line.Substring(i + 1).Trim();
 
                 m_pairs[name] = value;
             }
         }
+
         public bool GetValue(string key, ref string value)
         {
             string data = GetValue(key);
@@ -93,8 +95,7 @@ namespace Winter
 
             return data != null;
         }
-
-
+        
         public bool GetValue(string key, ref int value)
         {
             string data = GetValue(key);

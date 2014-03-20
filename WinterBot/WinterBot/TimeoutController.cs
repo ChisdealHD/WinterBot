@@ -15,9 +15,9 @@ namespace Winter
     public class TimeoutController
     {
         const string s_urlExtensions = "arpa,com,edu,firm,gov,int,mil,mobi,nato,net,nom,org,store,web,me,ac,ad,ae,af,ag,ai,al,am,an,ao,aq,ar,as,at,au,aw,az,ba,bb,bd,be,bf,bg,bh,bi,bj,bm,bn,bo,br,bs,bt,bv,bw,by,bz,ca,cc,cf,cg,ch,ci,ck,cl,cm,cn,co,cr,cs,cu,cv,cx,cy,cz,de,dj,dk,dm,do,dz,ec,ee,eg,eh,er,es,et,eu,fi,fj,fk,fm,fo,fr,fx,ga,gb,gd,ge,gf,gh,gi,gl,gm,gn,gp,gq,gr,gs,gt,gu,gw,gy,hk,hm,hn,hr,ht,hu,id,ie,il,in,io,iq,ir,is,it,jm,jo,jp,ke,kg,kh,ki,km,kn,kp,kr,kw,ky,kz,la,lb,lc,li,lk,lr,ls,lt,lu,lv,ly,ma,mc,md,mg,mh,mk,ml,mm,mn,mo,mp,mq,mr,ms,mt,mu,mv,mw,mx,my,mz,na,nc,ne,nf,ng,ni,nl,no,np,nr,nt,nu,nz,om,pa,pe,pf,pg,ph,pk,pl,pm,pn,pr,pt,pw,py,qa,re,ro,ru,rw,sa,sb,sc,sd,se,sg,sh,si,sj,sk,sl,sm,sn,so,sr,st,su,sv,sy,sz,tc,td,tf,tg,th,tj,tk,tm,tn,to,tp,tr,tt,tv,tw,tz,ua,ug,uk,um,us,uy,uz,va,vc,ve,vg,vi,vn,vu,wf,ws,ye,yt,yu,za,zm,zr,zw";
-        private WinterBot m_winterBot;
-        
-        HashSet<string> m_permit = new HashSet<string>();
+        WinterBot m_winterBot;
+
+        HashSet<TwitchUser> m_permit = new HashSet<TwitchUser>();
 
         Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w-./?%&=]*)?", RegexOptions.IgnoreCase);
         List<Regex> m_urlWhitelist;
@@ -27,6 +27,9 @@ namespace Winter
         
         private HashSet<string> m_defaultImageSet;
         private Dictionary<int, HashSet<string>> m_imageSets;
+
+        Dictionary<TwitchUser, TimeoutCount> m_timeouts = new Dictionary<TwitchUser, TimeoutCount>();
+        Options m_options;
 
         int m_maxCaps = 16;
         int m_capsPercent = 70;
@@ -42,8 +45,10 @@ namespace Winter
         }
 
 
-        void LoadOptions(IniReader options)
+        void LoadOptions(Options options)
         {
+            m_options = options;
+
             // Load url lists
             var section = options.GetSectionByName("whitelist");
             if (section != null)
@@ -73,19 +78,22 @@ namespace Winter
         [BotCommand(AccessLevel.Mod, "deny")]
         public void Deny(WinterBot sender, TwitchUser user, string cmd, string value)
         {
-            value = value.Trim().ToLower();
+            value = value.Trim();
 
             if (!TwitchUsers.IsValidUserName(value))
+            {
+                sender.SendMessage("{0}: Usage: !deny [user]", user.Name);
                 return;
+            }
 
             user = sender.Users.GetUser(value);
             if (sender.CanUseCommand(user, AccessLevel.Regular))
                 return;
 
-            if (m_permit.Contains(value))
-                m_permit.Remove(value);
+            if (m_permit.Contains(user))
+                m_permit.Remove(user);
             else
-                sender.SendMessage("{0}: You are not allowed to post a link.  You couldn't anyway, but a mod thought you could use a reminder.", user.Name);
+                sender.SendMessage("{0}: You are not allowed to post a link.  You couldn't anyway, but someone thought you could use a reminder.", user.Name);
         }
 
         [BotCommand(AccessLevel.Mod, "permit")]
@@ -94,14 +102,13 @@ namespace Winter
             Debug.Assert(m_winterBot == sender);
 
             value = value.Trim().ToLower();
-
             if (!TwitchUsers.IsValidUserName(value))
             {
                 m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
                 return;
             }
 
-            m_permit.Add(value);
+            m_permit.Add(sender.Users.GetUser(value));
             m_winterBot.SendMessage("{0} -> {1} has been granted permission to post a single link.", user.Name, value);
         }
 
@@ -114,7 +121,7 @@ namespace Winter
             string clearReason = null;
 
             List<string> urls;
-            if (HasUrls(text, out urls))
+            if (m_options.TimeoutUrls && HasUrls(text, out urls))
             {
                 // Check bans.
                 if (MatchesAny(urls, m_urlBanlist))
@@ -125,26 +132,21 @@ namespace Winter
                 }
                 else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
                 {
-                    if (m_permit.Contains(user.Name))
-                    {
-                        m_permit.Remove(user.Name);
-                    }
+                    if (m_permit.Contains(user))
+                        m_permit.Remove(user);
                     else
-                    {
                         clearReason = "Only subscribers are allowed to post links.";
-                    }
                 }
             }
-
-            else if (HasSpecialCharacter(text))
+            else if (m_options.TimeoutSpecialChars && HasSpecialCharacter(text))
             {
                 clearReason = "Sorry, no special characters allowed.";
             }
-            else if (TooManyCaps(text))
+            else if (m_options.TimeoutCaps && TooManyCaps(text))
             {
                 clearReason = "Please don't spam caps.";
             }
-            else if (TooManyEmotes(user, text))
+            else if (m_options.TimeoutEmotes && TooManyEmotes(user, text))
             {
                 clearReason = "Please don't spam emotes.";
             }
@@ -158,9 +160,9 @@ namespace Winter
             bool shouldMessage = true;
             var now = DateTime.Now;
             TimeoutCount timeout;
-            if (!m_timeouts.TryGetValue(user.Name, out timeout))
+            if (!m_timeouts.TryGetValue(user, out timeout))
             {
-                timeout = m_timeouts[user.Name] = new TimeoutCount(now);
+                timeout = m_timeouts[user] = new TimeoutCount(now);
             }
             else
             {
@@ -168,6 +170,7 @@ namespace Winter
 
                 int curr = timeout.Count;
                 int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 15;
+
                 if (diff > 0)
                     curr -= diff;
 
@@ -213,7 +216,6 @@ namespace Winter
             }
         }
 
-        Dictionary<string, TimeoutCount> m_timeouts = new Dictionary<string, TimeoutCount>();
 
         class TimeoutCount
         {
@@ -317,7 +319,7 @@ namespace Winter
         }
 
 
-        static bool HasSpecialCharacter(string str)
+        bool HasSpecialCharacter(string str)
         {
             for (int i = 0; i < str.Length; ++i)
                 if (!Allowed(str[i]))
@@ -326,7 +328,7 @@ namespace Winter
             return false;
         }
 
-        static bool Allowed(char c)
+        bool Allowed(char c)
         {
             if (c < 255)
                 return true;
@@ -335,7 +337,7 @@ namespace Winter
             if (0x2010 <= c && c <= 0x2049)
                 return true;
 
-            return c == '♥' || c == '…' || c == '€' || IsKoreanCharacter(c);
+            return c == '♥' || c == '…' || c == '€' || (m_options.AllowKorean && IsKoreanCharacter(c));
         }
 
         static bool IsKoreanCharacter(char c)
