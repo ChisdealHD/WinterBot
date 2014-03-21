@@ -34,6 +34,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -51,10 +52,6 @@
     <ProjectReference Include="..\WinterBot\WinterBot.csproj">
       <Project>{7463a6b3-6c12-4d9d-83ab-652c11db0f51}</Project>
       <Name>WinterBot</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WinterExtensions\WinterExtensions.csproj">
-      <Project>{9d1e431f-a8cb-43ab-8486-ed18313b8582}</Project>
-      <Name>WinterExtensions</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

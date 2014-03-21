@@ -4,8 +4,9 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
+using Winter;
 
-namespace Winter
+namespace WinterExtensions
 {
     class Program
     {
@@ -32,13 +33,14 @@ namespace Winter
 
             var verInfo = FileVersionInfo.GetVersionInfo(thisExe);
             string version = string.Format("{0}.{1}", verInfo.ProductMajorPart, verInfo.FileMinorPart);
-
             Console.WriteLine("Winterbot {0}", version);
             Console.WriteLine("Using data folder: {0}", GetDataFolder(options.Data));
             Console.WriteLine("Press Q to quit safely.");
             Console.WriteLine();
 
             WinterBot bot = new WinterBot(options, options.Channel, options.Username, options.Password);
+            bot.AddCommands(new JukeBox(bot));
+            bot.AddCommands(new Betting(bot));
 
             bot.Connected += delegate(WinterBot b) { WriteLine("Connected to channel: {0}", options.Channel); };
             bot.MessageReceived += delegate(WinterBot b, TwitchUser user, string text) { s_messages++; };

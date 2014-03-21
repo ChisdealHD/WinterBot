@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinterBot", "WinterBot\Wint
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinterBotConsole", "WinterBotConsole\WinterBotConsole.csproj", "{079AFCFD-FE1C-44AB-87CC-1E23E8D3BA1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinterExtensions", "WinterExtensions\WinterExtensions.csproj", "{9D1E431F-A8CB-43AB-8486-ED18313B8582}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtendedConsole", "WinterExtensions\ExtendedConsole.csproj", "{9D1E431F-A8CB-43AB-8486-ED18313B8582}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

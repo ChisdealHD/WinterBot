@@ -43,10 +43,10 @@ namespace Winter
             IniSection section = GetSectionByName("stream");
             if (section == null)
                 throw new InvalidOperationException("Options file missing [Stream] section.");
-            
-            GetStringValue(section, out m_stream, "stream", section.GetValue("stream"));
-            GetStringValue(section, out m_twitchName, "twitchname", section.GetValue("twitchname") ?? section.GetValue("user") ?? section.GetValue("username"));
-            GetStringValue(section, out m_oauthPass, "oauth", section.GetValue("oauth") ?? section.GetValue("pass") ?? section.GetValue("password"));
+
+            m_stream = section.GetValue("stream");
+            m_twitchName = section.GetValue("twitchname") ?? section.GetValue("user") ?? section.GetValue("username");
+            m_oauthPass = section.GetValue("oauth") ?? section.GetValue("pass") ?? section.GetValue("password");
             section.GetValue("DataDirectory", ref m_dataDirectory);
 
             // Set defaults
@@ -70,14 +70,6 @@ namespace Winter
             section = GetSectionByName("chat");
             if (section != null)
                 section.GetValue("allowkorean", ref m_allowKorean);
-        }
-
-        private void GetStringValue(IniSection section, out string key, string name, string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new FormatException(string.Format("Section [{0}] is missing value '{1}'.", section.Name, name));
-
-            key = value;
         }
     }
 }

@@ -81,6 +81,11 @@ namespace Winter
         public event UnknownCommandHandler UnknownCommandReceived;
 
         /// <summary>
+        /// Called when the bot has connected to the user's channel.
+        /// </summary>
+        public event BotEventHandler Connected;
+
+        /// <summary>
         /// Called when the bot begins a clean shutdown (you may not get this event
         /// if the process is rudely killed).  This is followed by EndShutdown.  It
         /// is expected that BeingShutdown signals that a shutdown is about to occur
@@ -475,6 +480,13 @@ namespace Winter
         private bool Connect()
         {
             bool connected = m_twitch.Connect(m_channel, m_options.Username, m_options.Password);
+            if (connected)
+            {
+                var evt = Connected;
+                if (evt != null)
+                    evt(this);
+            }
+
             return connected;
         }
         #endregion
