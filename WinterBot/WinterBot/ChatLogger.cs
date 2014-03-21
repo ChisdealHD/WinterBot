@@ -115,6 +115,7 @@ namespace Winter
         Thread m_saveThread;
         volatile bool m_shutdown;
         string m_dataDirectory;
+        AutoResetEvent m_saveThreadSleep = new AutoResetEvent(false);
 
         string m_stream;
 
@@ -148,6 +149,7 @@ namespace Winter
         private void bot_BeginShutdown(WinterBot sender)
         {
             m_shutdown = true;
+            m_saveThreadSleep.Set();
         }
 
         private void bot_EndShutdown(WinterBot sender)
@@ -208,15 +210,17 @@ namespace Winter
             {
                 DateTime lastSave = DateTime.Now;
                 while (!m_shutdown && lastSave.Elapsed().TotalMinutes < 1)
-                    Thread.Sleep(250);
+                    if (m_saveThreadSleep.WaitOne(10000))
+                        break;
 
                 lock (m_saveSync)
                 {
-                    List<ChatEvent> events;
+                    List<ChatEvent> events = new List<ChatEvent>();
                     lock (m_sync)
                     {
-                        events = m_queue;
-                        m_queue = new List<ChatEvent>();
+                        var tmp = m_queue;
+                        m_queue = events;
+                        events = tmp;
                     }
 
                     if (events.Count == 0)
