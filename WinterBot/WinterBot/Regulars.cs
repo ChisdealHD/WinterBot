@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
-    public class BuiltinCommands
+    public class Regulars
     {
-        public BuiltinCommands(WinterBot sender)
+        public Regulars(WinterBot sender)
         {
         }
 

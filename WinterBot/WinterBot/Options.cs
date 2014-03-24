@@ -14,12 +14,12 @@ namespace Winter
 
         bool m_autoMessage, m_timeoutUrls, m_timeoutEmotes, m_timeoutCaps, m_timeoutSpecialChars, m_userCommands;
         bool m_allowKorean;
+        bool m_saveLog, m_saveBinaryLog, m_regulars;
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
         public string Password { get { return m_oauthPass; } }
-        public string Data { get { return m_dataDirectory; } }
-
+        public string DataDirectory { get { return m_dataDirectory; } }
         public bool AutoMessage { get { return m_autoMessage; } }
         public bool TimeoutUrls { get { return m_timeoutUrls; } }
         public bool TimeoutEmotes { get { return m_timeoutEmotes; } }
@@ -27,6 +27,10 @@ namespace Winter
         public bool TimeoutSpecialChars { get { return m_timeoutSpecialChars; } }
         public bool AllowKorean { get { return m_allowKorean; } }
         public bool UserCommands { get { return m_userCommands; } }
+        public bool SaveLog { get { return m_saveLog; } }
+        public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
+        public bool Regulars { get { return m_regulars;  } }
+        public bool Timeouts { get { return m_timeoutCaps || m_timeoutEmotes || m_timeoutSpecialChars || m_timeoutUrls; } }
 
         public Options(string filename)
             : base(filename)
@@ -57,6 +61,10 @@ namespace Winter
             m_timeoutSpecialChars = true;
             m_timeoutUrls = true;
             m_allowKorean = true;
+            m_saveLog = true;
+            m_saveBinaryLog = false;
+            m_userCommands = true;
+            m_regulars = true;
 
             section = GetSectionByName("features");
             if (section != null)
@@ -65,6 +73,10 @@ namespace Winter
                 section.GetValue("timeoutcapsspam", ref m_timeoutCaps);
                 section.GetValue("timeoutemotespam", ref m_timeoutEmotes);
                 section.GetValue("timeouturls", ref m_timeoutUrls);
+                section.GetValue("savelog", ref m_saveLog);
+                section.GetValue("savebinarylog", ref m_saveBinaryLog);
+                section.GetValue("usercommands", ref m_userCommands);
+                section.GetValue("regulars", ref m_regulars);
             }
 
             section = GetSectionByName("chat");

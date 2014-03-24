@@ -34,6 +34,12 @@
   <PropertyGroup>
     <StartupObject />
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\DarkAutumn.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="IrcDotNet">
       <HintPath>..\IrcDotNet.dll</HintPath>
@@ -52,7 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AutoMessage.cs" />
-    <Compile Include="BuiltinCommands.cs" />
+    <Compile Include="Regulars.cs" />
     <Compile Include="ChatLogger.cs" />
     <Compile Include="Helpers.cs" />
     <Compile Include="TimeoutController.cs" />
@@ -69,6 +75,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="DarkAutumn.snk" />
+    <None Include="options.ini" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

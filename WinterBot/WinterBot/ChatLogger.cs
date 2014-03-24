@@ -147,13 +147,9 @@ namespace Winter
         {
             var options = bot.Options;
             m_stream = options.Channel;
-            m_dataDirectory = options.Data;
-            var section = options.GetSectionByName("logging");
-            if (section != null)
-            {
-                section.GetValue("saveLog", ref m_saveReadableLog);
-                section.GetValue("saveCompressedLog", ref m_saveCompressedLog);
-            }
+            m_dataDirectory = options.DataDirectory;
+            m_saveReadableLog = options.SaveLog;
+            m_saveCompressedLog = options.SaveBinaryLog;
 
             if (m_saveReadableLog || m_saveCompressedLog)
             {

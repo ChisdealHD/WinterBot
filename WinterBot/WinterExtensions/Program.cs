@@ -34,7 +34,7 @@ namespace WinterExtensions
             var verInfo = FileVersionInfo.GetVersionInfo(thisExe);
             string version = string.Format("{0}.{1}", verInfo.ProductMajorPart, verInfo.FileMinorPart);
             Console.WriteLine("Winterbot {0}", version);
-            Console.WriteLine("Using data folder: {0}", GetDataFolder(options.Data));
+            Console.WriteLine("Using data folder: {0}", GetDataFolder(options.DataDirectory));
             Console.WriteLine("Press Q to quit safely.");
             Console.WriteLine();
 

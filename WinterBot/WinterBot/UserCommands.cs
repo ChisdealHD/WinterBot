@@ -63,7 +63,7 @@ namespace Winter
         public UserCommands(WinterBot bot)
         {
             m_stream = bot.Options.Channel;
-            m_dataDirectory = bot.Options.Data;
+            m_dataDirectory = bot.Options.DataDirectory;
             bot.UnknownCommandReceived += UnknownCommandReceived;
 
             LoadCommands();

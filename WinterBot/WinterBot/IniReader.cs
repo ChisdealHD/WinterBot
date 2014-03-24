@@ -166,7 +166,10 @@ namespace Winter
                 {
                     line = line.Trim();
 
-                    int comment = line.IndexOf(";");
+                    int semi = line.IndexOf(";");
+                    int hash = line.IndexOf("#");
+                    int comment = semi > hash ? semi : hash;
+
                     if (comment != -1)
                     {
                         line = line.Substring(0, comment);

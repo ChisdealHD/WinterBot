@@ -257,11 +257,20 @@ namespace Winter
 
         private void LoadExtensions()
         {
-            AddCommands(new BuiltinCommands(this));
-            AddCommands(new TimeoutController(this));
-            AddCommands(new AutoMessage(this));
-            AddCommands(new UserCommands(this));
-            AddCommands(new ChatLogger(this));
+            if (m_options.Regulars)
+                AddCommands(new Regulars(this));
+
+            if (m_options.SaveLog || m_options.SaveBinaryLog)
+                AddCommands(new ChatLogger(this));
+
+            if (m_options.Timeouts)
+                AddCommands(new TimeoutController(this));
+
+            if (m_options.AutoMessage)
+                AddCommands(new AutoMessage(this));
+
+            if (m_options.UserCommands)
+                AddCommands(new UserCommands(this));
         }
 
         public void AddCommands(object commands)
@@ -565,7 +574,7 @@ namespace Winter
 
         private string GetRegularFile()
         {
-            return Path.Combine(Options.Data, m_channel + "_regulars.txt");
+            return Path.Combine(Options.DataDirectory, m_channel + "_regulars.txt");
         }
 
         public bool IsRegular(TwitchUser user)

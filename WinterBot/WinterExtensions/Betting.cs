@@ -31,7 +31,7 @@ namespace WinterExtensions
 
         public Betting(WinterBot bot)
         {
-            m_dataDirectory = bot.Options.Data;
+            m_dataDirectory = bot.Options.DataDirectory;
             m_stream = bot.Options.Channel;
             LoadPoints();
             bot.Tick += bot_Tick;
