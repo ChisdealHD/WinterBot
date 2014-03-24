@@ -53,6 +53,11 @@ namespace Winter
         public event UserEventHandler InformSubscriber;
 
         /// <summary>
+        /// Fired when twitch informs us that a user is a moderator in this channel.
+        /// </summary>
+        public event ModeratorEventHandler InformModerator;
+
+        /// <summary>
         /// Fired when a user subscribes to the channel.
         /// </summary>
         public event UserEventHandler UserSubscribed;
@@ -77,6 +82,14 @@ namespace Winter
         /// Event handler for when users are timed out.
         /// </summary>
         public delegate void UserTimeoutHandler(TwitchClient sender, TwitchUser user, int duration);
+
+        /// <summary>
+        /// Event fired when moderator status changes for a user.
+        /// </summary>
+        /// <param name="sender">This object.</param>
+        /// <param name="user">The user whos status is changing.</param>
+        /// <param name="moderator">The moderator in question.</param>
+        public delegate void ModeratorEventHandler(TwitchClient sender, TwitchUser user, bool moderator);
         #endregion
 
         /// <summary>
@@ -402,7 +415,74 @@ namespace Winter
             m_joinedEvent.Set();
             m_channel = e.Channel;
             m_channel.MessageReceived += channel_MessageReceived;
+            m_channel.UserJoined += m_channel_UserJoined;
+            m_channel.UsersListReceived += m_channel_UsersListReceived;
         }
+
+        void m_channel_UsersListReceived(object sender, EventArgs e)
+        {
+            foreach (var user in m_channel.Users)
+            {
+                CheckModeratorStatus(user);
+                user.ModesChanged += ChannelUser_ModesChanged;
+            }
+        }
+
+
+        void ChannelUser_ModesChanged(object sender, EventArgs e)
+        {
+            IrcChannelUser user = sender as IrcChannelUser;
+            if (user != null)
+                CheckModeratorStatus(user);
+        }
+
+
+        void m_channel_UserJoined(object sender, IrcChannelUserEventArgs e)
+        {
+            CheckModeratorStatus(e.ChannelUser);
+            e.ChannelUser.ModesChanged += ChannelUser_ModesChanged;
+        }
+
+
+        private void CheckModeratorStatus(IrcChannelUser chanUser)
+        {
+            string username = chanUser.User.NickName;
+
+            bool op = chanUser.Modes.Contains('o');
+            TwitchUser user = m_data.GetUser(username, op);
+
+            if (user != null)
+            {
+                if (op)
+                {
+                    if (!m_mods.Contains(user))
+                    {
+                        OnInformModerator(user, true);
+                        m_mods.Add(user);
+                    }
+                }
+                else
+                {
+                    if (m_mods.Contains(user))
+                    {
+                        OnInformModerator(user, false);
+                        m_mods.Remove(user);
+                    }
+                }
+            }
+        }
+
+        HashSet<TwitchUser> m_mods = new HashSet<TwitchUser>();
+
+
+        protected void OnInformModerator(TwitchUser user, bool moderator)
+        {
+            var evt = InformModerator;
+            if (evt != null)
+                evt(this, user, moderator);
+        }
+
+
 
         private void client_Connected(object sender, EventArgs e)
         {

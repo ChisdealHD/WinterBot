@@ -44,6 +44,18 @@ namespace Winter
 
         #region Events
         /// <summary>
+        /// Fired when a user gains moderator status.  This happens when the
+        /// streamer promotes a user to a moderator, or simply when a moderator
+        /// joins the chat.
+        /// </summary>
+        public event UserEventHandler ModeratorAdded;
+
+        /// <summary>
+        /// Fired when a moderator's status has been downgraded to normal user.
+        /// </summary>
+        public event UserEventHandler ModeratorRemoved;
+
+        /// <summary>
         /// Fired when a user subscribes to the channel.
         /// </summary>
         public event UserEventHandler UserSubscribed;
@@ -196,6 +208,7 @@ namespace Winter
             m_twitch.InformChatClear += ClearChatHandler;
             m_twitch.MessageReceived += ChatMessageReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
+            m_twitch.InformModerator += InformModerator;
 
             LoadRegulars();
             LoadExtensions();
@@ -343,6 +356,17 @@ namespace Winter
                 m_event.Set();
             }
         }
+
+        void InformModerator(TwitchClient sender, TwitchUser user, bool moderator)
+        {
+            var evt = moderator ? ModeratorAdded : ModeratorRemoved;
+            if (evt != null)
+            {
+                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
+                m_event.Set();
+            }
+        }
+
 
         public void Shutdown()
         {

@@ -42,6 +42,8 @@ namespace WinterExtensions
             bot.AddCommands(new JukeBox(bot));
             bot.AddCommands(new Betting(bot));
 
+            bot.ModeratorRemoved += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator removed: {0}", user.Name); };
+            bot.ModeratorAdded += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator added: {0}", user.Name); };
             bot.Connected += delegate(WinterBot b) { WriteLine("Connected to channel: {0}", options.Channel); };
             bot.MessageReceived += delegate(WinterBot b, TwitchUser user, string text) { s_messages++; };
             bot.ChatClear += delegate(WinterBot b, TwitchUser user) { WriteLine("Chat Clear: {0}", user.Name); };

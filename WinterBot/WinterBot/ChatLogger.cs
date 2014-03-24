@@ -88,6 +88,29 @@ namespace Winter
             return base.ToString() + " banned by this bot.";
         }
     }
+
+    [Serializable]
+    class ChatModEvent : ChatEvent
+    {
+        private bool m_added;
+
+        [NonSerialized]
+        private List<TwitchUser> m_mods;
+
+        public ChatModEvent(TwitchUser user, bool added, IEnumerable<TwitchUser> mods)
+            : base(user)
+        {
+            m_added = added;
+            m_mods = new List<TwitchUser>(mods);
+        }
+
+        public override string ToString()
+        {
+            return base.ToString() + string.Format(" {0} chat. ({1})", m_added ? "joined" : "left", string.Join(", ", m_mods));
+        }
+    }
+
+
     [Serializable]
     class ChatTimeout : ChatEvent
     {
@@ -110,6 +133,7 @@ namespace Winter
         object m_sync = new object();
         volatile List<ChatEvent> m_queue = new List<ChatEvent>();
         HashSet<TwitchUser> m_timeouts = new HashSet<TwitchUser>();
+        HashSet<TwitchUser> m_mods = new HashSet<TwitchUser>();
         bool m_saveReadableLog = true;
         bool m_saveCompressedLog = true;
         Thread m_saveThread;
@@ -138,12 +162,31 @@ namespace Winter
                 bot.UserSubscribed += bot_UserSubscribed;
                 bot.UserBanned += bot_UserBanned;
                 bot.UserTimedOut += bot_UserTimedOut;
+                bot.ModeratorAdded += bot_ModeratorAdded;
+                bot.ModeratorRemoved += bot_ModeratorRemoved;
                 bot.BeginShutdown += bot_BeginShutdown;
                 bot.EndShutdown += bot_EndShutdown;
 
                 m_saveThread = new Thread(SaveThreadProc);
                 m_saveThread.Start();
             }
+        }
+
+        void bot_ModeratorRemoved(WinterBot sender, TwitchUser user)
+        {
+            if (m_mods.Contains(user))
+                m_mods.Remove(user);
+
+            lock (m_sync)
+                m_queue.Add(new ChatModEvent(user, false, m_mods));
+        }
+
+        void bot_ModeratorAdded(WinterBot sender, TwitchUser user)
+        {
+            m_mods.Add(user);
+
+            lock (m_sync)
+                m_queue.Add(new ChatModEvent(user, true, m_mods));
         }
 
         private void bot_BeginShutdown(WinterBot sender)
