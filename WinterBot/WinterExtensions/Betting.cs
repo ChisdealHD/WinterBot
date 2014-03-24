@@ -500,7 +500,7 @@ namespace WinterExtensions
                     }
                     else
                     {
-                        SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 100.)", user.Name);
+                        SendMessage(bot, "{0}:  Usage:  !bet [who] [amount].  (Minimum bet is 1, maximum bet is 500.)", user.Name);
                         return false;
                     }
                 }
