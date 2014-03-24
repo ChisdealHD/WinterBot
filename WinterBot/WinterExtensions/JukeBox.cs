@@ -56,7 +56,10 @@ namespace WinterExtensions
             if (!m_enabled)
             {
                 if (!sender.CanUseCommand(user, AccessLevel.Mod))
+                {
+                    sender.SendMessage("Winter is not currently accepting donations for song requests.");
                     return;
+                }
 
                 value = value.Trim().ToLower();
 
