@@ -138,7 +138,7 @@ namespace Winter
 
         private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
         {
-            bool shouldMessage = true;
+            bool shouldMessage = !string.IsNullOrEmpty(clearReason);
             var now = DateTime.Now;
             TimeoutCount timeout;
             if (!m_timeouts.TryGetValue(user, out timeout))
@@ -147,7 +147,7 @@ namespace Winter
             }
             else
             {
-                shouldMessage = (DateTime.Now > timeout.LastTimeout) && (DateTime.Now - timeout.LastTimeout).TotalMinutes > 60;
+                shouldMessage &= (DateTime.Now > timeout.LastTimeout) && (DateTime.Now - timeout.LastTimeout).TotalMinutes > 60;
 
                 int curr = timeout.Count;
                 int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 15;
