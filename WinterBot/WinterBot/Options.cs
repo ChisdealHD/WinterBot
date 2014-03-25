@@ -73,6 +73,7 @@ namespace Winter
                 section.GetValue("timeoutcapsspam", ref m_timeoutCaps);
                 section.GetValue("timeoutemotespam", ref m_timeoutEmotes);
                 section.GetValue("timeouturls", ref m_timeoutUrls);
+                section.GetValue("timeoutsymbols", ref m_timeoutSpecialChars);
                 section.GetValue("savelog", ref m_saveLog);
                 section.GetValue("savebinarylog", ref m_saveBinaryLog);
                 section.GetValue("usercommands", ref m_userCommands);
