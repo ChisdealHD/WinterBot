@@ -31,8 +31,6 @@ namespace Winter
         Dictionary<TwitchUser, TimeoutCount> m_timeouts = new Dictionary<TwitchUser, TimeoutCount>();
         Options m_options;
 
-        int m_maxEmotes = 3;
-
         public TimeoutController(WinterBot bot)
         {
             ThreadPool.QueueUserWorkItem(LoadEmoticons);
@@ -62,13 +60,6 @@ namespace Winter
 
             // Load URL extensions
             m_urlExtensions = new HashSet<string>(s_urlExtensions.Split(','));
-
-            // Load timeout variables
-            section = options.GetSectionByName("chat");
-            if (section != null)
-            {
-                section.GetValue("MaxEmotes", ref m_maxEmotes);
-            }
         }
         
         [BotCommand(AccessLevel.Mod, "deny")]
@@ -144,7 +135,7 @@ namespace Winter
             }
             else if (m_options.TimeoutEmotes && TooManyEmotes(user, text))
             {
-                clearReason = "Please don't spam emotes.";
+                clearReason = m_options.EmoteMessage;
             }
 
             if (clearReason != null)
@@ -246,7 +237,7 @@ namespace Winter
                 foreach (string item in m_defaultImageSet)
                 {
                     count += CountEmote(message, item);
-                    if (count > m_maxEmotes)
+                    if (count > m_options.EmoteMax)
                         return true;
                 }
             }
@@ -263,7 +254,7 @@ namespace Winter
                     foreach (string item in imageSet)
                     {
                         count += CountEmote(message, item);
-                        if (count > m_maxEmotes)
+                        if (count > m_options.EmoteMax)
                             return true;
                     }
                 }

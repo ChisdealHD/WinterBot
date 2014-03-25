@@ -18,6 +18,8 @@ namespace Winter
         private int m_maxCaps;
         private int m_maxCapsPercent;
         private string m_capsMessage;
+        private int m_emoteMax;
+        private string m_emoteMessage;
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
@@ -38,6 +40,9 @@ namespace Winter
         public int MaxCaps { get { return m_maxCaps; } }
         public int MaxCapsPercent { get { return m_maxCapsPercent; } }
         public string CapsTimeoutMesssage { get { return m_capsMessage ?? "Please don't spam caps."; } }
+
+        public int EmoteMax { get { return m_emoteMax; } }
+        public string EmoteMessage { get { return m_emoteMessage ?? "Please don't spam emotes."; } }
 
         public Options(string filename)
             : base(filename)
@@ -96,6 +101,16 @@ namespace Winter
                 section.GetValue("maxcaps", ref m_maxCaps);
                 section.GetValue("maxcapspercent", ref m_maxCapsPercent);
                 section.GetValue("message", ref m_capsMessage);
+            }
+
+            m_emoteMax = 3;
+            m_emoteMessage = "";
+
+            section = GetSectionByName("emotetimeout");
+            if (section != null)
+            {
+                section.GetValue("maxemotes", ref m_emoteMax);
+                section.GetValue("message", ref m_emoteMessage);
             }
 
             section = GetSectionByName("chat");
