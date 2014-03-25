@@ -31,8 +31,6 @@ namespace Winter
         Dictionary<TwitchUser, TimeoutCount> m_timeouts = new Dictionary<TwitchUser, TimeoutCount>();
         Options m_options;
 
-        int m_maxCaps = 16;
-        int m_capsPercent = 70;
         int m_maxEmotes = 3;
 
         public TimeoutController(WinterBot bot)
@@ -69,8 +67,6 @@ namespace Winter
             section = options.GetSectionByName("chat");
             if (section != null)
             {
-                section.GetValue("MaxCaps", ref m_maxCaps);
-                section.GetValue("MaxCapsPercent", ref m_capsPercent);
                 section.GetValue("MaxEmotes", ref m_maxEmotes);
             }
         }
@@ -144,7 +140,7 @@ namespace Winter
             }
             else if (m_options.TimeoutCaps && TooManyCaps(text))
             {
-                clearReason = "Please don't spam caps.";
+                clearReason = m_options.CapsTimeoutMesssage;
             }
             else if (m_options.TimeoutEmotes && TooManyEmotes(user, text))
             {
@@ -291,7 +287,9 @@ namespace Winter
 
         private bool TooManyCaps(string message)
         {
-            if (m_maxCaps <= 0 || m_capsPercent <= 0)
+            int maxCaps = m_options.MaxCaps;
+            int capsPercent = m_options.MaxCapsPercent;
+            if (maxCaps <= 0 || capsPercent <= 0)
                 return false;
 
             int upper = 0;
@@ -307,15 +305,14 @@ namespace Winter
 
             int total = lower + upper;
             
-            if (m_maxCaps > 0 && total < m_maxCaps)
+            if (maxCaps > 0 && total < maxCaps)
                 return false;
 
             int percent = 100 * upper / total;
-            if (m_capsPercent > 0 && percent < m_capsPercent)
+            if (capsPercent > 0 && percent < capsPercent)
                 return false;
 
             return true;
-
         }
 
 

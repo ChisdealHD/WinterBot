@@ -15,6 +15,9 @@ namespace Winter
         bool m_autoMessage, m_timeoutUrls, m_timeoutEmotes, m_timeoutCaps, m_timeoutSpecialChars, m_userCommands;
         bool m_allowKorean;
         bool m_saveLog, m_saveBinaryLog, m_regulars;
+        private int m_maxCaps;
+        private int m_maxCapsPercent;
+        private string m_capsMessage;
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
@@ -31,6 +34,10 @@ namespace Winter
         public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
         public bool Regulars { get { return m_regulars;  } }
         public bool Timeouts { get { return m_timeoutCaps || m_timeoutEmotes || m_timeoutSpecialChars || m_timeoutUrls; } }
+
+        public int MaxCaps { get { return m_maxCaps; } }
+        public int MaxCapsPercent { get { return m_maxCapsPercent; } }
+        public string CapsTimeoutMesssage { get { return m_capsMessage ?? "Please don't spam caps."; } }
 
         public Options(string filename)
             : base(filename)
@@ -78,6 +85,17 @@ namespace Winter
                 section.GetValue("savebinarylog", ref m_saveBinaryLog);
                 section.GetValue("usercommands", ref m_userCommands);
                 section.GetValue("regulars", ref m_regulars);
+            }
+
+            m_maxCaps = 16;
+            m_maxCapsPercent = 70;
+
+            section = GetSectionByName("capstimeout");
+            if (section != null)
+            {
+                section.GetValue("maxcaps", ref m_maxCaps);
+                section.GetValue("maxcapspercent", ref m_maxCapsPercent);
+                section.GetValue("message", ref m_capsMessage);
             }
 
             section = GetSectionByName("chat");
