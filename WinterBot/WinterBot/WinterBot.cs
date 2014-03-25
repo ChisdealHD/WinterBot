@@ -19,12 +19,11 @@ namespace Winter
 
     public delegate void WinterBotCommand(WinterBot sender, TwitchUser user, string cmd, string value);
 
-    public enum DiagnosticLevel
+    public enum DiagnosticFacility
     {
-        Diagnostic,
-        Notify,
-        Warning,
-        Error
+        UserError,
+        Ban,
+        Twitch
     }
 
     public class WinterBot : IDisposable
@@ -45,6 +44,8 @@ namespace Winter
         Thread m_streamLiveThread;
 
         #region Events
+        public event DiagnosticEventHandler DiagnosticMessage;
+
         /// <summary>
         /// Fired when a user gains moderator status.  This happens when the
         /// streamer promotes a user to a moderator, or simply when a moderator
@@ -152,6 +153,14 @@ namespace Winter
         /// <param name="cmd">The command used, with the !.</param>
         /// <param name="value"></param>
         public delegate void UnknownCommandHandler(WinterBot sender, TwitchUser user, string cmd, string value);
+
+        /// <summary>
+        /// Event when a diagnostic event happens in the bot.
+        /// </summary>
+        /// <param name="sender">The bot sending the event.</param>
+        /// <param name="facility">The type of event occurring.</param>
+        /// <param name="message">The message.</param>
+        public delegate void DiagnosticEventHandler(WinterBot sender, DiagnosticFacility facility, string message);
         #endregion
 
         public DateTime LastMessageSent { get; set; }
@@ -310,14 +319,16 @@ namespace Winter
             m_commands[cmd] = new CmdValue(command, requiredAccess);
         }
 
-        public void WriteDiagnostic(DiagnosticLevel level, string msg)
+        public void WriteDiagnostic(DiagnosticFacility facility, string msg)
         {
-            Console.WriteLine(msg);
+            var evt = DiagnosticMessage;
+            if (evt != null)
+                evt(this, facility, msg);
         }
 
-        public void WriteDiagnostic(DiagnosticLevel level, string msg, params object[] values)
+        public void WriteDiagnostic(DiagnosticFacility facility, string msg, params object[] values)
         {
-            WriteDiagnostic(level, string.Format(msg, values));
+            WriteDiagnostic(facility, string.Format(msg, values));
         }
 
         public void SendResponse(string msg)

@@ -67,7 +67,6 @@ namespace WinterExtensions
 
             m_currentRound = new BettingRound(this, user, values, confirm, time);
             WriteOpenBetMessage(sender, true);
-            sender.WriteDiagnostic(DiagnosticLevel.Diagnostic, "Started betting: " + string.Join(", ", values));
         }
 
         [BotCommand(AccessLevel.Mod, "cancelbetting", "cancelbet")]

@@ -83,7 +83,7 @@ namespace Winter
             value = value.Trim().ToLower();
             if (!TwitchUsers.IsValidUserName(value))
             {
-                m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
+                m_winterBot.WriteDiagnostic(DiagnosticFacility.UserError, "{0}: Invalid username '{1}.", cmd, value);
                 return;
             }
 
@@ -109,7 +109,7 @@ namespace Winter
                     if (!string.IsNullOrEmpty(m_options.UrlBanMessage))
                         sender.TimeoutMessage("{0}: {1}", user.Name, m_options.UrlBanMessage);
 
-                    m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
+                    m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
                 else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
                 {

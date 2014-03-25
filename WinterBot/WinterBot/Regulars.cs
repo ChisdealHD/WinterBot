@@ -29,7 +29,7 @@ namespace Winter
             value = value.Trim().ToLower();
             if (!TwitchUsers.IsValidUserName(value))
             {
-                sender.WriteDiagnostic(DiagnosticLevel.Notify, "{0}: Invalid username '{1}.", cmd, value);
+                sender.WriteDiagnostic(DiagnosticFacility.UserError, "{0}: Invalid username '{1}.", cmd, value);
                 return;
             }
 
