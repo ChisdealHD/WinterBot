@@ -21,6 +21,8 @@ namespace Winter
         private int m_emoteMax;
         private string m_emoteMessage;
         string m_specialCharMesssage;
+        string m_urlTimeoutMessage, m_urlBanMessage;
+        string[] m_whitelist, m_blacklist, m_banlist;
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
@@ -46,6 +48,12 @@ namespace Winter
         public string EmoteMessage { get { return m_emoteMessage ?? "Please don't spam emotes."; } }
 
         public string SpecialCharMessage { get { return m_specialCharMesssage ?? "Sorry, no special characters allowed."; } }
+        public string UrlTimeoutMessage { get { return m_urlTimeoutMessage ?? "Sorry, links are not allowed."; } }
+        public string UrlBanMessage { get { return m_urlBanMessage ?? "Banned."; } }
+
+        public string[] UrlWhitelist { get { return m_whitelist ?? new string[0]; } }
+        public string[] UrlBlacklist { get { return m_blacklist ?? new string[0]; } }
+        public string[] UrlBanlist { get { return m_banlist; } }
 
         public Options(string filename)
             : base(filename)
@@ -122,6 +130,25 @@ namespace Winter
                 section.GetValue("allowkorean", ref m_allowKorean);
                 section.GetValue("message", ref m_specialCharMesssage);
             }
+
+            section = GetSectionByName("urltimeout");
+            if (section != null)
+            {
+                section.GetValue("message", ref m_urlTimeoutMessage);
+                section.GetValue("banmessage", ref m_urlBanMessage);
+            }
+
+            section = GetSectionByName("whitelist");
+            if (section != null)
+                m_whitelist = (from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select r).ToArray();
+
+            section = GetSectionByName("blacklist");
+            if (section != null)
+                m_blacklist = (from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select r).ToArray();
+
+            section = GetSectionByName("banlist");
+            if (section != null)
+                m_banlist = (from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select r).ToArray();
         }
     }
 }

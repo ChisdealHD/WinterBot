@@ -46,17 +46,9 @@ namespace Winter
             m_options = options;
 
             // Load url lists
-            var section = options.GetSectionByName("whitelist");
-            if (section != null)
-                m_urlWhitelist = new List<Regex>(from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select new Regex(r, RegexOptions.IgnoreCase));
-
-            section = options.GetSectionByName("blacklist");
-            if (section != null)
-                m_urlBlacklist = new List<Regex>(from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select new Regex(r, RegexOptions.IgnoreCase));
-
-            section = options.GetSectionByName("banlist");
-            if (section != null)
-                m_urlBanlist = new List<Regex>(from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select new Regex(r, RegexOptions.IgnoreCase));
+            m_urlWhitelist = new List<Regex>(m_options.UrlWhitelist.Select(s=>new Regex(s, RegexOptions.IgnoreCase)));
+            m_urlBlacklist = new List<Regex>(m_options.UrlBlacklist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
+            m_urlBanlist = new List<Regex>(m_options.UrlBanlist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
 
             // Load URL extensions
             m_urlExtensions = new HashSet<string>(s_urlExtensions.Split(','));
@@ -114,6 +106,8 @@ namespace Winter
                 if (MatchesAny(urls, m_urlBanlist))
                 {
                     m_winterBot.Ban(user);
+                    if (!string.IsNullOrEmpty(m_options.UrlBanMessage))
+                        sender.SendMessage("{0}: {1}", user.Name, m_options.UrlBanMessage);
 
                     m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
@@ -122,7 +116,7 @@ namespace Winter
                     if (m_permit.Contains(user))
                         m_permit.Remove(user);
                     else
-                        clearReason = "Only subscribers are allowed to post links.";
+                        clearReason = m_options.UrlTimeoutMessage;
                 }
             }
             else if (m_options.TimeoutSpecialChars && HasSpecialCharacter(text))
@@ -212,9 +206,7 @@ namespace Winter
                 Count = 1;
             }
 
-
             public DateTime LastTimeout { get; set; }
-
             public int Count { get; set; }
         }
 
