@@ -14,8 +14,7 @@ namespace Winter
     {
         Message,
         Response,
-        Timeout,
-        Unconditional
+        Timeout
     }
 
     public delegate void WinterBotCommand(WinterBot sender, TwitchUser user, string cmd, string value);
@@ -352,6 +351,19 @@ namespace Winter
             Send(MessageType.Message, msg);
         }
 
+        internal void SendUnconditional(string msg, params string[] args)
+        {
+            SendUnconditional(string.Format(msg, args));
+        }
+
+        internal void SendUnconditional(string msg)
+        {
+            if (Passive)
+                return;
+
+            m_twitch.SendMessage(msg);
+            LastMessageSent = DateTime.Now;
+        }
 
 
         public void Send(MessageType type, string msg)
