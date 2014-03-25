@@ -132,7 +132,6 @@ namespace Winter
         object m_saveSync = new object();
         object m_sync = new object();
         volatile List<ChatEvent> m_queue = new List<ChatEvent>();
-        HashSet<TwitchUser> m_timeouts = new HashSet<TwitchUser>();
         HashSet<TwitchUser> m_mods = new HashSet<TwitchUser>();
         bool m_saveReadableLog = true;
         bool m_saveCompressedLog = true;
@@ -198,20 +197,12 @@ namespace Winter
 
         void bot_UserTimedOut(WinterBot sender, TwitchUser user, int duration)
         {
-            lock (m_sync)
-            {
-                m_queue.Add(new ChatTimeout(user, duration));
-                m_timeouts.Add(user);
-            }
+            Enqueue(new ChatTimeout(user, duration));
         }
 
         void bot_UserBanned(WinterBot sender, TwitchUser user)
         {
-            lock (m_sync)
-            {
-                m_queue.Add(new ChatBanEvent(user));
-                m_timeouts.Add(user);
-            }
+            Enqueue(new ChatBanEvent(user));
         }
 
         void bot_UserSubscribed(WinterBot sender, TwitchUser user)
@@ -221,13 +212,7 @@ namespace Winter
 
         void bot_ChatClear(WinterBot sender, TwitchUser user)
         {
-            lock (m_sync)
-            {
-                if (m_timeouts.Contains(user))
-                    m_timeouts.Remove(user);
-                else
-                    m_queue.Add(new ChatClearEvent(user));
-            }
+            Enqueue(new ChatClearEvent(user));
         }
 
         void bot_MessageReceived(WinterBot sender, TwitchUser user, string text)
