@@ -15,8 +15,7 @@ namespace Winter
     public class TwitchUsers
     {
         static Regex s_validUsername = new Regex("[a-zA-Z][a-zA-Z0-9_]*");
-        List<TwitchUser> m_users;
-        Dictionary<string, TwitchUser> m_userMap;
+        Dictionary<string, TwitchUser> m_users;
         HashSet<TwitchUser> m_moderators;
         object m_sync = new object();
 
@@ -46,8 +45,7 @@ namespace Winter
 
         public TwitchUsers()
         {
-            m_users = new List<TwitchUser>();
-            m_userMap = new Dictionary<string, TwitchUser>();
+            m_users = new Dictionary<string, TwitchUser>();
         }
 
         public TwitchUser GetUser(string username, bool create=true)
@@ -57,23 +55,14 @@ namespace Winter
 
             lock (m_sync)
             {
-                if (!m_userMap.TryGetValue(username, out user) && create)
+                if (!m_users.TryGetValue(username, out user) && create)
                 {
-                    user = new TwitchUser(username, m_users.Count);
-                    m_users.Add(user);
-                    m_userMap[username] = user;
+                    user = new TwitchUser(username);
+                    m_users[username] = user;
                 }
             }
 
             return user;
-        }
-
-        public TwitchUser GetUser(int id)
-        {
-            lock (m_sync)
-            {
-                return m_users[id];
-            }
         }
 
 
@@ -88,8 +77,6 @@ namespace Winter
         public int[] IconSet { get; internal set; }
 
         public string Name { get; internal set; }
-        
-        public int Id { get; internal set; }
 
         public bool IsModerator { get; internal set; }
 
@@ -97,10 +84,9 @@ namespace Winter
 
         public bool IsTurbo { get; internal set; }
 
-        public TwitchUser(string name, int id)
+        public TwitchUser(string name)
         {
             Name = name.ToLower();
-            Id = id;
         }
 
         public override string ToString()
