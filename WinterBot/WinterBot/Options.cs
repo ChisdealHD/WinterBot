@@ -20,6 +20,7 @@ namespace Winter
         private string m_capsMessage;
         private int m_emoteMax;
         private string m_emoteMessage;
+        string m_specialCharMesssage;
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
@@ -43,6 +44,8 @@ namespace Winter
 
         public int EmoteMax { get { return m_emoteMax; } }
         public string EmoteMessage { get { return m_emoteMessage ?? "Please don't spam emotes."; } }
+
+        public string SpecialCharMessage { get { return m_specialCharMesssage ?? "Sorry, no special characters allowed."; } }
 
         public Options(string filename)
             : base(filename)
@@ -113,9 +116,12 @@ namespace Winter
                 section.GetValue("message", ref m_emoteMessage);
             }
 
-            section = GetSectionByName("chat");
+            section = GetSectionByName("symboltimeout");
             if (section != null)
+            {
                 section.GetValue("allowkorean", ref m_allowKorean);
+                section.GetValue("message", ref m_specialCharMesssage);
+            }
         }
     }
 }

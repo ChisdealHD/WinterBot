@@ -127,7 +127,7 @@ namespace Winter
             }
             else if (m_options.TimeoutSpecialChars && HasSpecialCharacter(text))
             {
-                clearReason = "Sorry, no special characters allowed.";
+                clearReason = m_options.SpecialCharMessage;
             }
             else if (m_options.TimeoutCaps && TooManyCaps(text))
             {
