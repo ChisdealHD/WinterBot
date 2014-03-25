@@ -131,9 +131,21 @@ namespace Winter
             {
                 clearReason = m_options.EmoteMessage;
             }
+            else if (m_options.TimeoutLongMessages && MessageTooLong(user, text))
+            {
+                clearReason = m_options.LongMessageTimeout;
+            }
 
             if (clearReason != null)
                 ClearChat(sender, user, clearReason);
+        }
+
+        private bool MessageTooLong(TwitchUser user, string text)
+        {
+            if (m_options.MaxMessageLength <= 0)
+                return false;
+
+            return text.Length > m_options.MaxMessageLength;
         }
 
         private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)

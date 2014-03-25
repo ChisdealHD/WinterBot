@@ -25,6 +25,10 @@ namespace Winter
         string[] m_whitelist, m_blacklist, m_banlist;
         bool m_passive;
 
+        bool m_timeoutLongMessages;
+        string m_longTimeoutMessage;
+        int m_maxMessageLength;
+
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
         public string Password { get { return m_oauthPass; } }
@@ -34,12 +38,13 @@ namespace Winter
         public bool TimeoutEmotes { get { return m_timeoutEmotes; } }
         public bool TimeoutCaps { get { return m_timeoutCaps; } }
         public bool TimeoutSpecialChars { get { return m_timeoutSpecialChars; } }
+        public bool TimeoutLongMessages { get { return m_timeoutLongMessages; } }
         public bool AllowKorean { get { return m_allowKorean; } }
         public bool UserCommands { get { return m_userCommands; } }
         public bool SaveLog { get { return m_saveLog; } }
         public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
         public bool Regulars { get { return m_regulars;  } }
-        public bool Timeouts { get { return m_timeoutCaps || m_timeoutEmotes || m_timeoutSpecialChars || m_timeoutUrls; } }
+        public bool Timeouts { get { return m_timeoutCaps || m_timeoutEmotes || m_timeoutSpecialChars || m_timeoutUrls || m_timeoutLongMessages; } }
 
         public int MaxCaps { get { return m_maxCaps; } }
         public int MaxCapsPercent { get { return m_maxCapsPercent; } }
@@ -52,10 +57,15 @@ namespace Winter
         public string UrlTimeoutMessage { get { return m_urlTimeoutMessage ?? "Sorry, links are not allowed."; } }
         public string UrlBanMessage { get { return m_urlBanMessage ?? "Banned."; } }
 
+        public string LongMessageTimeout { get { return m_longTimeoutMessage ?? "Sorry, your message was too long."; } }
+        public int MaxMessageLength { get { return m_maxMessageLength; } }
+
         public string[] UrlWhitelist { get { return m_whitelist ?? new string[0]; } }
         public string[] UrlBlacklist { get { return m_blacklist ?? new string[0]; } }
         public string[] UrlBanlist { get { return m_banlist; } }
         public bool Passive { get { return m_passive; } }
+
+        
 
         public Options(string filename)
             : base(filename)
@@ -86,6 +96,7 @@ namespace Winter
             m_timeoutEmotes = true;
             m_timeoutSpecialChars = true;
             m_timeoutUrls = true;
+            m_timeoutLongMessages = true;
             m_allowKorean = true;
             m_saveLog = true;
             m_saveBinaryLog = false;
@@ -98,6 +109,7 @@ namespace Winter
                 section.GetValue("automessage", ref m_autoMessage);
                 section.GetValue("timeoutcapsspam", ref m_timeoutCaps);
                 section.GetValue("timeoutemotespam", ref m_timeoutEmotes);
+                section.GetValue("timeoutlongmessages", ref m_timeoutLongMessages);
                 section.GetValue("timeouturls", ref m_timeoutUrls);
                 section.GetValue("timeoutsymbols", ref m_timeoutSpecialChars);
                 section.GetValue("savelog", ref m_saveLog);
@@ -139,6 +151,16 @@ namespace Winter
             {
                 section.GetValue("message", ref m_urlTimeoutMessage);
                 section.GetValue("banmessage", ref m_urlBanMessage);
+            }
+
+            m_timeoutLongMessages = true;
+            m_maxMessageLength = 300;
+
+            section = GetSectionByName("messagetimeout");
+            if (section != null)
+            {
+                section.GetValue("message", ref m_longTimeoutMessage);
+                section.GetValue("maxmessagelength", ref m_maxMessageLength);
             }
 
             section = GetSectionByName("whitelist");
