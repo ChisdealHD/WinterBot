@@ -36,7 +36,7 @@ namespace WinterExtensions
                     {
                         m_enabled = false;
                         m_streamDead = false;
-                        sender.SendMessage("Disabling jukebox mode.");
+                        sender.SendResponse("Disabling jukebox mode.");
                     }
                 }
                 else
@@ -57,7 +57,7 @@ namespace WinterExtensions
             {
                 if (!sender.CanUseCommand(user, AccessLevel.Mod))
                 {
-                    sender.SendMessage("Winter is not currently accepting donations for song requests.");
+                    sender.SendResponse("Winter is not currently accepting donations for song requests.");
                     return;
                 }
 
@@ -67,15 +67,15 @@ namespace WinterExtensions
                 {
                     m_enabled = true;
                     m_lastMessage = DateTime.Now;
-                    sender.SendMessage("Jukebox mode enabled!  Use '!JukeboxMode off' to turn it off.");
+                    sender.SendResponse("Jukebox mode enabled!  Use '!JukeboxMode off' to turn it off.");
                 }
                 else if (value == "off")
                 {
-                    sender.SendMessage("Jukebox mode is off.");
+                    sender.SendResponse("Jukebox mode is off.");
                 }
                 else
                 {
-                    sender.SendMessage("Usage: '!jukebox on' and '!jukebox off'.  Mod only.");
+                    sender.SendResponse("Usage: '!jukebox on' and '!jukebox off'.  Mod only.");
                 }
             }
             else
@@ -84,11 +84,11 @@ namespace WinterExtensions
                 {
                     if (value == "on")
                     {
-                        sender.SendMessage("Jukebox mode is already enabled.");
+                        sender.SendResponse("Jukebox mode is already enabled.");
                     }
                     else if (value == "off")
                     {
-                        sender.SendMessage("Winter jukebox time is done for the night!  No more donations for songs until next time.");
+                        sender.SendResponse("Winter jukebox time is done for the night!  No more donations for songs until next time.");
                         m_enabled = false;
                     }
                     else
@@ -106,7 +106,7 @@ namespace WinterExtensions
         private void SendMessage(WinterBot bot)
         {
             m_lastMessage = DateTime.Now;
-            bot.SendMessage(m_message);
+            bot.SendResponse(m_message);
         }
     }
 }

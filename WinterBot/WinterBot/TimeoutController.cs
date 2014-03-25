@@ -61,7 +61,7 @@ namespace Winter
 
             if (!TwitchUsers.IsValidUserName(value))
             {
-                sender.SendMessage("{0}: Usage: !deny [user]", user.Name);
+                sender.SendResponse("{0}: Usage: !deny [user]", user.Name);
                 return;
             }
 
@@ -72,7 +72,7 @@ namespace Winter
             if (m_permit.Contains(user))
                 m_permit.Remove(user);
             else
-                sender.SendMessage("{0}: You are not allowed to post a link.  You couldn't anyway, but someone thought you could use a reminder.", user.Name);
+                sender.SendResponse("{0}: You are not allowed to post a link.  You couldn't anyway, but someone thought you could use a reminder.", user.Name);
         }
 
         [BotCommand(AccessLevel.Mod, "permit")]
@@ -88,7 +88,7 @@ namespace Winter
             }
 
             m_permit.Add(sender.Users.GetUser(value));
-            m_winterBot.SendMessage("{0} -> {1} has been granted permission to post a single link.", user.Name, value);
+            m_winterBot.SendResponse("{0} -> {1} has been granted permission to post a single link.", user.Name, value);
         }
 
 
@@ -107,7 +107,7 @@ namespace Winter
                 {
                     m_winterBot.Ban(user);
                     if (!string.IsNullOrEmpty(m_options.UrlBanMessage))
-                        sender.SendMessage("{0}: {1}", user.Name, m_options.UrlBanMessage);
+                        sender.TimeoutMessage("{0}: {1}", user.Name, m_options.UrlBanMessage);
 
                     m_winterBot.WriteDiagnostic(DiagnosticLevel.Notify, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
@@ -169,28 +169,28 @@ namespace Winter
                 case 1:
                 case 2:
                     if (shouldMessage)
-                        sender.SendMessage("{0}: {1} (This is not a timeout.)", user.Name, clearReason);
+                        sender.Send(MessageType.Timeout, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
 
                     sender.ClearChat(user);
                     break;
 
                 case 3:
                     duration = 5;
-                    sender.SendMessage("{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
                     sender.Timeout(user, duration * 60);
                     timeout.LastTimeout = now.AddMinutes(duration);
                     break;
 
                 case 4:
                     duration = 10;
-                    sender.SendMessage("{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
                     sender.Timeout(user, duration * 60);
                     timeout.LastTimeout = now.AddMinutes(duration);
                     break;
 
                 default:
                     Debug.Assert(timeout.Count > 0);
-                    sender.SendMessage("{0}: {1} (8 hour timeout.)", user.Name, clearReason);
+                    sender.Send(MessageType.Timeout, "{0}: {1} (8 hour timeout.)", user.Name, clearReason);
                     sender.Timeout(user, 8 * 60 * 60);
                     timeout.LastTimeout = now.AddHours(8);
                     break;

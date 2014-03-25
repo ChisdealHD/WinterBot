@@ -15,6 +15,14 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
+    public enum MessageType
+    {
+        Message,
+        Response,
+        Timeout,
+        Unconditional
+    }
+
     public delegate void WinterBotCommand(WinterBot sender, TwitchUser user, string cmd, string value);
 
     public enum DiagnosticLevel
@@ -185,6 +193,8 @@ namespace Winter
         /// </summary>
         public string Title { get; set; }
 
+        public bool Silent { get; set; }
+        public bool Quiet { get; set; }
 
         public Options Options { get { return m_options; } }
 
@@ -306,15 +316,66 @@ namespace Winter
             WriteDiagnostic(level, string.Format(msg, values));
         }
 
+        public void SendResponse(string msg)
+        {
+            Send(MessageType.Response, msg);
+        }
+
+        public void SendResponse(string msg, params object[] param)
+        {
+            Send(MessageType.Response, string.Format(msg, param));
+        }
+
+        public void TimeoutMessage(string msg, params object[] param)
+        {
+            Send(MessageType.Timeout, string.Format(msg, param));
+        }
+
+        public void TimeoutMessage(string msg)
+        {
+            Send(MessageType.Timeout, msg);
+        }
+
+
+        public void SendMessage(string msg, params object[] param)
+        {
+            Send(MessageType.Message, string.Format(msg, param));
+        }
+
         public void SendMessage(string msg)
         {
+            Send(MessageType.Message, msg);
+        }
+
+
+
+        public void Send(MessageType type, string msg)
+        {
+            if (!AllowMessage(type))
+                return;
+
             m_twitch.SendMessage(msg);
             LastMessageSent = DateTime.Now;
         }
 
-        public void SendMessage(string fmt, params object[] param)
+        public void Send(MessageType type, string fmt, params object[] param)
         {
-            SendMessage(string.Format(fmt, param));
+            Send(type, string.Format(fmt, param));
+        }
+
+        private bool AllowMessage(MessageType type)
+        {
+            if (Silent)
+                return false;
+
+            switch (type)
+            {
+                case MessageType.Message:
+                case MessageType.Response:
+                    return !Quiet;
+            }
+
+            return true;
         }
 
 

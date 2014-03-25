@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AutoMessage.cs" />
+    <Compile Include="Quiet.cs" />
     <Compile Include="Regulars.cs" />
     <Compile Include="ChatLogger.cs" />
     <Compile Include="Helpers.cs" />

@@ -95,7 +95,7 @@ namespace Winter
                 level = AccessLevel.Normal;
             }
 
-            sender.SendMessage("Commands {0} can use: {1}", part, string.Join(", ", (from c in m_commands.Values where  c.AccessRequired <= level orderby c.AccessRequired, c.Command select c.Command)));
+            sender.SendResponse("Commands {0} can use: {1}", part, string.Join(", ", (from c in m_commands.Values where  c.AccessRequired <= level orderby c.AccessRequired, c.Command select c.Command)));
         }
         
         [BotCommand(AccessLevel.Mod, "remcom", "removecommand", "delcom", "delcommand")]
@@ -104,7 +104,7 @@ namespace Winter
             value = value.Trim().ToLower();
             if (value.Length == 0)
             {
-                sender.SendMessage(m_removeCommandUsage);
+                sender.SendResponse(m_removeCommandUsage);
                 return;
             }
 
@@ -119,7 +119,7 @@ namespace Winter
             }
             else
             {
-                sender.SendMessage(string.Format("Command {0} not found.", value));
+                sender.SendResponse(string.Format("Command {0} not found.", value));
             }
         }
 
@@ -130,14 +130,14 @@ namespace Winter
             string cmdValue = value.Trim();
             if (cmdValue.Length < 2)
             {
-                sender.SendMessage(m_addCommandUsage);
+                sender.SendResponse(m_addCommandUsage);
                 return;
             }
 
             string[] split = cmdValue.ToLower().Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
             if (split.Length < 2)
             {
-                sender.SendMessage(m_addCommandUsage);
+                sender.SendResponse(m_addCommandUsage);
                 return;
             }
 
@@ -172,7 +172,7 @@ namespace Winter
                         break;
 
                     default:
-                        sender.SendMessage(string.Format("Invalid user level {0}. {1}", access, m_addCommandUsage));
+                        sender.SendResponse(string.Format("Invalid user level {0}. {1}", access, m_addCommandUsage));
                         return;
                 }
             }
@@ -180,7 +180,7 @@ namespace Winter
 
             if (split[cmd].Length < 2 || split[cmd][0] != '!')
             {
-                sender.SendMessage(string.Format("User commands must start with a '!'. {0}", m_addCommandUsage));
+                sender.SendResponse(string.Format("User commands must start with a '!'. {0}", m_addCommandUsage));
                 return;
             }
 
@@ -189,7 +189,7 @@ namespace Winter
 
             if (cmdText[0] == '.' || cmdText[0] == '/')
             {
-                sender.SendMessage(string.Format("Cannot create a command which starts with a '{0}'.", cmdText[0]));
+                sender.SendResponse(string.Format("Cannot create a command which starts with a '{0}'.", cmdText[0]));
                 return;
             }
 
@@ -203,9 +203,9 @@ namespace Winter
             m_commands[cmdName] = userCommand;
 
             if (exists)
-                sender.SendMessage(string.Format("Updated command: !{0}.", cmdName));
+                sender.SendResponse(string.Format("Updated command: !{0}.", cmdName));
             else
-                sender.SendMessage(string.Format("Successfully added command: !{0}.", cmdName));
+                sender.SendResponse(string.Format("Successfully added command: !{0}.", cmdName));
 
             SaveCommands();
         }
@@ -222,7 +222,7 @@ namespace Winter
                     // Keep user commands from spamming chat, only one once every 20 seconds (unless you are a mod).
                     if (m_lastMessage.Elapsed().TotalSeconds >= 10 || sender.CanUseCommand(user, AccessLevel.Mod))
                     {
-                        sender.SendMessage(command.Value);
+                        sender.SendResponse(command.Value);
                         m_lastMessage = DateTime.Now;
                     }
                 }

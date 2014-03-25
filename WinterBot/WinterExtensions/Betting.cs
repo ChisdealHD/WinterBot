@@ -49,7 +49,7 @@ namespace WinterExtensions
         {
             if (IsBettingOpen || WaitingResult)
             {
-                sender.SendMessage("Betting is currently ongoing.  Use !result to award points, use !cancelbet to cancel the current bet.");
+                sender.SendResponse("Betting is currently ongoing.  Use !result to award points, use !cancelbet to cancel the current bet.");
                 return;
             }
 
@@ -61,7 +61,7 @@ namespace WinterExtensions
 
             if (values.Count < 2)
             {
-                sender.SendMessage("Usage: '!openbetting option1 option2'.");
+                sender.SendResponse("Usage: '!openbetting option1 option2'.");
                 return;
             }
 
@@ -75,7 +75,7 @@ namespace WinterExtensions
         {
             if (m_currentRound == null)
             {
-                sender.SendMessage("Betting is not currently open.");
+                sender.SendResponse("Betting is not currently open.");
                 return;
             }
 
@@ -100,9 +100,9 @@ namespace WinterExtensions
         private void PointsMessage(WinterBot sender, TwitchUser user, TwitchUser who, int points)
         {
             if (points > 0)
-                sender.SendMessage("{0}: Gave {1} points to {2}.  {2} now has {3} points.", user.Name, points, who.Name, GetPoints(who));
+                sender.SendResponse("{0}: Gave {1} points to {2}.  {2} now has {3} points.", user.Name, points, who.Name, GetPoints(who));
             else
-                sender.SendMessage("{0}: Took {1} points from {2}.  {2} now has {3} points.", user.Name, -points, who.Name, GetPoints(who));
+                sender.SendResponse("{0}: Took {1} points from {2}.  {2} now has {3} points.", user.Name, -points, who.Name, GetPoints(who));
         }
 
         [BotCommand(AccessLevel.Mod, "removepoints", "subpoints", "subtractpoints")]
@@ -156,14 +156,14 @@ namespace WinterExtensions
             var round = m_currentRound != null ? m_currentRound : m_lastRound;
             if (round == null)
             {
-                sender.SendMessage("Not currently waiting for results.");
+                sender.SendResponse("Not currently waiting for results.");
                 return;
             }
 
             result = result.Trim().ToLower();
             if (!round.Values.Contains(result))
             {
-                sender.SendMessage("{0}: '{1}' is not a voting option, options are: {2}", user.Name, result, string.Join(", ", round.Values));
+                sender.SendResponse("{0}: '{1}' is not a voting option, options are: {2}", user.Name, result, string.Join(", ", round.Values));
                 return;
             }
 
@@ -177,13 +177,13 @@ namespace WinterExtensions
             if (oldResult == null)
             {
                 if (round.Winners > 0 || round.Losers > 0)
-                    sender.SendMessage("Bet complete, results are tallied.  {0} people won, {1} people lost.", round.Winners, round.Losers);
+                    sender.SendResponse("Bet complete, results are tallied.  {0} people won, {1} people lost.", round.Winners, round.Losers);
                 else
-                    sender.SendMessage("Bet complete (no bets).");
+                    sender.SendResponse("Bet complete (no bets).");
             }
             else
             {
-                sender.SendMessage("Rolled back betting result '{0}', new result '{1}'.", oldResult, result);
+                sender.SendResponse("Rolled back betting result '{0}', new result '{1}'.", oldResult, result);
             }
 
             lock (m_sync)
@@ -210,7 +210,7 @@ namespace WinterExtensions
                 if (m_currentRound.OpenTime.Elapsed().TotalSeconds >= m_currentRound.Time)
                 {
                     m_currentRound.Open = false;
-                    sender.SendMessage("Betting is now closed.");
+                    sender.SendResponse("Betting is now closed.");
                 }
                 else if (m_currentRound.Time > 60 && m_lastOpenUpdate.Elapsed().TotalSeconds > 60)
                 {
@@ -226,7 +226,7 @@ namespace WinterExtensions
                     if (m_confirmRequest.Count == 1)
                     {
                         var item = m_confirmRequest.First();
-                        sender.SendMessage("{0}: Bet {1} points for {2}.", item.Key.Name, item.Value.Item2, item.Value.Item1);
+                        sender.SendResponse("{0}: Bet {1} points for {2}.", item.Key.Name, item.Value.Item2, item.Value.Item1);
                         m_confirmRequest.Clear();
                     }
                     else
@@ -248,7 +248,7 @@ namespace WinterExtensions
                         }
 
                         sb.Append('.');
-                        sender.SendMessage(sb.ToString());
+                        sender.SendResponse(sb.ToString());
 
                         if (users.Count == m_confirmRequest.Count)
                         {
@@ -270,11 +270,11 @@ namespace WinterExtensions
                         TwitchUser user = m_pointsRequest.First();
                         int points = GetPoints(user);
 
-                        sender.SendMessage("{0}: You have {1} points.", user, points);
+                        sender.SendResponse("{0}: You have {1} points.", user, points);
                     }
                     else
                     {
-                        sender.SendMessage("Point totals: " + string.Join(", ", from user in m_pointsRequest
+                        sender.SendResponse("Point totals: " + string.Join(", ", from user in m_pointsRequest
                                                                                 let name = user.Name
                                                                                 let points = GetPoints(user)
                                                                                 select string.Format("{0} has {1} points", name, points)));
@@ -355,7 +355,7 @@ namespace WinterExtensions
         {
             if (m_lastMessage.Elapsed().TotalSeconds >= 10)
             {
-                bot.SendMessage(fmt, args);
+                bot.SendResponse(fmt, args);
                 m_lastMessage = DateTime.Now;
             }
         }
@@ -401,13 +401,13 @@ namespace WinterExtensions
                         string timeStr = item.Substring(6);
                         if (!int.TryParse(timeStr, out time))
                         {
-                            bot.SendMessage("Usage: '!openbetting -time=[seconds] option1 option2'.  Minimum of 30 seconds, maximum of 600 seconds.");
+                            bot.SendResponse("Usage: '!openbetting -time=[seconds] option1 option2'.  Minimum of 30 seconds, maximum of 600 seconds.");
                             return null;
                         }
                     }
                     else
                     {
-                        bot.SendMessage("!openbetting: unknown option '{0}'", item);
+                        bot.SendResponse("!openbetting: unknown option '{0}'", item);
                         return null;
                     }
                 }
@@ -454,7 +454,7 @@ namespace WinterExtensions
 
         private static void AddPointsUsage(WinterBot bot, TwitchUser user, string cmd)
         {
-            bot.SendMessage("{0}:  Usage:  {1} [who] [amount].", user.Name, cmd);
+            bot.SendResponse("{0}:  Usage:  {1} [who] [amount].", user.Name, cmd);
         }
 
         private bool ParseBet(WinterBot bot, TwitchUser user, string value, out string who, out int bet)
@@ -518,7 +518,7 @@ namespace WinterExtensions
         {
             if (m_currentRound != null)
             {
-                sender.SendMessage("Betting is cancelled.");
+                sender.SendResponse("Betting is cancelled.");
                 m_currentRound.Open = false;
                 m_currentRound = null;
             }
@@ -528,7 +528,7 @@ namespace WinterExtensions
         private void WriteOpenBetMessage(WinterBot sender, bool first = false)
         {
             int time = first ? m_currentRound.Time : (int)(m_currentRound.Time - m_currentRound.OpenTime.Elapsed().TotalSeconds);
-            sender.SendMessage("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  Max bet is 100 points (or up to 25 if you have none), betting closes in {1} seconds.", string.Join(", ", m_currentRound.Values), time);
+            sender.SendResponse("Betting is now open, use '!bet [player] [amount]' to bet.  Current players: {0}.  Max bet is 100 points (or up to 25 if you have none), betting closes in {1} seconds.", string.Join(", ", m_currentRound.Values), time);
             m_lastOpenUpdate = m_lastMessage = DateTime.Now;
         }
     }

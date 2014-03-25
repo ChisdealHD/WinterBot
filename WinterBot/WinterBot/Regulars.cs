@@ -36,12 +36,12 @@ namespace Winter
             if (regular)
             {
                 sender.AddRegular(value);
-                sender.SendMessage("{0} added to regular list.", value);
+                sender.SendResponse("{0} added to regular list.", value);
             }
             else
             {
                 sender.RemoveRegular(value);
-                sender.SendMessage("{0} removed from regular list.", value);
+                sender.SendResponse("{0} removed from regular list.", value);
             }
         }
     }
