@@ -371,7 +371,7 @@ namespace Winter
         private void LoadEmoticons(object state)
         {
             var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(@"https://api.twitch.tv/kraken/chat/emoticons");
-            req.UserAgent = "Question Grabber Bot/0.0.0.1";
+            req.UserAgent = "WinterBot/0.0.1.0";
             var response = req.GetResponse();
             var fromStream = response.GetResponseStream();
 
