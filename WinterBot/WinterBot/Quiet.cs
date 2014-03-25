@@ -8,6 +8,10 @@ namespace Winter
 {
     class Quiet
     {
+        public Quiet(WinterBot bot)
+        {
+        }
+
         [BotCommand(AccessLevel.Mod, "silent", "silentmode")]
         public void SilentMode(WinterBot bot, TwitchUser user, string cmd, string value)
         {

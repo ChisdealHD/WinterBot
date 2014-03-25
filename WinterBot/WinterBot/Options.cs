@@ -23,6 +23,7 @@ namespace Winter
         string m_specialCharMesssage;
         string m_urlTimeoutMessage, m_urlBanMessage;
         string[] m_whitelist, m_blacklist, m_banlist;
+        bool m_passive;
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
@@ -54,6 +55,7 @@ namespace Winter
         public string[] UrlWhitelist { get { return m_whitelist ?? new string[0]; } }
         public string[] UrlBlacklist { get { return m_blacklist ?? new string[0]; } }
         public string[] UrlBanlist { get { return m_banlist; } }
+        public bool Passive { get { return m_passive; } }
 
         public Options(string filename)
             : base(filename)
@@ -75,6 +77,7 @@ namespace Winter
             m_twitchName = section.GetValue("twitchname") ?? section.GetValue("user") ?? section.GetValue("username");
             m_oauthPass = section.GetValue("oauth") ?? section.GetValue("pass") ?? section.GetValue("password");
             section.GetValue("DataDirectory", ref m_dataDirectory);
+            section.GetValue("passive", ref m_passive);
 
             // Set defaults
             var messages = GetSectionByName("messages");

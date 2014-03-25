@@ -4,13 +4,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 
 
 namespace Winter
@@ -195,6 +190,7 @@ namespace Winter
 
         public bool Silent { get; set; }
         public bool Quiet { get; set; }
+        public bool Passive { get; set; }
 
         public Options Options { get { return m_options; } }
 
@@ -210,6 +206,8 @@ namespace Winter
         {
             m_options = options;
             m_channel = channel.ToLower();
+
+            Passive = m_options.Passive;
 
             MessageReceived += TryProcessCommand;
             LastMessageSent = DateTime.Now;
@@ -239,6 +237,9 @@ namespace Winter
 
         public void Ban(TwitchUser user)
         {
+            if (Passive)
+                return;
+
             var evt = UserBanned;
             if (evt != null)
                 evt(this, user);
@@ -248,15 +249,17 @@ namespace Winter
 
         public void ClearChat(TwitchUser user)
         {
-            var evt = UserTimedOut;
-            if (evt != null)
-                evt(this, user, 1);
+            if (Passive)
+                return;
 
-            m_twitch.Timeout(user.Name, 1);
+            Timeout(user, 1);
         }
 
         public void Timeout(TwitchUser user, int duration = 600)
         {
+            if (Passive)
+                return;
+
             var evt = UserTimedOut;
             if (evt != null)
                 evt(this, user, duration);
@@ -281,6 +284,8 @@ namespace Winter
 
             if (m_options.UserCommands)
                 AddCommands(new UserCommands(this));
+
+            AddCommands(new Quiet(this));
         }
 
         public void AddCommands(object commands)
@@ -351,6 +356,9 @@ namespace Winter
 
         public void Send(MessageType type, string msg)
         {
+            if (Passive)
+                return;
+
             if (!AllowMessage(type))
                 return;
 
@@ -365,7 +373,7 @@ namespace Winter
 
         private bool AllowMessage(MessageType type)
         {
-            if (Silent)
+            if (Silent || Passive)
                 return false;
 
             switch (type)
