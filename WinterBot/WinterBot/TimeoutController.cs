@@ -30,6 +30,7 @@ namespace Winter
 
         Dictionary<TwitchUser, TimeoutCount> m_timeouts = new Dictionary<TwitchUser, TimeoutCount>();
         Options m_options;
+        UrlTimeoutOptions m_urlOptions;
 
         public TimeoutController(WinterBot bot)
         {
@@ -44,11 +45,12 @@ namespace Winter
         void LoadOptions(Options options)
         {
             m_options = options;
+            m_urlOptions = m_options.UrlOptions;
 
             // Load url lists
-            m_urlWhitelist = new List<Regex>(m_options.UrlWhitelist.Select(s=>new Regex(s, RegexOptions.IgnoreCase)));
-            m_urlBlacklist = new List<Regex>(m_options.UrlBlacklist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
-            m_urlBanlist = new List<Regex>(m_options.UrlBanlist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
+            m_urlWhitelist = new List<Regex>(m_urlOptions.Whitelist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
+            m_urlBlacklist = new List<Regex>(m_urlOptions.Blacklist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
+            m_urlBanlist = new List<Regex>(m_urlOptions.Banlist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
 
             // Load URL extensions
             m_urlExtensions = new HashSet<string>(s_urlExtensions.Split(','));
@@ -106,8 +108,8 @@ namespace Winter
                 if (MatchesAny(urls, m_urlBanlist))
                 {
                     m_winterBot.Ban(user);
-                    if (!string.IsNullOrEmpty(m_options.UrlBanMessage))
-                        sender.TimeoutMessage("{0}: {1}", user.Name, m_options.UrlBanMessage);
+                    if (!string.IsNullOrEmpty(m_urlOptions.BanMessage))
+                        sender.TimeoutMessage("{0}: {1}", user.Name, m_urlOptions.BanMessage);
 
                     m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
@@ -116,24 +118,24 @@ namespace Winter
                     if (m_permit.Contains(user))
                         m_permit.Remove(user);
                     else
-                        clearReason = m_options.UrlTimeoutMessage;
+                        clearReason = m_urlOptions.Message;
                 }
             }
             else if (m_options.TimeoutSpecialChars && HasSpecialCharacter(text))
             {
-                clearReason = m_options.SpecialCharMessage;
+                clearReason = m_options.SymbolOptions.Message;
             }
             else if (m_options.TimeoutCaps && TooManyCaps(text))
             {
-                clearReason = m_options.CapsTimeoutMesssage;
+                clearReason = m_options.CapsOptions.Message;
             }
             else if (m_options.TimeoutEmotes && TooManyEmotes(user, text))
             {
-                clearReason = m_options.EmoteMessage;
+                clearReason = m_options.EmoteOptions.Message;
             }
             else if (m_options.TimeoutLongMessages && MessageTooLong(user, text))
             {
-                clearReason = m_options.LongMessageTimeout;
+                clearReason = m_options.LengthOptions.Message;
             }
 
             if (clearReason != null)
@@ -142,10 +144,11 @@ namespace Winter
 
         private bool MessageTooLong(TwitchUser user, string text)
         {
-            if (m_options.MaxMessageLength <= 0)
+            var msgs = m_options.LengthOptions;
+            if (msgs.MaxLength <= 0)
                 return false;
 
-            return text.Length > m_options.MaxMessageLength;
+            return text.Length > msgs.MaxLength;
         }
 
         private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
@@ -241,7 +244,7 @@ namespace Winter
                 foreach (string item in m_defaultImageSet)
                 {
                     count += CountEmote(message, item);
-                    if (count > m_options.EmoteMax)
+                    if (count > m_options.EmoteOptions.Max)
                         return true;
                 }
             }
@@ -258,7 +261,7 @@ namespace Winter
                     foreach (string item in imageSet)
                     {
                         count += CountEmote(message, item);
-                        if (count > m_options.EmoteMax)
+                        if (count > m_options.EmoteOptions.Max)
                             return true;
                     }
                 }
@@ -282,9 +285,10 @@ namespace Winter
 
         private bool TooManyCaps(string message)
         {
-            int maxCaps = m_options.MaxCaps;
-            int capsPercent = m_options.MaxCapsPercent;
-            if (maxCaps <= 0 || capsPercent <= 0)
+            var caps = m_options.CapsOptions;
+            int minLength = caps.MinLength;
+            int capsPercent = caps.Percent;
+            if (minLength <= 0 || capsPercent <= 0)
                 return false;
 
             int upper = 0;
@@ -300,7 +304,7 @@ namespace Winter
 
             int total = lower + upper;
             
-            if (maxCaps > 0 && total < maxCaps)
+            if (minLength > 0 && total < minLength)
                 return false;
 
             int percent = 100 * upper / total;
@@ -329,7 +333,7 @@ namespace Winter
             if (0x2010 <= c && c <= 0x2049)
                 return true;
 
-            return c == '♥' || c == '…' || c == '€' || (m_options.AllowKorean && IsKoreanCharacter(c));
+            return c == '♥' || c == '…' || c == '€' || (m_options.SymbolOptions.AllowKorean && IsKoreanCharacter(c));
         }
 
         static bool IsKoreanCharacter(char c)
