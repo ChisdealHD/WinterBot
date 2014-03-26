@@ -29,7 +29,7 @@ namespace Winter
     public class WinterBot : IDisposable
     {
         TwitchClient m_twitch;
-        TwitchUsers m_data = new TwitchUsers();
+        TwitchUsers m_data;
         ConcurrentQueue<Tuple<Delegate, object[]>> m_events = new ConcurrentQueue<Tuple<Delegate, object[]>>();
         AutoResetEvent m_event = new AutoResetEvent(false);
         string m_channel;
@@ -217,6 +217,7 @@ namespace Winter
 
         public WinterBot(Options options, string channel, string user, string oauth)
         {
+            m_data = new TwitchUsers(this);
             m_options = options;
             m_channel = channel.ToLower();
 
@@ -572,7 +573,7 @@ namespace Winter
                     return isStreamer || user.IsSubscriber || user.IsModerator;
 
                 case AccessLevel.Regular:
-                    return isStreamer || user.IsSubscriber || user.IsModerator || m_regulars.Contains(user.Name.ToLower());
+                    return isStreamer || user.IsSubscriber || user.IsModerator || user.IsRegular;
 
                 case AccessLevel.Streamer:
                     return isStreamer;
@@ -678,9 +679,9 @@ namespace Winter
             return Path.Combine(Options.DataDirectory, m_channel + "_regulars.txt");
         }
 
-        public bool IsRegular(TwitchUser user)
+        internal bool IsRegular(string user)
         {
-            return m_regulars.Contains(user.Name.ToLower());
+            return m_regulars.Contains(user.ToLower());
         }
 
         private void StreamLiveWoker()

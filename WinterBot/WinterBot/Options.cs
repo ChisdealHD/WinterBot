@@ -26,12 +26,12 @@ namespace Winter
         }
 
 
-        public T GetValue(WinterBot bot, TwitchUser user)
+        public T GetValue(TwitchUser user)
         {
             if (user.IsSubscriber)
                 return m_sub;
 
-            if (bot.IsRegular(user))
+            if (user.IsRegular)
                 return m_reg;
 
             return m_all;
@@ -56,7 +56,7 @@ namespace Winter
         public bool EnforceRegular { get { return m_enforceReg; } set { m_enforceReg = value; } }
         public bool EnforceSub { get { return m_enforceSub; } set { m_enforceSub = value; } }
 
-        public bool ShouldEnforce(WinterBot bot, TwitchUser user)
+        public bool ShouldEnforce(TwitchUser user)
         {
             if (!Enabled || user.IsModerator)
                 return false;
@@ -64,7 +64,7 @@ namespace Winter
             if (user.IsSubscriber)
                 return EnforceSub;
 
-            if (bot.IsRegular(user))
+            if (user.IsRegular)
                 return EnforceRegular;
 
             return true;
@@ -142,14 +142,14 @@ namespace Winter
         Option<int> m_percent = new Option<int>(70);
         string m_message = "Please don't spam caps.";
 
-        public int GetMinLength(WinterBot bot, TwitchUser user)
+        public int GetMinLength(TwitchUser user)
         {
-            return m_length.GetValue(bot, user);
+            return m_length.GetValue(user);
         }
-        
-        public int GetPercent(WinterBot bot, TwitchUser user)
+
+        public int GetPercent(TwitchUser user)
         {
-            return m_percent.GetValue(bot, user);
+            return m_percent.GetValue(user);
         }
 
         public string Message { get { return m_message; } }

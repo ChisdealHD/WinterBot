@@ -18,6 +18,7 @@ namespace Winter
         Dictionary<string, TwitchUser> m_users;
         HashSet<TwitchUser> m_moderators;
         object m_sync = new object();
+        public WinterBot Bot { get; set; }
 
         internal HashSet<TwitchUser> ModeratorSet
         {
@@ -43,9 +44,10 @@ namespace Winter
             }
         }
 
-        public TwitchUsers()
+        public TwitchUsers(WinterBot bot)
         {
             m_users = new Dictionary<string, TwitchUser>();
+            Bot = bot;
         }
 
         public TwitchUser GetUser(string username, bool create=true)
@@ -57,7 +59,7 @@ namespace Winter
             {
                 if (!m_users.TryGetValue(username, out user) && create)
                 {
-                    user = new TwitchUser(username);
+                    user = new TwitchUser(this, username);
                     m_users[username] = user;
                 }
             }
@@ -74,6 +76,7 @@ namespace Winter
 
     public class TwitchUser
     {
+        private TwitchUsers m_data;
         public int[] IconSet { get; internal set; }
 
         public string Name { get; internal set; }
@@ -84,9 +87,30 @@ namespace Winter
 
         public bool IsTurbo { get; internal set; }
 
-        public TwitchUser(string name)
+        public bool IsRegular
+        {
+            get
+            {
+                return m_data.Bot.IsRegular(Name);
+            }
+            internal set
+            {
+                var bot = m_data.Bot;
+                if (bot.IsRegular(Name) != value)
+                {
+                    if (value)
+                        bot.AddRegular(Name);
+                    else
+                        bot.RemoveRegular(Name);
+                }
+            }
+        }
+
+        public TwitchUser(TwitchUsers data, string name)
         {
             Name = name.ToLower();
+            m_data = data;
+            Debug.Assert(data != null);
         }
 
         public override string ToString()

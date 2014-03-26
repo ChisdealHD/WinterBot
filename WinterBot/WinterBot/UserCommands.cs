@@ -84,7 +84,7 @@ namespace Winter
                 part = "subscribers";
                 level = AccessLevel.Subscriber;
             }
-            else if (sender.IsRegular(user))
+            else if (user.IsRegular)
             {
                 part = "regulars";
                 level = AccessLevel.Regular;

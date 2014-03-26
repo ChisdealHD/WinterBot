@@ -106,10 +106,6 @@ namespace Winter
         public string Stream { get { return m_stream; } }
 
 
-        public TwitchClient()
-        {
-        }
-
         public TwitchClient(TwitchUsers data)
         {
             m_data = data;
@@ -128,8 +124,6 @@ namespace Winter
         {
             user = user.ToLower();
             m_stream = stream.ToLower();
-            if (m_data == null)
-                m_data = new TwitchUsers();
 
             // Create client and hook up events.
             string server = "irc.twitch.tv";

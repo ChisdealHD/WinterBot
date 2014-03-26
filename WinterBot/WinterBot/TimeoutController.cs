@@ -111,7 +111,7 @@ namespace Winter
             string clearReason = null;
 
             List<string> urls;
-            if (m_urlOptions.ShouldEnforce(bot, user) && HasUrls(text, out urls))
+            if (m_urlOptions.ShouldEnforce(user) && HasUrls(text, out urls))
             {
                 // Check bans.
                 if (MatchesAny(urls, m_urlBanlist))
@@ -130,19 +130,19 @@ namespace Winter
                         clearReason = m_urlOptions.Message;
                 }
             }
-            else if (m_symbolOptions.ShouldEnforce(bot, user) && HasSpecialCharacter(text))
+            else if (m_symbolOptions.ShouldEnforce(user) && HasSpecialCharacter(text))
             {
                 clearReason = m_symbolOptions.Message;
             }
-            else if (m_capsOptions.ShouldEnforce(bot, user) && TooManyCaps(bot, user, text))
+            else if (m_capsOptions.ShouldEnforce(user) && TooManyCaps(user, text))
             {
                 clearReason = m_capsOptions.Message;
             }
-            else if (m_emoteOptions.ShouldEnforce(bot, user) && TooManyEmotes(user, text))
+            else if (m_emoteOptions.ShouldEnforce(user) && TooManyEmotes(user, text))
             {
                 clearReason = m_emoteOptions.Message;
             }
-            else if (m_lengthOptions.ShouldEnforce(bot, user) && MessageTooLong(user, text))
+            else if (m_lengthOptions.ShouldEnforce(user) && MessageTooLong(user, text))
             {
                 clearReason = m_lengthOptions.Message;
             }
@@ -292,10 +292,10 @@ namespace Winter
             return count;
         }
 
-        private bool TooManyCaps(WinterBot bot, TwitchUser user, string message)
+        private bool TooManyCaps(TwitchUser user, string message)
         {
-            int minLength = m_capsOptions.GetMinLength(bot, user);
-            int capsPercent = m_capsOptions.GetPercent(bot, user);
+            int minLength = m_capsOptions.GetMinLength(user);
+            int capsPercent = m_capsOptions.GetPercent(user);
             if (minLength <= 0 || capsPercent <= 0)
                 return false;
 
