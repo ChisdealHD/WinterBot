@@ -41,7 +41,7 @@ namespace Winter
         volatile bool m_checkUpdates = true;
 
         bool m_live;
-        Thread m_streamLiveThread;
+        Thread m_streamLiveThread, m_streamFollowerThread;
 
         #region Events
         public event DiagnosticEventHandler DiagnosticMessage;
@@ -62,6 +62,11 @@ namespace Winter
         /// Fired when a user subscribes to the channel.
         /// </summary>
         public event UserEventHandler UserSubscribed;
+
+        /// <summary>
+        /// Fired when a user follows the channel.
+        /// </summary>
+        public event UserEventHandler UserFollowed;
 
         /// <summary>
         /// Fired when a chat message is received.
@@ -491,6 +496,12 @@ namespace Winter
                 m_streamLiveThread.Start();
             }
 
+            if (m_streamFollowerThread == null)
+            {
+                m_streamFollowerThread = new Thread(StreamFollowerWorker);
+                m_streamFollowerThread.Start();
+            }
+
             if (!Connect())
                 return;
 
@@ -680,16 +691,11 @@ namespace Winter
 
             while (m_checkUpdates)
             {
-                try
+                // Check stream values
+                string url = @"http://api.justin.tv/api/stream/list.json?channel=" + m_channel;
+                string result = GetUrl(url);
+                if (result != null)
                 {
-                    var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(@"http://api.justin.tv/api/stream/list.json?channel=" + m_channel);
-                    req.UserAgent = "WinterBot/0.0.0.1";
-                    var response = req.GetResponse();
-                    var fromStream = response.GetResponseStream();
-
-                    StreamReader reader = new StreamReader(fromStream);
-                    string result = reader.ReadToEnd();
-
                     var channels = JsonConvert.DeserializeObject<List<TwitchChannelResponse>>(result);
                     m_live = channels.Count > 0;
 
@@ -700,7 +706,6 @@ namespace Winter
                         CurrentViewers = channel.channel_count;
                         Game = channel.meta_game;
                         Title = channel.title;
-
                         // TODO: Uptime = channel.up_time;
                     }
                     else
@@ -708,14 +713,82 @@ namespace Winter
                         CurrentViewers = 0;
                     }
                 }
-                catch (Exception)
-                {
-                    // We ignore exceptions (mostly network issues), just leave the values alone for this iteration
-                }
 
-                // 1 minute between updates.
+                // One minute between updates.
                 Thread.Sleep(60000);
             }
+        }
+        private void StreamFollowerWorker()
+        {
+            bool checkedFollowers = false;
+            DateTime lastFollow = DateTime.Now;
+            string url, result;
+
+            while (m_checkUpdates)
+            {
+                var followedEvt = UserFollowed;
+                if (followedEvt != null)
+                {
+                    // Check followers
+                    if (!checkedFollowers)
+                    {
+                        url = string.Format("https://api.twitch.tv/kraken/channels/{0}/follows?direction=desc&limit=1&offset=0", m_channel); ;
+                        var follow = JsonConvert.DeserializeObject<JsonFollows>(GetUrl(url));
+
+                        lastFollow = DateTime.Parse(follow.follows[0].created_at);
+                        checkedFollowers = true;
+                    }
+                    else
+                    {
+                        int count = 0;
+                        int limit = 25;
+
+                        do
+                        {
+                            url = string.Format("https://api.twitch.tv/kraken/channels/{0}/follows?direction=desc&offset={1}&limit={2}", m_channel, count, limit);
+                            count += limit;
+
+                            result = GetUrl(url);
+                            if (result != null)
+                            {
+                                JsonFollows follows = JsonConvert.DeserializeObject<JsonFollows>(result);
+                                foreach (var follow in follows.follows)
+                                {
+                                    DateTime last = DateTime.Parse(follow.created_at);
+                                    if (last <= lastFollow)
+                                        break;
+
+                                    var user = Users.GetUser(follow.user.name);
+                                    m_events.Enqueue(new Tuple<Delegate, object[]>(followedEvt, new object[] { this, user }));
+                                }
+                            }
+                        } while (true);
+                    }
+                }
+
+                Thread.Sleep(15000);
+            }
+        }
+
+        private static string GetUrl(string url)
+        {
+            try
+            {
+                var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(url);
+                req.UserAgent = "WinterBot/0.1.0.0";
+                var response = req.GetResponse();
+                var fromStream = response.GetResponseStream();
+
+                StreamReader reader = new StreamReader(fromStream);
+                string result = reader.ReadToEnd();
+                return result;
+            }
+            catch (Exception)
+            {
+                // We ignore exceptions (mostly network issues), just leave the values alone for this iteration
+            }
+
+            return null;
         }
     }
 

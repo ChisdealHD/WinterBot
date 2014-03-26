@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Winter
@@ -16,7 +17,7 @@ namespace Winter
         int m_totalMessages;
         int m_messageDelay;
         List<string> m_messages;
-        string m_subMessage;
+        string m_subMessage, m_followMessage;
 
         public AutoMessage(WinterBot bot)
         {
@@ -55,18 +56,25 @@ namespace Winter
             if (m_messages.Count > 0)
                 bot.Tick += bot_Tick;
 
-            var chat = options.GetSectionByName("chat");
-            if (chat != null)
-                chat.GetValue("SubscriberMessage", ref m_subMessage);
+            var chatOptions = options.ChatOptions;
+            m_subMessage = chatOptions.SubscribeMessage;
+            m_followMessage = chatOptions.FollowMessage;
 
-            if (m_subMessage != null)
+            if (!string.IsNullOrEmpty(m_subMessage))
                 bot.UserSubscribed += bot_UserSubscribed;
 
+            if (!string.IsNullOrEmpty(m_followMessage))
+                bot.UserFollowed += bot_UserFollowed;
         }
 
         void bot_UserSubscribed(WinterBot sender, TwitchUser user)
         {
             sender.SendMessage("{0}: {1}", user.Name, m_subMessage);
+        }
+
+        private void bot_UserFollowed(WinterBot sender, TwitchUser user)
+        {
+            sender.SendMessage("{0}: {1}", user.Name, m_followMessage);
         }
 
         void bot_MessageReceived(WinterBot sender, TwitchUser user, string text)

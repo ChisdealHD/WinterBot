@@ -153,16 +153,35 @@ namespace Winter
         }
     }
 
+    public class ChatOptions
+    {
+        string m_subMessage = "Thanks for subscribing!";
+        string m_followMessage = "Thanks for following!";
+
+        public string SubscribeMessage { get { return m_subMessage; } }
+        public string FollowMessage { get { return m_followMessage; } }
+
+        public ChatOptions(Options options)
+        {
+            var chat = options.GetSectionByName("chat");
+            if (chat != null)
+            {
+                chat.GetValue("SubscribeMessage", ref m_subMessage);
+                chat.GetValue("FollowMessage", ref m_followMessage);
+            }
+        }
+    }
+
     public class Options : IniReader
     {
         string m_stream, m_twitchName, m_oauthPass;
         string m_dataDirectory;
 
-        bool m_autoMessage, m_timeoutUrls, m_timeoutEmotes, m_timeoutCaps, m_timeoutSpecialChars, m_userCommands;
+        bool m_autoMessage, m_timeoutUrls, m_timeoutEmotes, m_timeoutCaps, m_timeoutSpecialChars, m_timeoutLongMessages, m_userCommands;
         bool m_saveLog, m_saveBinaryLog, m_regulars;
         bool m_passive;
 
-        bool m_timeoutLongMessages;
+        ChatOptions m_chatOptions;
         UrlTimeoutOptions m_urlOptions;
         CapsTimeoutOptions m_capsOptions;
         LengthTimeoutOptions m_lengthOptions;
@@ -182,12 +201,13 @@ namespace Winter
         public bool UserCommands { get { return m_userCommands; } }
         public bool SaveLog { get { return m_saveLog; } }
         public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
-        public bool Regulars { get { return m_regulars;  } }
+        public bool Regulars { get { return m_regulars; } }
         public bool Timeouts { get { return m_timeoutCaps || m_timeoutEmotes || m_timeoutSpecialChars || m_timeoutUrls || m_timeoutLongMessages; } }
 
 
         public bool Passive { get { return m_passive; } }
 
+        public ChatOptions ChatOptions { get { return m_chatOptions; } }
         public UrlTimeoutOptions UrlOptions { get { return m_urlOptions; } }
         public CapsTimeoutOptions CapsOptions { get { return m_capsOptions; } }
         public LengthTimeoutOptions LengthOptions { get { return m_lengthOptions; } }
@@ -249,6 +269,7 @@ namespace Winter
             m_lengthOptions = m_timeoutLongMessages ? new LengthTimeoutOptions(this) : new LengthTimeoutOptions();
             m_symbolOptions = m_timeoutSpecialChars ? new SymbolTimeoutOptions(this) : new SymbolTimeoutOptions();
             m_emoteOptions = m_timeoutEmotes ? new EmoteTimeoutOptions(this) : new EmoteTimeoutOptions();
+            m_chatOptions = new ChatOptions(this);
         }
     }
 }

@@ -88,4 +88,47 @@ namespace Winter
         public string broadcaster { get; set; }
         public int channel_view_count { get; set; }
     }
+
+    public class FollowLinks
+    {
+        public string self { get; set; }
+        public string next { get; set; }
+    }
+
+    public class FollowLinks2
+    {
+        public string self { get; set; }
+    }
+
+    public class FollowLinks3
+    {
+        public string self { get; set; }
+    }
+
+    public class User
+    {
+        public string display_name { get; set; }
+        public int _id { get; set; }
+        public string name { get; set; }
+        public string type { get; set; }
+        public object bio { get; set; }
+        public string created_at { get; set; }
+        public string updated_at { get; set; }
+        public object logo { get; set; }
+        public FollowLinks3 _links { get; set; }
+    }
+
+    public class Follow
+    {
+        public string created_at { get; set; }
+        public FollowLinks2 _links { get; set; }
+        public User user { get; set; }
+    }
+
+    public class JsonFollows
+    {
+        public int _total { get; set; }
+        public FollowLinks _links { get; set; }
+        public List<Follow> follows { get; set; }
+    }
 }
