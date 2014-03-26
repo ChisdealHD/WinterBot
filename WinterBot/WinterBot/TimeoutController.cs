@@ -134,7 +134,7 @@ namespace Winter
             {
                 clearReason = m_symbolOptions.Message;
             }
-            else if (m_capsOptions.ShouldEnforce(bot, user) && TooManyCaps(text))
+            else if (m_capsOptions.ShouldEnforce(bot, user) && TooManyCaps(bot, user, text))
             {
                 clearReason = m_capsOptions.Message;
             }
@@ -292,10 +292,10 @@ namespace Winter
             return count;
         }
 
-        private bool TooManyCaps(string message)
+        private bool TooManyCaps(WinterBot bot, TwitchUser user, string message)
         {
-            int minLength = m_capsOptions.MinLength;
-            int capsPercent = m_capsOptions.Percent;
+            int minLength = m_capsOptions.GetMinLength(bot, user);
+            int capsPercent = m_capsOptions.GetPercent(bot, user);
             if (minLength <= 0 || capsPercent <= 0)
                 return false;
 

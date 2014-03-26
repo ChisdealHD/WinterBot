@@ -7,6 +7,46 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
+    class Option<T>
+    {
+        T m_all, m_reg, m_sub;
+
+        public Option(T allDefault)
+        {
+            m_all = allDefault;
+            m_reg = allDefault;
+            m_sub = allDefault;
+        }
+
+        public Option(T allDefault, T regDefault, T subDefault)
+        {
+            m_all = allDefault;
+            m_reg = regDefault;
+            m_sub = subDefault;
+        }
+
+
+        public T GetValue(WinterBot bot, TwitchUser user)
+        {
+            if (user.IsSubscriber)
+                return m_sub;
+
+            if (bot.IsRegular(user))
+                return m_reg;
+
+            return m_all;
+        }
+
+        public void Init(GetValueFunc getValue, string name)
+        {
+            getValue(name, ref m_all);
+            getValue("Regular" + name, ref m_reg);
+            getValue("Subscriber" + name, ref m_sub);
+        }
+
+        public delegate bool GetValueFunc(string name, ref T val);
+    }
+
     public abstract class FeatureOptions
     {
         bool m_enabled = true;
@@ -98,11 +138,20 @@ namespace Winter
 
     public class CapsTimeoutOptions : FeatureOptions
     {
-        int m_length = 16, m_percent = 70;
+        Option<int> m_length = new Option<int>(16);
+        Option<int> m_percent = new Option<int>(70);
         string m_message = "Please don't spam caps.";
 
-        public int MinLength { get { return m_length; } }
-        public int Percent { get { return m_percent; } }
+        public int GetMinLength(WinterBot bot, TwitchUser user)
+        {
+            return m_length.GetValue(bot, user);
+        }
+        
+        public int GetPercent(WinterBot bot, TwitchUser user)
+        {
+            return m_percent.GetValue(bot, user);
+        }
+
         public string Message { get { return m_message; } }
 
         public CapsTimeoutOptions()
@@ -115,9 +164,9 @@ namespace Winter
             base.Init(section);
             if (section != null)
             {
-                section.GetValue("maxcaps", ref m_length);
-                section.GetValue("maxcapspercent", ref m_percent);
-                section.GetValue("message", ref m_message);
+                m_length.Init(section.GetValue, "MaxCaps");
+                m_percent.Init(section.GetValue, "MaxCapsPercent");
+                section.GetValue("Message", ref m_message);
             }
         }
     }
