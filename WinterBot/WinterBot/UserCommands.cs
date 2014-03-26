@@ -59,11 +59,14 @@ namespace Winter
         string m_stream, m_dataDirectory;
         Dictionary<string, UserCommand> m_commands = new Dictionary<string, UserCommand>();
         DateTime m_lastMessage = DateTime.Now;
+        ChatOptions m_options;
 
         public UserCommands(WinterBot bot)
         {
+            m_options = bot.Options.ChatOptions;
             m_stream = bot.Options.Channel;
             m_dataDirectory = bot.Options.DataDirectory;
+
             bot.UnknownCommandReceived += UnknownCommandReceived;
 
             LoadCommands();
@@ -72,6 +75,9 @@ namespace Winter
         [BotCommand(AccessLevel.Normal, "commands", "listcommands")]
         public void ListCommands(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.UserCommandsEnabled)
+                return;
+
             AccessLevel level;
             string part = null;
             if (user.IsModerator)
@@ -101,6 +107,9 @@ namespace Winter
         [BotCommand(AccessLevel.Mod, "remcom", "removecommand", "delcom", "delcommand")]
         public void RemoveCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.UserCommandsEnabled)
+                return;
+
             value = value.Trim().ToLower();
             if (value.Length == 0)
             {
@@ -127,6 +136,9 @@ namespace Winter
         [BotCommand(AccessLevel.Mod, "addcom", "addcommand")]
         public void AddCommand(WinterBot sender, TwitchUser user, string commandText, string value)
         {
+            if (!m_options.UserCommandsEnabled)
+                return;
+
             string cmdValue = value.Trim();
             if (cmdValue.Length < 2)
             {
@@ -212,6 +224,9 @@ namespace Winter
 
         void UnknownCommandReceived(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.UserCommandsEnabled)
+                return;
+
             cmd = cmd.ToLower();
             UserCommand command;
 

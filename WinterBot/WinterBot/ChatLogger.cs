@@ -147,8 +147,8 @@ namespace Winter
             var options = bot.Options;
             m_stream = options.Channel;
             m_dataDirectory = options.DataDirectory;
-            m_saveReadableLog = options.SaveLog;
-            m_saveCompressedLog = options.SaveBinaryLog;
+            m_saveReadableLog = options.ChatOptions.SaveLog;
+            m_saveCompressedLog = options.ChatOptions.SaveBinaryLog;
 
             if (m_saveReadableLog || m_saveCompressedLog)
             {

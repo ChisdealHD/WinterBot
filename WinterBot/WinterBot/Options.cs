@@ -84,7 +84,8 @@ namespace Winter
     public class UrlTimeoutOptions : FeatureOptions
     {
         string[] m_whitelist, m_blacklist, m_banlist;
-        string m_message, m_banMessage;
+        string m_message = "Sorry, links are not allowed.";
+        string m_banMessage = "Banned.";
 
         public string[] Whitelist { get { return m_whitelist; } }
         public string[] Blacklist { get { return m_blacklist; } }
@@ -95,14 +96,9 @@ namespace Winter
         public string BanMessage { get { return m_banMessage ?? ""; } }
 
 
-        public UrlTimeoutOptions()
-        {
-            Init();
-        }
-
         public UrlTimeoutOptions(Options options)
         {
-            Init();
+            m_whitelist = m_blacklist = m_banlist = new string[0];
 
             var section = options.GetSectionByName("whitelist");
             if (section != null)
@@ -120,19 +116,9 @@ namespace Winter
             base.Init(section);
             if (section != null)
             {
-                section.GetValue("message", ref m_message);
-                section.GetValue("banmessage", ref m_banMessage);
+                section.GetValue("Message", ref m_message);
+                section.GetValue("BanMessage", ref m_banMessage);
             }
-        }
-
-        private void Init()
-        {
-            var list = new string[0];
-            m_whitelist = list;
-            m_blacklist = list;
-            m_banlist = list;
-            m_message = "Sorry, links are not allowed.";
-            m_banMessage = "Banned.";
         }
     }
 
@@ -154,9 +140,6 @@ namespace Winter
 
         public string Message { get { return m_message; } }
 
-        public CapsTimeoutOptions()
-        {
-        }
 
         public CapsTimeoutOptions(Options options)
         {
@@ -174,24 +157,24 @@ namespace Winter
     public class LengthTimeoutOptions : FeatureOptions
     {
         string m_message = "Sorry, your message was too long.";
-        int m_maxLength = 300;
+        Option<int> m_maxLength = new Option<int>(300);
 
         public string Message { get { return m_message; } }
-        public int MaxLength { get { return m_maxLength; } }
+
+        public int GetMaxLength(TwitchUser user)
+        {
+            return m_maxLength.GetValue(user);
+        }
 
         public LengthTimeoutOptions(Options options)
         {
-            var section = options.GetSectionByName("messagetimeout");
+            var section = options.GetSectionByName("LongMessageTimeout");
             base.Init(section);
             if (section != null)
             {
-                section.GetValue("message", ref m_message);
-                section.GetValue("maxmessagelength", ref m_maxLength);
+                m_maxLength.Init(section.GetValue, "MaxLength");
+                section.GetValue("Message", ref m_message);
             }
-        }
-
-        public LengthTimeoutOptions()
-        {
         }
     }
 
@@ -203,18 +186,14 @@ namespace Winter
         public bool AllowKorean { get { return m_allowKorean; } }
         public string Message { get { return m_message; } }
 
-        public SymbolTimeoutOptions()
-        {
-        }
-
         public SymbolTimeoutOptions(Options options)
         {
             var section = options.GetSectionByName("symboltimeout");
             base.Init(section);
             if (section != null)
             {
-                section.GetValue("allowkorean", ref m_allowKorean);
-                section.GetValue("message", ref m_message);
+                section.GetValue("AllowKorean", ref m_allowKorean);
+                section.GetValue("Message", ref m_message);
             }
         }
     }
@@ -222,13 +201,13 @@ namespace Winter
     public class EmoteTimeoutOptions : FeatureOptions
     {
         string m_message = "Please don't spam emotes.";
-        int m_max = 3;
+        Option<int> m_max = new Option<int>(3, 5, 10);
 
         public string Message { get { return m_message; } }
-        public int Max { get { return m_max; } }
 
-        public EmoteTimeoutOptions()
+        public int GetMax(TwitchUser user)
         {
+            return m_max.GetValue(user);
         }
 
         public EmoteTimeoutOptions(Options options)
@@ -237,27 +216,79 @@ namespace Winter
             base.Init(section);
             if (section != null)
             {
-                section.GetValue("maxemotes", ref m_max);
-                section.GetValue("message", ref m_message);
+                m_max.Init(section.GetValue, "MaxEmotes");
+                section.GetValue("Message", ref m_message);
             }
         }
     }
 
     public class ChatOptions
     {
-        string m_subMessage = "Thanks for subscribing!";
+        string m_subMessage = null;
         string m_followMessage = null;
+        bool m_saveLog = true;
+        bool m_saveBinaryLog = false;
+        bool m_userCommands = true;
 
         public string SubscribeMessage { get { return m_subMessage; } }
         public string FollowMessage { get { return m_followMessage; } }
 
+        public bool SaveLog { get { return m_saveLog; } }
+        public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
+
+        public bool UserCommandsEnabled { get { return m_userCommands; } }
+
         public ChatOptions(Options options)
         {
+            var messages = options.GetSectionByName("messages");
+
             var chat = options.GetSectionByName("chat");
             if (chat != null)
             {
                 chat.GetValue("SubscribeMessage", ref m_subMessage);
                 chat.GetValue("FollowMessage", ref m_followMessage);
+                chat.GetValue("SaveLog", ref m_saveLog);
+                chat.GetValue("SaveBinaryLog", ref m_saveBinaryLog);
+                chat.GetValue("UserCommands", ref m_userCommands);
+            }
+        }
+    }
+
+    public class AutoMessageOptions
+    {
+        bool m_enabled, m_random;
+        string[] m_messages;
+        int m_delay = 5;
+        int m_messageDelay = 25;
+
+        public bool Enabled { get { return m_enabled; } set { m_enabled = value; } }
+        public bool Random { get { return m_random; } }
+        public string[] Messages { get { return m_messages; } }
+        public int Delay { get { return m_delay >= 10 ? m_delay : 10; } }
+        public int MessageDelay { get { return m_messageDelay; } }
+
+        public AutoMessageOptions(Options options)
+        {
+            var messageSection = options.GetSectionByName("messages");
+            var settings = options.GetSectionByName("automessage");
+            if (messageSection == null || settings == null)
+                return;
+
+            var messages = from s in messageSection.EnumerateRawStrings()
+                           where !string.IsNullOrWhiteSpace(s)
+                           select s.Trim();
+
+            m_messages = messages.ToArray();
+
+            if (m_messages.Length == 0)
+                return;
+
+            if (settings != null)
+            {
+                settings.GetValue("Enabled", ref m_enabled);
+                settings.GetValue("Delay", ref m_delay);
+                settings.GetValue("Random", ref m_random);
+                settings.GetValue("MessageDelay", ref m_messageDelay);
             }
         }
     }
@@ -267,8 +298,7 @@ namespace Winter
         string m_stream, m_twitchName, m_oauthPass;
         string m_dataDirectory;
 
-        bool m_autoMessage, m_userCommands;
-        bool m_saveLog, m_saveBinaryLog, m_regulars;
+        bool m_regulars;
         bool m_passive;
 
         ChatOptions m_chatOptions;
@@ -277,15 +307,12 @@ namespace Winter
         LengthTimeoutOptions m_lengthOptions;
         SymbolTimeoutOptions m_symbolOptions;
         EmoteTimeoutOptions m_emoteOptions;
+        AutoMessageOptions m_autoMessageOptions;
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
         public string Password { get { return m_oauthPass; } }
         public string DataDirectory { get { return m_dataDirectory; } }
-        public bool AutoMessage { get { return m_autoMessage; } }
-        public bool UserCommands { get { return m_userCommands; } }
-        public bool SaveLog { get { return m_saveLog; } }
-        public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
         public bool Regulars { get { return m_regulars; } }
 
 
@@ -297,6 +324,7 @@ namespace Winter
         public LengthTimeoutOptions LengthOptions { get { return m_lengthOptions; } }
         public SymbolTimeoutOptions SymbolOptions { get { return m_symbolOptions; } }
         public EmoteTimeoutOptions EmoteOptions { get { return m_emoteOptions; } }
+        public AutoMessageOptions AutoMessageOptions { get { return m_autoMessageOptions; } }
 
         public Options(string filename)
             : base(filename)
@@ -321,21 +349,13 @@ namespace Winter
             section.GetValue("passive", ref m_passive);
 
             // Set defaults
-            var messages = GetSectionByName("messages");
-            m_autoMessage = messages != null && messages.EnumerateRawStrings().FirstOrDefault() != null;
-            m_saveLog = true;
-            m_saveBinaryLog = false;
-            m_userCommands = true;
+
             m_regulars = true;
 
-            section = GetSectionByName("features");
+            section = GetSectionByName("Regulars");
             if (section != null)
             {
-                section.GetValue("automessage", ref m_autoMessage);
-                section.GetValue("savelog", ref m_saveLog);
-                section.GetValue("savebinarylog", ref m_saveBinaryLog);
-                section.GetValue("usercommands", ref m_userCommands);
-                section.GetValue("regulars", ref m_regulars);
+                section.GetValue("Enabled", ref m_regulars);
             }
 
             m_urlOptions = new UrlTimeoutOptions(this);
@@ -344,6 +364,7 @@ namespace Winter
             m_symbolOptions = new SymbolTimeoutOptions(this);
             m_emoteOptions = new EmoteTimeoutOptions(this);
             m_chatOptions = new ChatOptions(this);
+            m_autoMessageOptions = new AutoMessageOptions(this);
         }
     }
 }

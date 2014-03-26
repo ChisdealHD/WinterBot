@@ -11,70 +11,46 @@ namespace Winter
     class AutoMessage
     {
         DateTime m_lastMessage = DateTime.Now;
-        Random m_random;
+        Random m_random = new Random();
         int m_curr;
-        int m_delay = 10;
         int m_totalMessages;
-        int m_messageDelay;
-        List<string> m_messages;
-        string m_subMessage, m_followMessage;
+        AutoMessageOptions m_msgOptions;
+        ChatOptions m_chatOptions;
 
         public AutoMessage(WinterBot bot)
         {
             var options = bot.Options;
-            var autoMessage = options.GetSectionByName("automessage");
-            var messages = options.GetSectionByName("messages");
+            m_msgOptions = options.AutoMessageOptions;
+            m_chatOptions = options.ChatOptions;
 
-            if (options.AutoMessage && messages != null)
+            // TODO: respond to property changed on these
+            if (m_msgOptions.Enabled)
             {
-                m_messages = new List<string>(messages.EnumerateRawStrings());
-            }
+                if (m_msgOptions.MessageDelay > 0)
+                    bot.MessageReceived += bot_MessageReceived;
 
-            if (autoMessage != null)
-            {
-                autoMessage.GetValue("delay", ref m_delay);
-                if (m_delay <= 0)
-                    m_delay = 10;
-
-                bool random = true;
-                autoMessage.GetValue("random", ref random);
-                if (random)
-                    m_random = new Random();
-
-                autoMessage.GetValue("messageDelay", ref m_messageDelay);
-            }
-            else
-            {
-                m_delay = 10;
-                m_random = null;
-                m_messageDelay = 25;
-            }
-
-            if (m_messageDelay > 0)
-                bot.MessageReceived += bot_MessageReceived;
-
-            if (m_messages.Count > 0)
                 bot.Tick += bot_Tick;
+            }
 
-            var chatOptions = options.ChatOptions;
-            m_subMessage = chatOptions.SubscribeMessage;
-            m_followMessage = chatOptions.FollowMessage;
-
-            if (!string.IsNullOrEmpty(m_subMessage))
+            if (!string.IsNullOrEmpty(m_chatOptions.SubscribeMessage))
                 bot.UserSubscribed += bot_UserSubscribed;
 
-            if (!string.IsNullOrEmpty(m_followMessage))
+            if (!string.IsNullOrEmpty(m_chatOptions.FollowMessage))
                 bot.UserFollowed += bot_UserFollowed;
         }
 
         void bot_UserSubscribed(WinterBot sender, TwitchUser user)
         {
-            sender.SendMessage("{0}: {1}", user.Name, m_subMessage);
+            var subMessage = m_chatOptions.SubscribeMessage;
+            if (!string.IsNullOrWhiteSpace(subMessage))
+                sender.SendMessage("{0}: {1}", user.Name, subMessage);
         }
 
         private void bot_UserFollowed(WinterBot sender, TwitchUser user)
         {
-            sender.SendMessage("{0}: {1}", user.Name, m_followMessage);
+            var msg = m_chatOptions.FollowMessage;
+            if (!string.IsNullOrWhiteSpace(msg))
+                sender.SendMessage("{0}: {1}", user.Name, msg);
         }
 
         void bot_MessageReceived(WinterBot sender, TwitchUser user, string text)
@@ -84,20 +60,25 @@ namespace Winter
 
         void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
         {
-            if (m_lastMessage.Elapsed().TotalMinutes >= m_delay &&
-                m_totalMessages >= m_messageDelay &&
+            if (m_lastMessage.Elapsed().TotalMinutes >= m_msgOptions.Delay &&
+                m_totalMessages >= m_msgOptions.MessageDelay &&
                 sender.LastMessageSent.Elapsed().TotalSeconds >= 45)
             {
                 m_lastMessage = DateTime.Now;
                 m_totalMessages = 0;
 
+                var messages = m_msgOptions.Messages;
+                if (messages.Length == 0)
+                    return;
+
+                m_curr %= messages.Length;
+
                 string msg = null;
                 if (m_random != null)
-                    msg = m_messages[m_random.Next(m_messages.Count)];
+                    msg = messages[m_random.Next(messages.Length)];
                 else
-                    msg = m_messages[m_curr];
+                    msg = messages[m_curr++];
 
-                m_curr = ++m_curr % m_messages.Count;
                 sender.SendMessage(msg);
             }
         }

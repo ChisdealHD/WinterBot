@@ -153,10 +153,11 @@ namespace Winter
 
         private bool MessageTooLong(TwitchUser user, string text)
         {
-            if (m_lengthOptions.MaxLength <= 0)
+            int max = m_lengthOptions.GetMaxLength(user);
+            if (max <= 0)
                 return false;
 
-            return text.Length > m_lengthOptions.MaxLength;
+            return text.Length > max;
         }
 
         private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
@@ -246,7 +247,7 @@ namespace Winter
         private bool TooManyEmotes(TwitchUser user, string message)
         {
             int count = 0;
-            int max = m_emoteOptions.Max;
+            int max = m_emoteOptions.GetMax(user);
 
             if (m_defaultImageSet != null)
             {

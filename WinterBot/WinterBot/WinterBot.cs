@@ -287,14 +287,12 @@ namespace Winter
             if (m_options.Regulars)
                 AddCommands(new Regulars(this));
 
-            if (m_options.SaveLog || m_options.SaveBinaryLog)
+            var chatOptions = m_options.ChatOptions;
+            if (chatOptions.SaveLog || chatOptions.SaveBinaryLog)
                 AddCommands(new ChatLogger(this));
 
-            if (m_options.AutoMessage)
-                AddCommands(new AutoMessage(this));
-
-            if (m_options.UserCommands)
-                AddCommands(new UserCommands(this));
+            AddCommands(new AutoMessage(this));
+            AddCommands(new UserCommands(this));
 
             AddCommands(new TimeoutController(this));
             AddCommands(new Quiet(this));

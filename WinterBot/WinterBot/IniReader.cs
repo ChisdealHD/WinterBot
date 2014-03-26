@@ -131,6 +131,8 @@ namespace Winter
                 return true;
             else if (value.Equals("1", StringComparison.CurrentCultureIgnoreCase))
                 return true;
+            else if (value.Equals("enabled", StringComparison.CurrentCultureIgnoreCase))
+                return true;
 
             result = false;
             if (value.Equals("false", StringComparison.CurrentCultureIgnoreCase))
@@ -142,6 +144,8 @@ namespace Winter
             else if (value.Equals("n", StringComparison.CurrentCultureIgnoreCase))
                 return true;
             else if (value.Equals("0", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (value.Equals("disabled", StringComparison.CurrentCultureIgnoreCase))
                 return true;
 
             return false;
