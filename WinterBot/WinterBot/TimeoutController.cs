@@ -29,8 +29,13 @@ namespace Winter
         private Dictionary<int, HashSet<string>> m_imageSets;
 
         Dictionary<TwitchUser, TimeoutCount> m_timeouts = new Dictionary<TwitchUser, TimeoutCount>();
-        Options m_options;
+
+        ChatOptions m_chatOptions;
         UrlTimeoutOptions m_urlOptions;
+        CapsTimeoutOptions m_capsOptions;
+        LengthTimeoutOptions m_lengthOptions;
+        SymbolTimeoutOptions m_symbolOptions;
+        EmoteTimeoutOptions m_emoteOptions;
 
         public TimeoutController(WinterBot bot)
         {
@@ -44,8 +49,12 @@ namespace Winter
 
         void LoadOptions(Options options)
         {
-            m_options = options;
-            m_urlOptions = m_options.UrlOptions;
+            m_chatOptions = options.ChatOptions;
+            m_urlOptions = options.UrlOptions;
+            m_capsOptions = options.CapsOptions;
+            m_lengthOptions = options.LengthOptions;
+            m_symbolOptions = options.SymbolOptions;
+            m_emoteOptions = options.EmoteOptions;
 
             // Load url lists
             m_urlWhitelist = new List<Regex>(m_urlOptions.Whitelist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
@@ -94,22 +103,22 @@ namespace Winter
         }
 
 
-        public void CheckMessage(WinterBot sender, TwitchUser user, string text)
+        public void CheckMessage(WinterBot bot, TwitchUser user, string text)
         {
-            if (user.IsSubscriber || user.IsModerator || sender.IsRegular(user))
+            if (user.IsModerator)
                 return;
 
             string clearReason = null;
 
             List<string> urls;
-            if (m_options.TimeoutUrls && HasUrls(text, out urls))
+            if (m_urlOptions.ShouldEnforce(bot, user) && HasUrls(text, out urls))
             {
                 // Check bans.
                 if (MatchesAny(urls, m_urlBanlist))
                 {
                     m_winterBot.Ban(user);
                     if (!string.IsNullOrEmpty(m_urlOptions.BanMessage))
-                        sender.TimeoutMessage("{0}: {1}", user.Name, m_urlOptions.BanMessage);
+                        bot.TimeoutMessage("{0}: {1}", user.Name, m_urlOptions.BanMessage);
 
                     m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
@@ -121,34 +130,33 @@ namespace Winter
                         clearReason = m_urlOptions.Message;
                 }
             }
-            else if (m_options.TimeoutSpecialChars && HasSpecialCharacter(text))
+            else if (m_symbolOptions.ShouldEnforce(bot, user) && HasSpecialCharacter(text))
             {
-                clearReason = m_options.SymbolOptions.Message;
+                clearReason = m_symbolOptions.Message;
             }
-            else if (m_options.TimeoutCaps && TooManyCaps(text))
+            else if (m_capsOptions.ShouldEnforce(bot, user) && TooManyCaps(text))
             {
-                clearReason = m_options.CapsOptions.Message;
+                clearReason = m_capsOptions.Message;
             }
-            else if (m_options.TimeoutEmotes && TooManyEmotes(user, text))
+            else if (m_emoteOptions.ShouldEnforce(bot, user) && TooManyEmotes(user, text))
             {
-                clearReason = m_options.EmoteOptions.Message;
+                clearReason = m_emoteOptions.Message;
             }
-            else if (m_options.TimeoutLongMessages && MessageTooLong(user, text))
+            else if (m_lengthOptions.ShouldEnforce(bot, user) && MessageTooLong(user, text))
             {
-                clearReason = m_options.LengthOptions.Message;
+                clearReason = m_lengthOptions.Message;
             }
 
             if (clearReason != null)
-                ClearChat(sender, user, clearReason);
+                ClearChat(bot, user, clearReason);
         }
 
         private bool MessageTooLong(TwitchUser user, string text)
         {
-            var msgs = m_options.LengthOptions;
-            if (msgs.MaxLength <= 0)
+            if (m_lengthOptions.MaxLength <= 0)
                 return false;
 
-            return text.Length > msgs.MaxLength;
+            return text.Length > m_lengthOptions.MaxLength;
         }
 
         private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
@@ -238,13 +246,14 @@ namespace Winter
         private bool TooManyEmotes(TwitchUser user, string message)
         {
             int count = 0;
+            int max = m_emoteOptions.Max;
 
             if (m_defaultImageSet != null)
             {
                 foreach (string item in m_defaultImageSet)
                 {
                     count += CountEmote(message, item);
-                    if (count > m_options.EmoteOptions.Max)
+                    if (count > max)
                         return true;
                 }
             }
@@ -261,7 +270,7 @@ namespace Winter
                     foreach (string item in imageSet)
                     {
                         count += CountEmote(message, item);
-                        if (count > m_options.EmoteOptions.Max)
+                        if (count > max)
                             return true;
                     }
                 }
@@ -285,9 +294,8 @@ namespace Winter
 
         private bool TooManyCaps(string message)
         {
-            var caps = m_options.CapsOptions;
-            int minLength = caps.MinLength;
-            int capsPercent = caps.Percent;
+            int minLength = m_capsOptions.MinLength;
+            int capsPercent = m_capsOptions.Percent;
             if (minLength <= 0 || capsPercent <= 0)
                 return false;
 
@@ -333,7 +341,7 @@ namespace Winter
             if (0x2010 <= c && c <= 0x2049)
                 return true;
 
-            return c == '♥' || c == '…' || c == '€' || (m_options.SymbolOptions.AllowKorean && IsKoreanCharacter(c));
+            return c == '♥' || c == '…' || c == '€' || (m_symbolOptions.AllowKorean && IsKoreanCharacter(c));
         }
 
         static bool IsKoreanCharacter(char c)

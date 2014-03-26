@@ -7,7 +7,41 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
-    public class UrlTimeoutOptions
+    public abstract class FeatureOptions
+    {
+        bool m_enabled = true;
+        bool m_enforceReg, m_enforceSub;
+
+        public bool Enabled { get { return m_enabled; } set { m_enabled = value; } }
+        public bool EnforceRegular { get { return m_enforceReg; } set { m_enforceReg = value; } }
+        public bool EnforceSub { get { return m_enforceSub; } set { m_enforceSub = value; } }
+
+        public bool ShouldEnforce(WinterBot bot, TwitchUser user)
+        {
+            if (!Enabled || user.IsModerator)
+                return false;
+
+            if (user.IsSubscriber)
+                return EnforceSub;
+
+            if (bot.IsRegular(user))
+                return EnforceRegular;
+
+            return true;
+        }
+
+        protected void Init(IniSection section)
+        {
+            if (section != null)
+            {
+                section.GetValue("Enabled", ref m_enabled);
+                section.GetValue("EnforceForRegulars", ref m_enforceReg);
+                section.GetValue("EnforceForSubscribers", ref m_enforceSub);
+            }
+        }
+    }
+
+    public class UrlTimeoutOptions : FeatureOptions
     {
         string[] m_whitelist, m_blacklist, m_banlist;
         string m_message, m_banMessage;
@@ -19,6 +53,7 @@ namespace Winter
         public string Message { get { return m_message ?? ""; } }
 
         public string BanMessage { get { return m_banMessage ?? ""; } }
+
 
         public UrlTimeoutOptions()
         {
@@ -42,12 +77,14 @@ namespace Winter
                 m_banlist = (from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select r).ToArray();
 
             section = options.GetSectionByName("urltimeout");
+            base.Init(section);
             if (section != null)
             {
                 section.GetValue("message", ref m_message);
                 section.GetValue("banmessage", ref m_banMessage);
             }
         }
+
         private void Init()
         {
             var list = new string[0];
@@ -59,7 +96,7 @@ namespace Winter
         }
     }
 
-    public class CapsTimeoutOptions
+    public class CapsTimeoutOptions : FeatureOptions
     {
         int m_length = 16, m_percent = 70;
         string m_message = "Please don't spam caps.";
@@ -75,6 +112,7 @@ namespace Winter
         public CapsTimeoutOptions(Options options)
         {
             var section = options.GetSectionByName("capstimeout");
+            base.Init(section);
             if (section != null)
             {
                 section.GetValue("maxcaps", ref m_length);
@@ -84,7 +122,7 @@ namespace Winter
         }
     }
 
-    public class LengthTimeoutOptions
+    public class LengthTimeoutOptions : FeatureOptions
     {
         string m_message = "Sorry, your message was too long.";
         int m_maxLength = 300;
@@ -95,6 +133,7 @@ namespace Winter
         public LengthTimeoutOptions(Options options)
         {
             var section = options.GetSectionByName("messagetimeout");
+            base.Init(section);
             if (section != null)
             {
                 section.GetValue("message", ref m_message);
@@ -107,7 +146,7 @@ namespace Winter
         }
     }
 
-    public class SymbolTimeoutOptions
+    public class SymbolTimeoutOptions : FeatureOptions
     {
         string m_message = "Sorry, no special characters allowed.";
         bool m_allowKorean = true;
@@ -122,6 +161,7 @@ namespace Winter
         public SymbolTimeoutOptions(Options options)
         {
             var section = options.GetSectionByName("symboltimeout");
+            base.Init(section);
             if (section != null)
             {
                 section.GetValue("allowkorean", ref m_allowKorean);
@@ -130,7 +170,7 @@ namespace Winter
         }
     }
 
-    public class EmoteTimeoutOptions
+    public class EmoteTimeoutOptions : FeatureOptions
     {
         string m_message = "Please don't spam emotes.";
         int m_max = 3;
@@ -145,6 +185,7 @@ namespace Winter
         public EmoteTimeoutOptions(Options options)
         {
             var section = options.GetSectionByName("emotetimeout");
+            base.Init(section);
             if (section != null)
             {
                 section.GetValue("maxemotes", ref m_max);
@@ -156,7 +197,7 @@ namespace Winter
     public class ChatOptions
     {
         string m_subMessage = "Thanks for subscribing!";
-        string m_followMessage = "Thanks for following!";
+        string m_followMessage = null;
 
         public string SubscribeMessage { get { return m_subMessage; } }
         public string FollowMessage { get { return m_followMessage; } }
@@ -177,7 +218,7 @@ namespace Winter
         string m_stream, m_twitchName, m_oauthPass;
         string m_dataDirectory;
 
-        bool m_autoMessage, m_timeoutUrls, m_timeoutEmotes, m_timeoutCaps, m_timeoutSpecialChars, m_timeoutLongMessages, m_userCommands;
+        bool m_autoMessage, m_userCommands;
         bool m_saveLog, m_saveBinaryLog, m_regulars;
         bool m_passive;
 
@@ -193,16 +234,10 @@ namespace Winter
         public string Password { get { return m_oauthPass; } }
         public string DataDirectory { get { return m_dataDirectory; } }
         public bool AutoMessage { get { return m_autoMessage; } }
-        public bool TimeoutUrls { get { return m_timeoutUrls; } }
-        public bool TimeoutEmotes { get { return m_timeoutEmotes; } }
-        public bool TimeoutCaps { get { return m_timeoutCaps; } }
-        public bool TimeoutSpecialChars { get { return m_timeoutSpecialChars; } }
-        public bool TimeoutLongMessages { get { return m_timeoutLongMessages; } }
         public bool UserCommands { get { return m_userCommands; } }
         public bool SaveLog { get { return m_saveLog; } }
         public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
         public bool Regulars { get { return m_regulars; } }
-        public bool Timeouts { get { return m_timeoutCaps || m_timeoutEmotes || m_timeoutSpecialChars || m_timeoutUrls || m_timeoutLongMessages; } }
 
 
         public bool Passive { get { return m_passive; } }
@@ -239,11 +274,6 @@ namespace Winter
             // Set defaults
             var messages = GetSectionByName("messages");
             m_autoMessage = messages != null && messages.EnumerateRawStrings().FirstOrDefault() != null;
-            m_timeoutCaps = true;
-            m_timeoutEmotes = true;
-            m_timeoutSpecialChars = true;
-            m_timeoutUrls = true;
-            m_timeoutLongMessages = true;
             m_saveLog = true;
             m_saveBinaryLog = false;
             m_userCommands = true;
@@ -253,22 +283,17 @@ namespace Winter
             if (section != null)
             {
                 section.GetValue("automessage", ref m_autoMessage);
-                section.GetValue("timeoutcapsspam", ref m_timeoutCaps);
-                section.GetValue("timeoutemotespam", ref m_timeoutEmotes);
-                section.GetValue("timeoutlongmessages", ref m_timeoutLongMessages);
-                section.GetValue("timeouturls", ref m_timeoutUrls);
-                section.GetValue("timeoutsymbols", ref m_timeoutSpecialChars);
                 section.GetValue("savelog", ref m_saveLog);
                 section.GetValue("savebinarylog", ref m_saveBinaryLog);
                 section.GetValue("usercommands", ref m_userCommands);
                 section.GetValue("regulars", ref m_regulars);
             }
 
-            m_urlOptions = m_timeoutUrls ? new UrlTimeoutOptions(this) : new UrlTimeoutOptions();
-            m_capsOptions = m_timeoutCaps ? new CapsTimeoutOptions(this) : new CapsTimeoutOptions();
-            m_lengthOptions = m_timeoutLongMessages ? new LengthTimeoutOptions(this) : new LengthTimeoutOptions();
-            m_symbolOptions = m_timeoutSpecialChars ? new SymbolTimeoutOptions(this) : new SymbolTimeoutOptions();
-            m_emoteOptions = m_timeoutEmotes ? new EmoteTimeoutOptions(this) : new EmoteTimeoutOptions();
+            m_urlOptions = new UrlTimeoutOptions(this);
+            m_capsOptions = new CapsTimeoutOptions(this);
+            m_lengthOptions = new LengthTimeoutOptions(this);
+            m_symbolOptions = new SymbolTimeoutOptions(this);
+            m_emoteOptions = new EmoteTimeoutOptions(this);
             m_chatOptions = new ChatOptions(this);
         }
     }

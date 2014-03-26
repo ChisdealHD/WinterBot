@@ -289,15 +289,13 @@ namespace Winter
             if (m_options.SaveLog || m_options.SaveBinaryLog)
                 AddCommands(new ChatLogger(this));
 
-            if (m_options.Timeouts)
-                AddCommands(new TimeoutController(this));
-
             if (m_options.AutoMessage)
                 AddCommands(new AutoMessage(this));
 
             if (m_options.UserCommands)
                 AddCommands(new UserCommands(this));
 
+            AddCommands(new TimeoutController(this));
             AddCommands(new Quiet(this));
         }
 
