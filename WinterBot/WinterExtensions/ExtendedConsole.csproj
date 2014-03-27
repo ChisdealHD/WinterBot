@@ -54,8 +54,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AnnoyFrosty.cs" />
     <Compile Include="Betting.cs" />
+    <Compile Include="Insult.cs" />
     <Compile Include="JukeBox.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

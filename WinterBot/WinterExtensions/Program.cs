@@ -42,6 +42,7 @@ namespace WinterExtensions
             bot.AddCommands(new JukeBox(bot));
             bot.AddCommands(new Betting(bot));
             bot.AddCommands(new ViewerCountLogger(bot));
+            bot.AddCommands(new Insult(bot));
 
             bot.ModeratorRemoved += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator removed: {0}", user.Name); };
             bot.ModeratorAdded += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator added: {0}", user.Name); };
