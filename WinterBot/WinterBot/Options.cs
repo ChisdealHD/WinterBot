@@ -236,6 +236,7 @@ namespace Winter
         bool m_userCommands = true;
 
         Option<bool> m_neverTimeout = new Option<bool>(false, false, true);
+        private int m_userCommandDelay = 15;
 
         public bool ShouldTimeout(TwitchUser user)
         {
@@ -249,6 +250,7 @@ namespace Winter
         public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
 
         public bool UserCommandsEnabled { get { return m_userCommands; } }
+        public int UserCommandDelay { get { return m_userCommandDelay; } }
 
         public ChatOptions(Options options)
         {
@@ -262,6 +264,7 @@ namespace Winter
                 chat.GetValue("SaveLog", ref m_saveLog);
                 chat.GetValue("SaveBinaryLog", ref m_saveBinaryLog);
                 chat.GetValue("UserCommands", ref m_userCommands);
+                chat.GetValue("UserCommandDelay", ref m_userCommandDelay);
                 m_neverTimeout.Init(chat.GetValue, "NeverTimeout", "NeverTimeoutRegulars", "NeverTimeoutSubscribers");
             }
         }

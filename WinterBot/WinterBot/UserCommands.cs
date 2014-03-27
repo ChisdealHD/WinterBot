@@ -64,8 +64,9 @@ namespace Winter
         
         public UserCommands(WinterBot bot)
         {
-            m_options = bot.Options.ChatOptions;
-            m_stream = bot.Options.Channel;
+            var options = bot.Options;
+            m_options = options.ChatOptions;
+            m_stream = options.Channel;
             m_dataDirectory = bot.Options.DataDirectory;
 
             bot.UnknownCommandReceived += UnknownCommandReceived;
@@ -77,6 +78,10 @@ namespace Winter
         public void ListCommands(WinterBot sender, TwitchUser user, string cmd, string value)
         {
             if (!m_options.UserCommandsEnabled)
+                return;
+
+            int delay = m_options.UserCommandDelay;
+            if (m_lastMessage.Elapsed().TotalSeconds < delay || m_lastCommand.Elapsed().TotalSeconds < delay)
                 return;
 
             AccessLevel level;
@@ -109,9 +114,6 @@ namespace Winter
         public void RemoveCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
             if (!m_options.UserCommandsEnabled)
-                return;
-
-            if (m_lastMessage.Elapsed().TotalSeconds < 15 || m_lastCommand.Elapsed().TotalSeconds < 15)
                 return;
 
             m_lastCommand = DateTime.Now;
@@ -240,7 +242,7 @@ namespace Winter
                 if (sender.CanUseCommand(user, command.AccessRequired))
                 {
                     // Keep user commands from spamming chat, only one once every 20 seconds (unless you are a mod).
-                    if (m_lastMessage.Elapsed().TotalSeconds >= 15 || sender.CanUseCommand(user, AccessLevel.Mod))
+                    if (m_lastMessage.Elapsed().TotalSeconds >= m_options.UserCommandDelay || sender.CanUseCommand(user, AccessLevel.Mod))
                     {
                         sender.SendResponse(command.Value);
                         m_lastMessage = DateTime.Now;
