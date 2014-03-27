@@ -40,8 +40,8 @@ namespace Winter
 
         volatile bool m_checkUpdates = true;
 
-        bool m_live;
         Thread m_streamLiveThread, m_streamFollowerThread;
+        int m_viewers;
 
         #region Events
         public event DiagnosticEventHandler DiagnosticMessage;
@@ -121,6 +121,21 @@ namespace Winter
         public event BotEventHandler EndShutdown;
 
         /// <summary>
+        /// Fired when the stream goes online.
+        /// </summary>
+        public event BotEventHandler StreamOnline;
+
+        /// <summary>
+        /// Fired when the stream goes offline.
+        /// </summary>
+        public event BotEventHandler StreamOffline;
+
+        /// <summary>
+        /// Fired when the viewer count changes.
+        /// </summary>
+        public event ViewerEventHandler ViewerCountChanged;
+
+        /// <summary>
         /// Called when a global event for the bot occurs.
         /// </summary>
         /// <param name="sender">The winterbot instance sending the event.</param>
@@ -166,46 +181,68 @@ namespace Winter
         /// <param name="facility">The type of event occurring.</param>
         /// <param name="message">The message.</param>
         public delegate void DiagnosticEventHandler(WinterBot sender, DiagnosticFacility facility, string message);
+
+        /// <summary>
+        /// Fired when the viewer count is updated.
+        /// </summary>
+        /// <param name="sender">The bot sending the event.</param>
+        /// <param name="currentViewerCount">The new viewer total for the stream.</param>
+        public delegate void ViewerEventHandler(WinterBot sender, int currentViewerCount);
         #endregion
 
-        public DateTime LastMessageSent { get; set; }
+        public DateTime LastMessageSent { get; private set; }
 
         /// <summary>
         /// Returns true if the stream is live, false otherwise (updates every 60 seconds).
         /// </summary>
-        public bool IsStreamLive
-        {
-            get
-            {
-                return m_live;
-            }
-        }
+        public bool IsStreamLive { get; private set; }
 
         /// <summary>
         /// Returns the total number of viewers who have ever watched the stream (updates every 60 seconds).
         /// </summary>
-        public int TotalViewers { get; set; }
+        public int TotalViewers { get; private set; }
 
         /// <summary>
         /// Returns the number of viewers currently watching the stream (updates every 60 seconds).
         /// </summary>
-        public int CurrentViewers { get; set; }
+        public int CurrentViewers
+        {
+            get
+            {
+                return m_viewers;
+            }
+            private set
+            {
+                if (m_viewers != value)
+                {
+                    m_viewers = value;
+                    var evt = ViewerCountChanged;
+                    if (evt != null)
+                    {
+                        m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, value }));
+                        m_event.Set();
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Returns the name of the game being played (updates every 60 seconds).
         /// </summary>
-        public string Game { get; set; }
+        public string Game { get; private set; }
 
         /// <summary>
         /// Returns the stream title (updates every 60 seconds).
         /// </summary>
-        public string Title { get; set; }
+        public string Title { get; private set; }
 
         public bool Silent { get; set; }
         public bool Quiet { get; set; }
         public bool Passive { get; set; }
 
         public Options Options { get { return m_options; } }
+
+        public string Channel { get { return m_channel; } }
 
         public TwitchUsers Users
         {
@@ -684,8 +721,6 @@ namespace Winter
 
         private void StreamLiveWoker()
         {
-            m_live = true;
-
             while (m_checkUpdates)
             {
                 // Check stream values
@@ -694,7 +729,20 @@ namespace Winter
                 if (result != null)
                 {
                     var channels = JsonConvert.DeserializeObject<List<TwitchChannelResponse>>(result);
-                    m_live = channels.Count > 0;
+                    
+                    bool live = channels.Count > 0;
+                    if (live != IsStreamLive)
+                    {
+                        IsStreamLive = live;
+
+                        var evt = live ? StreamOnline : StreamOffline;
+                        if (evt != null)
+                        {
+                            m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this }));
+                            m_event.Set();
+                        }
+                    }
+                    
 
                     if (channels.Count > 0)
                     {

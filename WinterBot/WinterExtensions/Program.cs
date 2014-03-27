@@ -84,7 +84,7 @@ namespace WinterExtensions
 
             if (s_messages > 0 && m_lastHeartbeat.TotalMinutes >= 5)
             {
-                WriteLine("Messsages: {0}", s_messages);
+                WriteLine("Viewers: {0}, Messsages: {0}", sender.CurrentViewers, s_messages);
                 s_messages = 0;
                 m_lastHeartbeat = new TimeSpan();
             }
