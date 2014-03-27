@@ -19,17 +19,21 @@ namespace Winter
 
         HashSet<TwitchUser> m_permit = new HashSet<TwitchUser>();
 
+        AutoResetEvent m_saveEvent = new AutoResetEvent(false);
+        ConcurrentHashset<TwitchUser> m_denyList = new ConcurrentHashset<TwitchUser>();
+
         Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w-./?%&=]*)?", RegexOptions.IgnoreCase);
         List<Regex> m_urlWhitelist;
         List<Regex> m_urlBlacklist;
         List<Regex> m_urlBanlist;
         HashSet<string> m_urlExtensions;
         
-        private HashSet<string> m_defaultImageSet;
-        private Dictionary<int, HashSet<string>> m_imageSets;
+        HashSet<string> m_defaultImageSet;
+        Dictionary<int, HashSet<string>> m_imageSets;
 
         Dictionary<TwitchUser, TimeoutCount> m_timeouts = new Dictionary<TwitchUser, TimeoutCount>();
 
+        Options m_options;
         ChatOptions m_chatOptions;
         UrlTimeoutOptions m_urlOptions;
         CapsTimeoutOptions m_capsOptions;
@@ -39,16 +43,22 @@ namespace Winter
 
         public TimeoutController(WinterBot bot)
         {
-            ThreadPool.QueueUserWorkItem(LoadEmoticons);
+            m_winterBot = bot;
             LoadOptions(bot.Options);
 
-            m_winterBot = bot;
+            ThreadPool.QueueUserWorkItem(LoadDenyList);
+            ThreadPool.QueueUserWorkItem(LoadEmoticons);
+
             m_winterBot.MessageReceived += CheckMessage;
+
+            Thread thread = new Thread(SaveDenyListProc);
+            thread.Start();
         }
 
 
         void LoadOptions(Options options)
         {
+            m_options = options;
             m_chatOptions = options.ChatOptions;
             m_urlOptions = options.UrlOptions;
             m_capsOptions = options.CapsOptions;
@@ -76,14 +86,21 @@ namespace Winter
                 return;
             }
 
-            user = sender.Users.GetUser(value);
-            if (sender.CanUseCommand(user, AccessLevel.Regular))
+            var target = sender.Users.GetUser(value);
+            if (target.IsModerator)
                 return;
 
-            if (m_permit.Contains(user))
-                m_permit.Remove(user);
+            if (m_urlOptions.ShouldEnforce(target))
+            {
+                if (m_permit.Contains(target))
+                    m_permit.Remove(target);
+            }
             else
-                sender.SendResponse("{0}: You are not allowed to post a link.  You couldn't anyway, but someone thought you could use a reminder.", user.Name);
+            {
+                m_denyList.Add(target);
+                m_saveEvent.Set();
+                sender.SendResponse("{0}: {1} is no longer allowed to post links.", user.Name, target.Name);
+            }
         }
 
         [BotCommand(AccessLevel.Mod, "permit")]
@@ -98,8 +115,28 @@ namespace Winter
                 return;
             }
 
-            m_permit.Add(sender.Users.GetUser(value));
-            m_winterBot.SendResponse("{0} -> {1} has been granted permission to post a single link.", user.Name, value);
+            var target = sender.Users.GetUser(value);
+            if (target.IsModerator)
+                return;
+
+            if (m_urlOptions.ShouldEnforce(target))
+            {
+                m_permit.Add(target);
+                m_winterBot.SendResponse("{0} -> {1} has been granted permission to post a single link.", user.Name, target.Name);
+            }
+            else
+            {
+                bool removed = m_denyList.TryRemove(target);
+                if (removed)
+                {
+                    m_saveEvent.Set();
+                    m_winterBot.SendResponse("{0}: {1} can now post links again.", user.Name, target.Name);
+                }
+                else
+                {
+                    m_winterBot.SendResponse("{0}: {1} can posts links.", user.Name, target.Name);
+                }
+            }
         }
 
 
@@ -111,7 +148,7 @@ namespace Winter
             string clearReason = null;
 
             List<string> urls;
-            if (m_urlOptions.ShouldEnforce(user) && HasUrls(text, out urls))
+            if (HasUrls(text, out urls))
             {
                 // Check bans.
                 if (MatchesAny(urls, m_urlBanlist))
@@ -122,7 +159,7 @@ namespace Winter
 
                     m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
-                else if (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist))
+                else if ((m_urlOptions.ShouldEnforce(user) || m_denyList.Contains(user)) && (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist)))
                 {
                     if (m_permit.Contains(user))
                         m_permit.Remove(user);
@@ -186,6 +223,8 @@ namespace Winter
             }
 
             timeout.LastTimeout = now;
+            if (!m_chatOptions.ShouldTimeout(user))
+                timeout.Count = 1;
 
             int duration = 0;
             switch (timeout.Count)
@@ -373,6 +412,32 @@ namespace Winter
             }
             
             return urls.Count > 0;
+        }
+
+        string DenyListFilename
+        {
+            get
+            {
+                string dir = m_options.DataDirectory;
+                string chan = m_options.Channel;
+                return Path.Combine(dir, chan + "_deny.txt");
+            }
+        }
+
+        private void LoadDenyList(object state)
+        {
+            if (File.Exists(DenyListFilename))
+                m_denyList.AddRange(File.ReadAllLines(DenyListFilename).Select(name=>m_winterBot.Users.GetUser(name)));
+        }
+        void SaveDenyListProc()
+        {
+            Thread.CurrentThread.Name = "SaveDenyListProc";
+
+            while (true)
+            {
+                m_saveEvent.WaitOne();
+                File.WriteAllLines(DenyListFilename, m_denyList.Select(t=>t.Name));
+            }
         }
 
 

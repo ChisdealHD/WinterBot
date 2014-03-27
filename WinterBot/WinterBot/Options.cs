@@ -39,9 +39,14 @@ namespace Winter
 
         public void Init(GetValueFunc getValue, string name)
         {
+            Init(getValue, name, "Regular" + name, "Subscriber" + name);
+        }
+
+        public void Init(GetValueFunc getValue, string name, string regName, string subName)
+        {
             getValue(name, ref m_all);
-            getValue("Regular" + name, ref m_reg);
-            getValue("Subscriber" + name, ref m_sub);
+            getValue(regName, ref m_reg);
+            getValue(subName, ref m_sub);
         }
 
         public delegate bool GetValueFunc(string name, ref T val);
@@ -230,6 +235,13 @@ namespace Winter
         bool m_saveBinaryLog = false;
         bool m_userCommands = true;
 
+        Option<bool> m_neverTimeout = new Option<bool>(false, false, true);
+
+        public bool ShouldTimeout(TwitchUser user)
+        {
+            return !m_neverTimeout.GetValue(user);
+        }
+
         public string SubscribeMessage { get { return m_subMessage; } }
         public string FollowMessage { get { return m_followMessage; } }
 
@@ -250,6 +262,7 @@ namespace Winter
                 chat.GetValue("SaveLog", ref m_saveLog);
                 chat.GetValue("SaveBinaryLog", ref m_saveBinaryLog);
                 chat.GetValue("UserCommands", ref m_userCommands);
+                m_neverTimeout.Init(chat.GetValue, "NeverTimeout", "NeverTimeoutRegulars", "NeverTimeoutSubscribers");
             }
         }
     }
