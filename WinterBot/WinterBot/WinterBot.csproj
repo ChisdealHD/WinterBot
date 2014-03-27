@@ -63,6 +63,7 @@
     <Compile Include="Regulars.cs" />
     <Compile Include="ChatLogger.cs" />
     <Compile Include="Helpers.cs" />
+    <Compile Include="ConcurrentHashset.cs" />
     <Compile Include="TimeoutController.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="TwitchJsonObjects.cs" />
