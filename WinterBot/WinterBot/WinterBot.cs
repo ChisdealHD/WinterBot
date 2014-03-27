@@ -819,7 +819,7 @@ namespace Winter
             try
             {
                 var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(url);
-                req.UserAgent = "WinterBot/0.1.0.0";
+                req.UserAgent = "WinterBot/0.2.0.0";
                 var response = req.GetResponse();
                 var fromStream = response.GetResponseStream();
 
