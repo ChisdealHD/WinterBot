@@ -46,7 +46,7 @@ namespace WinterExtensions
             "you filthy casual."
         };
         
-        [BotCommand(AccessLevel.Normal, "insult")]
+        //[BotCommand(AccessLevel.Normal, "insult")]
         public void InsultUser(WinterBot sender, TwitchUser user, string cmd, string value)
         {
             value = value.Trim().ToLower();
