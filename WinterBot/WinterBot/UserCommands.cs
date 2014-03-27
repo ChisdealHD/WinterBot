@@ -59,8 +59,9 @@ namespace Winter
         string m_stream, m_dataDirectory;
         Dictionary<string, UserCommand> m_commands = new Dictionary<string, UserCommand>();
         DateTime m_lastMessage = DateTime.Now;
+        DateTime m_lastCommand = DateTime.Now;
         ChatOptions m_options;
-
+        
         public UserCommands(WinterBot bot)
         {
             m_options = bot.Options.ChatOptions;
@@ -110,6 +111,10 @@ namespace Winter
             if (!m_options.UserCommandsEnabled)
                 return;
 
+            if (m_lastMessage.Elapsed().TotalSeconds < 15 || m_lastCommand.Elapsed().TotalSeconds < 15)
+                return;
+
+            m_lastCommand = DateTime.Now;
             value = value.Trim().ToLower();
             if (value.Length == 0)
             {
@@ -235,7 +240,7 @@ namespace Winter
                 if (sender.CanUseCommand(user, command.AccessRequired))
                 {
                     // Keep user commands from spamming chat, only one once every 20 seconds (unless you are a mod).
-                    if (m_lastMessage.Elapsed().TotalSeconds >= 10 || sender.CanUseCommand(user, AccessLevel.Mod))
+                    if (m_lastMessage.Elapsed().TotalSeconds >= 15 || sender.CanUseCommand(user, AccessLevel.Mod))
                     {
                         sender.SendResponse(command.Value);
                         m_lastMessage = DateTime.Now;
