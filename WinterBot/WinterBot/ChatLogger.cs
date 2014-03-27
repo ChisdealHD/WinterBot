@@ -135,11 +135,7 @@ namespace Winter
         HashSet<TwitchUser> m_mods = new HashSet<TwitchUser>();
         bool m_saveReadableLog = true;
         bool m_saveCompressedLog = true;
-        Thread m_saveThread;
-        volatile bool m_shutdown;
         string m_dataDirectory;
-        AutoResetEvent m_saveThreadSleep = new AutoResetEvent(false);
-
         string m_stream;
 
         public ChatLogger(WinterBot bot)
@@ -159,11 +155,9 @@ namespace Winter
                 bot.UserTimedOut += bot_UserTimedOut;
                 bot.ModeratorAdded += bot_ModeratorAdded;
                 bot.ModeratorRemoved += bot_ModeratorRemoved;
-                bot.BeginShutdown += bot_BeginShutdown;
-                bot.EndShutdown += bot_EndShutdown;
 
-                m_saveThread = new Thread(SaveThreadProc);
-                m_saveThread.Start();
+                BotAsyncTask task = new BotAsyncTask(bot, new TimeSpan(0, 5, 0));
+                task.StartAsync(SaveLog);
             }
         }
 
@@ -182,17 +176,6 @@ namespace Winter
 
             lock (m_sync)
                 m_queue.Add(new ChatModEvent(user, true, m_mods));
-        }
-
-        private void bot_BeginShutdown(WinterBot sender)
-        {
-            m_shutdown = true;
-            m_saveThreadSleep.Set();
-        }
-
-        private void bot_EndShutdown(WinterBot sender)
-        {
-            m_saveThread.Join();
         }
 
         void bot_UserTimedOut(WinterBot sender, TwitchUser user, int duration)
@@ -226,55 +209,38 @@ namespace Winter
                 m_queue.Add(evt);
         }
 
-        List<ChatEvent> m_binaryEvents = new List<ChatEvent>();
 
-        private void SaveThreadProc()
+        private bool SaveLog(WinterBot bot)
         {
-            while (!m_shutdown)
+            lock (m_saveSync)
             {
-                DateTime lastSave = DateTime.Now;
-                while (!m_shutdown && lastSave.Elapsed().TotalMinutes < 1)
-                    if (m_saveThreadSleep.WaitOne(10000))
-                        break;
-
-                lock (m_saveSync)
+                List<ChatEvent> events = new List<ChatEvent>();
+                lock (m_sync)
                 {
-                    List<ChatEvent> events = new List<ChatEvent>();
-                    lock (m_sync)
-                    {
-                        var tmp = m_queue;
-                        m_queue = events;
-                        events = tmp;
-                    }
-
-                    if (events.Count == 0)
-                        continue;
-
-                    var now = DateTime.Now;
-                    string logPath = Path.Combine(m_dataDirectory, "logs");
-                    string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", m_stream, now.Year, now.Month, now.Day);
-
-                    if (m_saveReadableLog)
-                    {
-                        Directory.CreateDirectory(logPath);
-                        File.AppendAllLines(Path.Combine(logPath, filename), events.Select(evt => evt.ToString()));
-                    }
-
-                    if (m_saveCompressedLog)
-                    {
-                        filename = Path.ChangeExtension(filename, "dat");
-
-                        using (var stream = new FileStream(Path.Combine(logPath, filename), FileMode.Append, FileAccess.Write, FileShare.None))
-                        {
-                            using (GZipStream gzStream = new GZipStream(stream, CompressionLevel.Optimal))
-                            {
-                                BinaryFormatter fmt = new BinaryFormatter();
-                                fmt.Serialize(gzStream, events);
-                            }
-                        }
-                    }
+                    var tmp = m_queue;
+                    m_queue = events;
+                    events = tmp;
                 }
+
+                if (events.Count == 0)
+                    return true;
+
+                var now = DateTime.Now;
+                string logPath = Path.Combine(m_dataDirectory, "logs");
+                Directory.CreateDirectory(logPath);
+
+                string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", m_stream, now.Year, now.Month, now.Day);
+                if (m_saveReadableLog)
+                    File.AppendAllLines(Path.Combine(logPath, filename), events.Select(evt => evt.ToString()));
+
+                filename = Path.ChangeExtension(filename, "dat");
+                if (m_saveCompressedLog)
+                    using (var stream = new FileStream(Path.Combine(logPath, filename), FileMode.Append, FileAccess.Write, FileShare.None))
+                        using (GZipStream gzStream = new GZipStream(stream, CompressionLevel.Optimal))
+                            new BinaryFormatter().Serialize(gzStream, events);
             }
+
+            return true;
         }
     }
 }

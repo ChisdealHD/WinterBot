@@ -24,9 +24,8 @@ namespace WinterExtensions
         DateTime m_lastOpenUpdate = DateTime.Now;
         BettingRound m_currentRound, m_lastRound;
         ConcurrentQueue<BettingRound> m_toSave = new ConcurrentQueue<BettingRound>();
-        
-        Thread m_saveThread;
-        bool m_shutdown;
+
+        BotAsyncTask m_task;
         object m_sync = new object();
 
         public Betting(WinterBot bot)
@@ -35,8 +34,7 @@ namespace WinterExtensions
             m_stream = bot.Options.Channel;
             LoadPoints();
             bot.Tick += bot_Tick;
-            bot.BeginShutdown += bot_BeginShutdown;
-            bot.EndShutdown += bot_EndShutdown;
+            m_task = new BotAsyncTask(bot, new TimeSpan(0, 5, 0));
         }
 
         bool IsBettingOpen { get { return m_currentRound != null && m_currentRound.Open; } }
@@ -290,17 +288,6 @@ namespace WinterExtensions
             }
         }
 
-        void bot_BeginShutdown(WinterBot sender)
-        {
-            m_shutdown = true;
-            SaveLastRound();
-        }
-
-        void bot_EndShutdown(WinterBot sender)
-        {
-            if (m_saveThread != null)
-                m_saveThread.Join();
-        }
 
         private void SaveLastRound()
         {
@@ -311,29 +298,19 @@ namespace WinterExtensions
                     m_toSave.Enqueue(m_lastRound);
                     m_lastRound = null;
 
-                    if (m_saveThread == null)
-                    {
-                        m_saveThread = new Thread(SaveThreadProc);
-                        m_saveThread.Start();
-                    }
+                    if (!m_task.Started)
+                        m_task.StartAsync(SaveBettingData);
                 }
             }
         }
 
-        private void SaveThreadProc()
+        private bool SaveBettingData(WinterBot bot)
         {
-            while (!m_shutdown)
-            {
-                DateTime lastSave = DateTime.Now;
-                while (!m_shutdown && lastSave.Elapsed().TotalMinutes < 5)
-                    Thread.Sleep(250);
-
-                if (m_toSave.Count == 0)
-                    continue;
-
-                string filename = Path.Combine(m_dataDirectory, "logs", m_stream + "_pointlog.txt");
+            string filename = Path.Combine(m_dataDirectory, "logs", m_stream + "_pointlog.txt");
+            if (m_toSave.Count != 0)
                 File.AppendAllLines(filename, m_toSave.Enumerate().Select(o => o.ToString()));
-            }
+
+            return true;
         }
 
         internal void AddPoints(TwitchUser user, int points)

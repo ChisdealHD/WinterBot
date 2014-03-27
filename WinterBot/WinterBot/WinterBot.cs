@@ -539,12 +539,11 @@ namespace Winter
             if (!Connect())
                 return;
 
-            Stopwatch timer = new Stopwatch();
-            timer.Start();
+            DateTime lastTick = DateTime.Now;
 
             while (true)
             {
-                m_event.WaitOne(250);
+                m_event.WaitOne(1000);
 
                 Tuple<Delegate, object[]> evt;
                 while (m_events.TryDequeue(out evt))
@@ -555,11 +554,11 @@ namespace Winter
                     function.DynamicInvoke(args);
                 }
 
-                if (timer.Elapsed.TotalSeconds >= 5)
+                var elapsed = lastTick.Elapsed();
+                if (elapsed.TotalSeconds >= 5)
                 {
-                    timer.Stop();
-                    OnTick(timer.Elapsed);
-                    timer.Restart();
+                    OnTick(elapsed);
+                    lastTick = DateTime.Now;
                 }
             }
         }
