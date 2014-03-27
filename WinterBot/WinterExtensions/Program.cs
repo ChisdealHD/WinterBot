@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 using Winter;
+using System.Linq;
 
 namespace WinterExtensions
 {
@@ -12,6 +13,7 @@ namespace WinterExtensions
     {
         static TimeSpan m_lastHeartbeat = new TimeSpan();
         static volatile int s_messages = 0;
+        static string[] m_autoban = new string[0];
 
         static void Main(string[] args)
         {
@@ -31,6 +33,11 @@ namespace WinterExtensions
                 Environment.Exit(1);
             }
 
+            string banlist = Path.Combine(options.DataDirectory, "ban.txt");
+            if (File.Exists(banlist))
+                m_autoban = File.ReadLines(banlist).ToArray();
+
+
             var verInfo = FileVersionInfo.GetVersionInfo(thisExe);
             string version = string.Format("{0}.{1}", verInfo.ProductMajorPart, verInfo.FileMinorPart);
             Console.WriteLine("Winterbot {0}", version);
@@ -47,7 +54,7 @@ namespace WinterExtensions
             bot.ModeratorRemoved += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator removed: {0}", user.Name); };
             bot.ModeratorAdded += delegate(WinterBot b, TwitchUser user) { WriteLine("Moderator added: {0}", user.Name); };
             bot.Connected += delegate(WinterBot b) { WriteLine("Connected to channel: {0}", options.Channel); };
-            bot.MessageReceived += delegate(WinterBot b, TwitchUser user, string text) { s_messages++; };
+            bot.MessageReceived += bot_MessageReceived;
             bot.ChatClear += delegate(WinterBot b, TwitchUser user) { WriteLine("Chat Clear: {0}", user.Name); };
             bot.UserBanned += delegate(WinterBot b, TwitchUser user) { WriteLine("Banned: {0}", user.Name); };
             bot.UserTimedOut += delegate(WinterBot b, TwitchUser user, int duration) { WriteLine("Timeout: {0} for {1} seconds", user.Name, duration); };
@@ -69,6 +76,14 @@ namespace WinterExtensions
                 }
             }
 
+        }
+
+        static void bot_MessageReceived(WinterBot sender, TwitchUser user, string text)
+        {
+            s_messages++;
+
+            if (m_autoban.Any(name => user.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
+                sender.Ban(user);
         }
 
         private static string GetDataFolder(string path)

@@ -14,7 +14,7 @@ namespace Winter
 {
     public class TwitchUsers
     {
-        static Regex s_validUsername = new Regex("[a-zA-Z][a-zA-Z0-9_]*");
+        static Regex s_validUsername = new Regex("[a-zA-Z][a-zA-Z0-9_]*$");
         Dictionary<string, TwitchUser> m_users;
         HashSet<TwitchUser> m_moderators;
         object m_sync = new object();

@@ -14,7 +14,7 @@ namespace WinterExtensions
 
         public Insult(WinterBot bot)
         {
-            m_last.AddHours(-1);
+            m_last = DateTime.Now.AddHours(-1);
             bot.MessageReceived += bot_MessageReceived;
         }
 
@@ -49,8 +49,9 @@ namespace WinterExtensions
         [BotCommand(AccessLevel.Normal, "insult")]
         public void InsultUser(WinterBot sender, TwitchUser user, string cmd, string value)
         {
-            if (user.Name.Equals("darkautumn", StringComparison.CurrentCultureIgnoreCase))
-                return;
+            value = value.Trim().ToLower();
+            if (TwitchUsers.IsValidUserName(value))
+                user = sender.Users.GetUser(value);
 
             if (m_last.Elapsed().Minutes >= 1)
                 sender.SendMessage("{0}, {1}", user.Name, m_insults[m_random.Next(m_insults.Length)]);
