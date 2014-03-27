@@ -90,20 +90,16 @@ namespace Winter
             if (target.IsModerator)
                 return;
 
-            if (m_urlOptions.ShouldEnforce(target))
-            {
-                if (m_permit.Contains(target))
-                    m_permit.Remove(target);
-            }
-            else
-            {
-                m_denyList.Add(target);
-                m_saveEvent.Set();
-                sender.SendResponse("{0}: {1} is no longer allowed to post links.", user.Name, target.Name);
-            }
+            if (m_permit.Contains(target))
+                m_permit.Remove(target);
+
+            m_denyList.Add(target);
+            m_saveEvent.Set();
+            sender.SendResponse("{0}: {1} is no longer allowed to post links.", user.Name, target.Name);
+            
         }
 
-        [BotCommand(AccessLevel.Mod, "permit")]
+        [BotCommand(AccessLevel.Mod, "permit", "allow")]
         public void Permit(WinterBot sender, TwitchUser user, string cmd, string value)
         {
             Debug.Assert(m_winterBot == sender);
@@ -119,18 +115,22 @@ namespace Winter
             if (target.IsModerator)
                 return;
 
-            if (m_urlOptions.ShouldEnforce(target))
+            bool removed = m_denyList.TryRemove(target);
+            if (removed)
             {
-                m_permit.Add(target);
-                m_winterBot.SendResponse("{0} -> {1} has been granted permission to post a single link.", user.Name, target.Name);
+                m_saveEvent.Set();
+
+                if (m_urlOptions.ShouldEnforce(target))
+                    m_winterBot.SendResponse("{0}: {1} was removed from the deny list.", user.Name, target.Name);
+                else
+                    m_winterBot.SendResponse("{0}: {1} can now post links again.", user.Name, target.Name);
             }
             else
             {
-                bool removed = m_denyList.TryRemove(target);
-                if (removed)
+                if (m_urlOptions.ShouldEnforce(target))
                 {
-                    m_saveEvent.Set();
-                    m_winterBot.SendResponse("{0}: {1} can now post links again.", user.Name, target.Name);
+                    m_permit.Add(target);
+                    m_winterBot.SendResponse("{0} -> {1} has been granted permission to post a single link.", user.Name, target.Name);
                 }
                 else
                 {
