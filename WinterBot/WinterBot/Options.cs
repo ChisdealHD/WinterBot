@@ -101,7 +101,7 @@ namespace Winter
         public string BanMessage { get { return m_banMessage ?? ""; } }
 
 
-        public UrlTimeoutOptions(Options options)
+        public UrlTimeoutOptions(IniReader options)
         {
             m_whitelist = m_blacklist = m_banlist = new string[0];
 
@@ -146,7 +146,7 @@ namespace Winter
         public string Message { get { return m_message; } }
 
 
-        public CapsTimeoutOptions(Options options)
+        public CapsTimeoutOptions(IniReader options)
         {
             var section = options.GetSectionByName("capstimeout");
             base.Init(section);
@@ -171,7 +171,7 @@ namespace Winter
             return m_maxLength.GetValue(user);
         }
 
-        public LengthTimeoutOptions(Options options)
+        public LengthTimeoutOptions(IniReader options)
         {
             var section = options.GetSectionByName("LongMessageTimeout");
             base.Init(section);
@@ -191,7 +191,7 @@ namespace Winter
         public bool AllowKorean { get { return m_allowKorean; } }
         public string Message { get { return m_message; } }
 
-        public SymbolTimeoutOptions(Options options)
+        public SymbolTimeoutOptions(IniReader options)
         {
             var section = options.GetSectionByName("symboltimeout");
             base.Init(section);
@@ -215,7 +215,7 @@ namespace Winter
             return m_max.GetValue(user);
         }
 
-        public EmoteTimeoutOptions(Options options)
+        public EmoteTimeoutOptions(IniReader options)
         {
             var section = options.GetSectionByName("emotetimeout");
             base.Init(section);
@@ -252,7 +252,7 @@ namespace Winter
         public bool UserCommandsEnabled { get { return m_userCommands; } }
         public int UserCommandDelay { get { return m_userCommandDelay; } }
 
-        public ChatOptions(Options options)
+        public ChatOptions(IniReader options)
         {
             var messages = options.GetSectionByName("messages");
 
@@ -283,7 +283,7 @@ namespace Winter
         public int Delay { get { return m_delay >= 10 ? m_delay : 10; } }
         public int MessageDelay { get { return m_messageDelay; } }
 
-        public AutoMessageOptions(Options options)
+        public AutoMessageOptions(IniReader options)
         {
             var messageSection = options.GetSectionByName("messages");
             var settings = options.GetSectionByName("automessage");
@@ -309,8 +309,10 @@ namespace Winter
         }
     }
 
-    public class Options : IniReader
+    public class Options
     {
+        IniReader m_iniReader;
+
         string m_stream, m_twitchName, m_oauthPass;
         string m_dataDirectory;
 
@@ -324,6 +326,8 @@ namespace Winter
         SymbolTimeoutOptions m_symbolOptions;
         EmoteTimeoutOptions m_emoteOptions;
         AutoMessageOptions m_autoMessageOptions;
+
+        public IniReader IniReader { get { return m_iniReader; } }
 
         public string Channel { get { return m_stream; } }
         public string Username { get { return m_twitchName; } }
@@ -346,7 +350,7 @@ namespace Winter
         {
             get
             {
-                var section = GetSectionByName("plugins");
+                var section = m_iniReader.GetSectionByName("plugins");
                 if (section == null)
                     return new string[0];
 
@@ -357,8 +361,8 @@ namespace Winter
         }
 
         public Options(string filename)
-            : base(filename)
         {
+            m_iniReader = new IniReader(filename);
             m_dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "WinterBot").Replace("\\\\", "\\");
             LoadData();
 
@@ -368,7 +372,7 @@ namespace Winter
 
         private void LoadData()
         {
-            IniSection section = GetSectionByName("stream");
+            IniSection section = m_iniReader.GetSectionByName("stream");
             if (section == null)
                 throw new InvalidOperationException("Options file missing [Stream] section.");
 
@@ -382,19 +386,19 @@ namespace Winter
 
             m_regulars = true;
 
-            section = GetSectionByName("Regulars");
+            section = m_iniReader.GetSectionByName("Regulars");
             if (section != null)
             {
                 section.GetValue("Enabled", ref m_regulars);
             }
 
-            m_urlOptions = new UrlTimeoutOptions(this);
-            m_capsOptions = new CapsTimeoutOptions(this);
-            m_lengthOptions = new LengthTimeoutOptions(this);
-            m_symbolOptions = new SymbolTimeoutOptions(this);
-            m_emoteOptions = new EmoteTimeoutOptions(this);
-            m_chatOptions = new ChatOptions(this);
-            m_autoMessageOptions = new AutoMessageOptions(this);
+            m_urlOptions = new UrlTimeoutOptions(m_iniReader);
+            m_capsOptions = new CapsTimeoutOptions(m_iniReader);
+            m_lengthOptions = new LengthTimeoutOptions(m_iniReader);
+            m_symbolOptions = new SymbolTimeoutOptions(m_iniReader);
+            m_emoteOptions = new EmoteTimeoutOptions(m_iniReader);
+            m_chatOptions = new ChatOptions(m_iniReader);
+            m_autoMessageOptions = new AutoMessageOptions(m_iniReader);
         }
     }
 }
