@@ -18,6 +18,11 @@ namespace Winter
     }
 
     public delegate void WinterBotCommand(WinterBot sender, TwitchUser user, string cmd, string value);
+    
+    public abstract class WinterBotPlugin
+    {
+        public abstract void Initialize(WinterBot bot);
+    }
 
     public enum DiagnosticFacility
     {
@@ -858,4 +863,9 @@ namespace Winter
         }
     }
 
+
+    [AttributeUsage(AttributeTargets.Class)]
+    public class WinterBotPluginAttribute : Attribute
+    {
+    }
 }

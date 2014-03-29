@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace Winter
 {
@@ -18,16 +19,7 @@ namespace Winter
             if (!Debugger.IsAttached)
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            string thisExe = Assembly.GetExecutingAssembly().Location;
-
-            string iniFile = Path.Combine(Path.GetDirectoryName(thisExe), "options.ini");
-            if (!File.Exists(iniFile))
-            {
-                MessageBox.Show(string.Format("Could not find options.ini.  This must be placed next to {0}.", Path.GetFileName(thisExe)), "No options.ini found!");
-                Environment.Exit(1);
-            }
-
-            Options options = new Options(iniFile);
+            Options options = new Options(GetIniFile(args));
             if (string.IsNullOrEmpty(options.Channel) || string.IsNullOrEmpty(options.Username) || string.IsNullOrEmpty(options.Password))
             {
                 MessageBox.Show("You must first fill in a stream, user, and oauth password to use WinterBot.\n\nPlease follow the instructions here:\nhttps://github.com/DarkAutumn/WinterBot/wiki/Getting-Started", "WinterBot needs configuration!");
@@ -36,6 +28,7 @@ namespace Winter
 
             s_errorFile = options.DataDirectory;
 
+            string thisExe = Assembly.GetExecutingAssembly().Location;
             var verInfo = FileVersionInfo.GetVersionInfo(thisExe);
             string version = string.Format("{0}.{1}", verInfo.ProductMajorPart, verInfo.FileMinorPart);
 
@@ -45,6 +38,7 @@ namespace Winter
             Console.WriteLine();
 
             WinterBot bot = new WinterBot(options, options.Channel, options.Username, options.Password);
+            LoadPlugins(options, bot);
 
             bot.Connected += delegate(WinterBot b) { WriteLine("Connected to channel: {0}", options.Channel); };
             bot.MessageReceived += delegate(WinterBot b, TwitchUser user, string text) { s_messages++; };
@@ -69,6 +63,85 @@ namespace Winter
                 }
             }
 
+        }
+
+        private static void LoadPlugins(Options options, WinterBot bot)
+        {
+            foreach (string fn in options.Plugins)
+            {
+                string filename = fn;
+                if (!File.Exists(filename))
+                {
+                    Console.WriteLine("Could not find plugin file: {0}", filename);
+                    continue;
+                }
+
+                filename = Path.GetFullPath(filename);
+                try
+                {
+                    var assembly = Assembly.LoadFile(filename);
+
+                    var types = from type in assembly.GetTypes()
+                                where type.IsPublic
+
+                                let attr = type.GetCustomAttribute(typeof(WinterBotPluginAttribute), false)
+                                where attr != null
+                                select type;
+
+                    foreach (var type in types)
+                    {
+                        var init = type.GetMethod("Init", new Type[] { typeof(WinterBot) });
+                        init.Invoke(null, new object[] { bot });
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error loading assembly {0}:", filename);
+                    Console.WriteLine(e);
+                }
+            }
+        }
+
+        private static string GetIniFile(string[] args)
+        {
+            string thisExe = Assembly.GetExecutingAssembly().Location;
+            string thisFolder = Path.GetDirectoryName(thisExe);
+
+            if (args.Length > 1)
+                Usage(thisExe);
+
+            string iniFile = Path.Combine(thisFolder, "options.ini");
+            if (args.Length == 0)
+            {
+                if (!File.Exists(iniFile))
+                    Usage(thisExe);
+
+                return iniFile;
+            }
+            else
+            {
+                string arg = args[0];
+                if (!arg.EndsWith(".ini"))
+                    arg += ".ini";
+
+                arg = Path.Combine(thisFolder, arg);
+                if (File.Exists(arg))
+                    return arg;
+
+                string longname = Path.Combine(thisFolder, Path.GetFileNameWithoutExtension(arg) + "_options.ini");
+
+                if (!File.Exists(longname))
+                    Usage(thisExe);
+                    
+                return longname;
+            }
+        }
+
+        private static void Usage(string thisExe)
+        {
+
+            MessageBox.Show(string.Format("Usage: {0} [options.ini].", Path.GetFileName(thisExe)), "Invalid Parameters");
+            Environment.Exit(1);
         }
 
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -97,7 +170,7 @@ namespace Winter
         {
             string documentFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments).ToLower();
             if (path.ToLower().StartsWith(documentFolder))
-                return "My Documents\\" + path.Substring(documentFolder.Length);
+                return "My Documents" + path.Substring(documentFolder.Length);
 
             return path;
         }

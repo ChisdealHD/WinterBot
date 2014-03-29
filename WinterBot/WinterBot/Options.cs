@@ -342,10 +342,24 @@ namespace Winter
         public EmoteTimeoutOptions EmoteOptions { get { return m_emoteOptions; } }
         public AutoMessageOptions AutoMessageOptions { get { return m_autoMessageOptions; } }
 
+        public IEnumerable<string> Plugins
+        {
+            get
+            {
+                var section = GetSectionByName("plugins");
+                if (section == null)
+                    return new string[0];
+
+                return from s in section.EnumerateRawStrings()
+                       where !string.IsNullOrWhiteSpace(s)
+                       select s;
+            }
+        }
+
         public Options(string filename)
             : base(filename)
         {
-            m_dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "WinterBot");
+            m_dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "WinterBot").Replace("\\\\", "\\");
             LoadData();
 
             if (!Directory.Exists(m_dataDirectory))

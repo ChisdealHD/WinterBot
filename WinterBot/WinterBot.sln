@@ -6,8 +6,11 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinterBot", "WinterBot\WinterBot.csproj", "{7463A6B3-6C12-4D9D-83AB-652C11DB0F51}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinterBotConsole", "WinterBotConsole\WinterBotConsole.csproj", "{079AFCFD-FE1C-44AB-87CC-1E23E8D3BA1A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9D1E431F-A8CB-43AB-8486-ED18313B8582} = {9D1E431F-A8CB-43AB-8486-ED18313B8582}
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtendedConsole", "WinterExtensions\ExtendedConsole.csproj", "{9D1E431F-A8CB-43AB-8486-ED18313B8582}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions", "WinterExtensions\Extensions.csproj", "{9D1E431F-A8CB-43AB-8486-ED18313B8582}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
