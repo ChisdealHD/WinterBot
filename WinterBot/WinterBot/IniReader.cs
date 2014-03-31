@@ -117,38 +117,7 @@ namespace Winter
             if (value == null)
                 return false;
 
-            if (bool.TryParse(value, out result))
-                return true;
-
-            result = true;
-            if (value.Equals("true", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("t", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("yes", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("y", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("1", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("enabled", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-
-            result = false;
-            if (value.Equals("false", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("f", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("no", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("n", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("0", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-            else if (value.Equals("disabled", StringComparison.CurrentCultureIgnoreCase))
-                return true;
-
-            return false;
+            return value.ParseBool(ref result);
         }
     }
 
