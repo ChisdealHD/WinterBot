@@ -156,8 +156,8 @@ namespace Winter
                 bot.ModeratorAdded += bot_ModeratorAdded;
                 bot.ModeratorRemoved += bot_ModeratorRemoved;
 
-                BotAsyncTask task = new BotAsyncTask(bot, new TimeSpan(0, 5, 0));
-                task.StartAsync(SaveLog);
+                BotAsyncTask task = new BotAsyncTask(bot, SaveLog, new TimeSpan(0, 5, 0));
+                task.StartAsync();
             }
         }
 

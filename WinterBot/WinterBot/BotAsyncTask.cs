@@ -10,61 +10,100 @@ namespace Winter
     public class BotAsyncTask
     {
         WinterBot m_bot;
-        bool m_shutdown;
+        volatile bool m_shutdown;
         Callback m_callback;
-        Thread m_thread;
+        volatile Thread m_thread;
         AutoResetEvent m_event = new AutoResetEvent(false);
 
         public delegate bool Callback(WinterBot bot);
 
-        public TimeSpan Interval { get; set; }
+        public TimeSpan Interval { get; private set; }
 
-        public bool Started { get { return m_callback != null; } }
+        public bool Started { get { return m_thread != null; } }
 
-        public BotAsyncTask(WinterBot bot, TimeSpan interval)
+        public BotAsyncTask(WinterBot bot, Callback callback, TimeSpan interval)
         {
             m_bot = bot;
             Interval = interval;
-        }
-
-        public void StartAsync(Callback callback)
-        {
-            if (Started)
-                throw new InvalidOperationException("Task already started");
-
             m_callback = callback;
-
-            m_bot.BeginShutdown += m_bot_BeginShutdown;
-            m_bot.EndShutdown += m_bot_EndShutdown;
-
-            m_thread = new Thread(ThreadProc);
-            m_thread.Start();
         }
 
-        void m_bot_BeginShutdown(WinterBot sender)
+        public void Stop()
         {
             m_shutdown = true;
             m_event.Set();
         }
 
-        void m_bot_EndShutdown(WinterBot sender)
+        public void Join()
         {
-            m_thread.Join();
+            var thread = m_thread;
+            if (thread != null)
+            {
+                if (!m_shutdown)
+                    Stop();
+
+                thread.Join();
+                m_thread = null;
+            }
         }
 
-        void ThreadProc()
+        public void StartAsync(bool saveImmediately=false)
+        {
+            if (m_thread != null)
+                throw new InvalidOperationException("Task already started");
+
+            m_bot.BeginShutdown += m_bot_BeginShutdown;
+            m_bot.EndShutdown += m_bot_EndShutdown;
+
+            if (saveImmediately)
+                m_thread = new Thread(SaveImmediatelyThreadProc);
+            else
+                m_thread = new Thread(ThreadProc);
+            m_thread.Start();
+        }
+
+        void m_bot_BeginShutdown(WinterBot sender)
+        {
+            Stop();
+        }
+
+        void m_bot_EndShutdown(WinterBot sender)
+        {
+            Join();
+        }
+
+
+        void SaveImmediatelyThreadProc()
+        {
+            if (m_callback(m_bot))
+                MainLoop();
+        }
+
+        private void MainLoop()
         {
             Thread.CurrentThread.Name = m_callback.Method.Name;
 
             while (!m_shutdown)
             {
-                m_event.WaitOne(Interval);
+                if (Interval == TimeSpan.Zero || Interval == TimeSpan.MaxValue)
+                    m_event.WaitOne();
+                else
+                    m_event.WaitOne(Interval);
+
                 if (!m_callback(m_bot))
                     break;
             }
 
             m_bot.BeginShutdown -= m_bot_BeginShutdown;
             m_bot.EndShutdown -= m_bot_EndShutdown;
+            m_thread = null;
+        }
+
+
+
+        void ThreadProc()
+        {
+            MainLoop();
         }
     }
 }

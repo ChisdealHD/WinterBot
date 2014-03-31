@@ -11,7 +11,23 @@ using Winter;
 
 namespace WinterExtensions
 {
-    public class Betting
+    class BettingOptions
+    {
+        bool m_enabled;
+
+        public bool Enabled { get { return m_enabled; } set { m_enabled = value; } }
+
+
+        public BettingOptions(Options options)
+        {
+            var ini = options.IniReader;
+            var section = ini.GetSectionByName("betting");
+            if (section != null)
+                section.GetValue("Enabled", ref m_enabled);
+        }
+    }
+
+    class Betting
     {
         string m_stream;
         string m_dataDirectory;
@@ -25,26 +41,88 @@ namespace WinterExtensions
         BettingRound m_currentRound, m_lastRound;
         ConcurrentQueue<BettingRound> m_toSave = new ConcurrentQueue<BettingRound>();
 
+        WinterBot m_bot;
         BotAsyncTask m_task;
         object m_sync = new object();
 
+        BettingOptions m_options;
+
         public Betting(WinterBot bot)
         {
+            m_bot = bot;
+            m_options = new BettingOptions(bot.Options);
+            
             m_dataDirectory = bot.Options.DataDirectory;
             m_stream = bot.Options.Channel;
+
             LoadPoints();
-            bot.Tick += bot_Tick;
-            m_task = new BotAsyncTask(bot, new TimeSpan(0, 5, 0));
+
+            if (m_options.Enabled)
+                Enable();
+        }
+
+        void Enable()
+        {
+            m_bot.Tick += bot_Tick;
+            if (m_task == null)
+                m_task = new BotAsyncTask(m_bot, SaveBettingData, new TimeSpan(0, 5, 0));
+            else
+                m_task.Join();
+        }
+
+        void Disable()
+        {
+            if (m_lastRound != null)
+                SaveLastRound();
+
+            if (m_task.Started)
+                m_task.Stop();
         }
 
         bool IsBettingOpen { get { return m_currentRound != null && m_currentRound.Open; } }
 
         bool WaitingResult { get { return m_currentRound != null && m_currentRound.Result == null; } }
 
+        [BotCommand(AccessLevel.Mod, "betting")]
+        public void BettingMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                sender.SendResponse("Betting is currently {0}.", m_options.Enabled ? "enabled" : "disabled");
+                return;
+            }
+
+            bool mode = false;
+            if (!value.ParseBool(ref mode))
+            {
+                sender.SendResponse("Usage: {0} [enable|disable]", cmd);
+                return;
+            }
+
+            if (m_options.Enabled == mode)
+            {
+                sender.SendResponse("Betting is currently {0}.", m_options.Enabled ? "enabled" : "disabled");
+                return;
+            }
+            else
+            {
+                m_options.Enabled = mode;
+                sender.SendResponse("Betting is now {0}.", m_options.Enabled ? "enabled" : "disabled");
+            }
+
+
+            if (m_options.Enabled)
+                Enable();
+            else
+                Disable();
+        }
 
         [BotCommand(AccessLevel.Mod, "openbetting", "openbet", "startbet", "startbetting")]
         public void OpenBetting(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.Enabled)
+                return;
+
             if (IsBettingOpen || WaitingResult)
             {
                 sender.SendResponse("Betting is currently ongoing.  Use !result to award points, use !cancelbet to cancel the current bet.");
@@ -70,6 +148,9 @@ namespace WinterExtensions
         [BotCommand(AccessLevel.Mod, "cancelbetting", "cancelbet")]
         public void CancelBetting(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.Enabled)
+                return;
+
             if (m_currentRound == null)
             {
                 sender.SendResponse("Betting is not currently open.");
@@ -82,6 +163,9 @@ namespace WinterExtensions
         [BotCommand(AccessLevel.Mod, "addpoints")]
         public void AddPoints(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.Enabled)
+                return;
+
             TwitchUser who;
             int points;
             if (!ParsePoints(sender, user, cmd, value, out who, out points))
@@ -105,6 +189,9 @@ namespace WinterExtensions
         [BotCommand(AccessLevel.Mod, "removepoints", "subpoints", "subtractpoints")]
         public void RemovePoints(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.Enabled)
+                return;
+
             TwitchUser who;
             int points;
             if (!ParsePoints(sender, user, cmd, value, out who, out points))
@@ -123,6 +210,9 @@ namespace WinterExtensions
         [BotCommand(AccessLevel.Normal, "bet")]
         public void BetCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.Enabled)
+                return;
+
             if (!IsBettingOpen)
             {
                 SendMessage(sender, "{0}: Betting is not currently open.", user.Name);
@@ -144,12 +234,18 @@ namespace WinterExtensions
         [BotCommand(AccessLevel.Normal, "points")]
         public void PointsCommand(WinterBot sender, TwitchUser user, string cmd, string value)
         {
+            if (!m_options.Enabled)
+                return;
+
             m_pointsRequest.Add(user);
         }
         
         [BotCommand(AccessLevel.Mod, "result", "winner")]
         public void ResultCommand(WinterBot sender, TwitchUser user, string cmd, string result)
         {
+            if (!m_options.Enabled)
+                return;
+
             var round = m_currentRound != null ? m_currentRound : m_lastRound;
             if (round == null)
             {
@@ -299,7 +395,7 @@ namespace WinterExtensions
                     m_lastRound = null;
 
                     if (!m_task.Started)
-                        m_task.StartAsync(SaveBettingData);
+                        m_task.StartAsync(true);
                 }
             }
         }
@@ -651,7 +747,7 @@ namespace WinterExtensions
             Debug.Assert(Result != null);
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendFormat("Bet on: {0} ran from {1} - {2}, with result {3}\n", string.Join(", ", Values), OpenTime, CloseTime, Result);
+            sb.AppendFormat("Bet on: {0}.  Ran from {1} - {2}, with result {3}\n", string.Join(", ", Values), OpenTime, CloseTime, Result);
             sb.AppendFormat("Created by: {0}\n", m_createdBy);
             sb.AppendFormat("Closed by: {0}\n", m_closedBy);
             if (Result != null && m_bets.ContainsKey(Result))

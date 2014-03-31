@@ -26,8 +26,8 @@ namespace WinterExtensions
             bot.StreamOnline += bot_StreamOnline;
             bot.StreamOffline += bot_StreamOffline;
             
-            BotAsyncTask task = new BotAsyncTask(bot, new TimeSpan(0, 5, 0));
-            task.StartAsync(SaveViewerTotals);
+            BotAsyncTask task = new BotAsyncTask(bot, SaveViewerTotals, new TimeSpan(0, 5, 0));
+            task.StartAsync();
         }
 
         void WriteLine(string fmt, params object[] objs)
