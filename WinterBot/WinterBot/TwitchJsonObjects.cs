@@ -32,7 +32,7 @@ namespace Winter
     public class Channel
     {
         public object subcategory { get; set; }
-        public bool producer { get; set; }
+        public bool? producer { get; set; }
         public string image_url_huge { get; set; }
         public string timezone { get; set; }
         public string screen_cap_url_huge { get; set; }
@@ -50,11 +50,11 @@ namespace Winter
         public string image_url_small { get; set; }
         public string screen_cap_url_medium { get; set; }
         public string language { get; set; }
-        public bool embed_enabled { get; set; }
+        public bool? embed_enabled { get; set; }
         public string subcategory_title { get; set; }
         public string image_url_medium { get; set; }
         public string image_url_large { get; set; }
-        public bool mature { get; set; }
+        public bool? mature { get; set; }
         public string screen_cap_url_small { get; set; }
         public string login { get; set; }
         public string category_title { get; set; }
@@ -71,12 +71,12 @@ namespace Winter
         public int channel_count { get; set; }
         public int video_height { get; set; }
         public int site_count { get; set; }
-        public bool embed_enabled { get; set; }
+        public bool? embed_enabled { get; set; }
         public Channel channel { get; set; }
         public string up_time { get; set; }
         public string meta_game { get; set; }
         public string format { get; set; }
-        public int embed_count { get; set; }
+        public int? embed_count { get; set; }
         public string stream_type { get; set; }
         public bool abuse_reported { get; set; }
         public int video_width { get; set; }
