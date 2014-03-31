@@ -451,7 +451,16 @@ namespace Winter
             StreamReader reader = new StreamReader(fromStream);
             string data = reader.ReadToEnd();
 
-            TwitchEmoticonResponse emotes = JsonConvert.DeserializeObject<TwitchEmoticonResponse>(data);
+            TwitchEmoticonResponse emotes = null;
+            try
+            {
+                emotes = JsonConvert.DeserializeObject<TwitchEmoticonResponse>(data);
+            }
+            catch (Exception e)
+            {
+                m_winterBot.WriteDiagnostic(DiagnosticFacility.Error, "Error reading emoticon response: " + e.ToString());
+                return;
+            }
 
             HashSet<string> defaultSet = new HashSet<string>();
             Dictionary<int, HashSet<string>> imageSets = new Dictionary<int, HashSet<string>>();

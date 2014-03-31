@@ -28,7 +28,8 @@ namespace Winter
     {
         UserError,
         Ban,
-        Twitch
+        Twitch,
+        Error
     }
 
     public class WinterBot : IDisposable
@@ -727,12 +728,24 @@ namespace Winter
         {
             while (m_checkUpdates)
             {
+                // One minute between updates.
+                Thread.Sleep(60000);
+
                 // Check stream values
                 string url = @"http://api.justin.tv/api/stream/list.json?channel=" + m_channel;
                 string result = GetUrl(url);
                 if (result != null)
                 {
-                    var channels = JsonConvert.DeserializeObject<List<TwitchChannelResponse>>(result);
+                    List<TwitchChannelResponse> channels = null;
+                    try
+                    {
+                        channels = JsonConvert.DeserializeObject<List<TwitchChannelResponse>>(result);
+                    }
+                    catch (Exception e)
+                    {
+                        WriteDiagnostic(DiagnosticFacility.Error, "Exception while processing stream JSON data: " + e.ToString());
+                        continue;
+                    }
                     
                     bool live = channels.Count > 0;
                     if (live != IsStreamLive)
@@ -762,9 +775,6 @@ namespace Winter
                         CurrentViewers = 0;
                     }
                 }
-
-                // One minute between updates.
-                Thread.Sleep(60000);
             }
         }
         private void StreamFollowerWorker()
