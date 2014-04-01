@@ -33,14 +33,15 @@ namespace Winter
                 return;
             }
 
+            TwitchUser target = sender.Users.GetUser(value);
             if (regular)
             {
-                sender.AddRegular(value);
+                sender.AddRegular(target);
                 sender.SendResponse("{0} added to regular list.", value);
             }
             else
             {
-                sender.RemoveRegular(value);
+                sender.RemoveRegular(target);
                 sender.SendResponse("{0} removed from regular list.", value);
             }
         }

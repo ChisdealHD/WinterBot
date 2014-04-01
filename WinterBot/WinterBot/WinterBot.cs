@@ -29,7 +29,8 @@ namespace Winter
         UserError,
         Ban,
         Twitch,
-        Error
+        Error,
+        IO
     }
 
     public class WinterBot : IDisposable
@@ -42,7 +43,7 @@ namespace Winter
 
         Dictionary<string, CmdValue> m_commands = new Dictionary<string, CmdValue>();
         private Options m_options;
-        HashSet<string> m_regulars = new HashSet<string>();
+        UserSet m_regulars;
 
         volatile bool m_checkUpdates = true;
 
@@ -275,7 +276,6 @@ namespace Winter
             m_twitch.UserSubscribed += SubscribeHandler;
             m_twitch.InformModerator += InformModerator;
 
-            LoadRegulars();
             LoadExtensions();
         }
 
@@ -328,11 +328,13 @@ namespace Winter
         private void LoadExtensions()
         {
             if (m_options.Regulars)
+            {
+                m_regulars = new UserSet(this, "regulars");
+                m_regulars.LoadAsync();
                 AddCommands(new Regulars(this));
+            }
 
-            var chatOptions = m_options.ChatOptions;
-            if (chatOptions.SaveLog || chatOptions.SaveBinaryLog)
-                AddCommands(new ChatLogger(this));
+            ChatLog.Init(this);
 
             AddCommands(new AutoMessage(this));
             AddCommands(new UserCommands(this));
@@ -678,50 +680,22 @@ namespace Winter
             }
         }
 
-        internal void AddRegular(string value)
+        internal void AddRegular(TwitchUser user)
         {
-            if (!m_regulars.Contains(value))
-            {
-                m_regulars.Add(value);
-                SaveRegulars();
-            }
+            if (m_regulars != null)
+                m_regulars.Add(user);
         }
 
-        internal void RemoveRegular(string value)
+        internal void RemoveRegular(TwitchUser user)
         {
-            if (m_regulars.Contains(value))
-            {
-                m_regulars.Remove(value);
-                SaveRegulars();
-            }
+            if (m_regulars != null)
+                m_regulars.Remove(user);
         }
 
-        void LoadRegulars()
-        {
-            string regulars = GetRegularFile();
-            if (File.Exists(regulars))
-                m_regulars = new HashSet<string>(File.ReadAllLines(regulars));
-            else
-                m_regulars = new HashSet<string>();
-        }
 
-        void SaveRegulars()
+        internal bool IsRegular(TwitchUser user)
         {
-            var regulars = GetRegularFile();
-            if (m_regulars.Count > 0)
-                File.WriteAllLines(regulars, m_regulars);
-            else if (File.Exists(regulars))
-                File.Delete(regulars);
-        }
-
-        private string GetRegularFile()
-        {
-            return Path.Combine(Options.DataDirectory, m_channel + "_regulars.txt");
-        }
-
-        internal bool IsRegular(string user)
-        {
-            return m_regulars.Contains(user.ToLower());
+            return m_regulars != null ? m_regulars.Contains(user) : false;
         }
 
         private void StreamLiveWoker()

@@ -232,7 +232,6 @@ namespace Winter
         string m_subMessage = null;
         string m_followMessage = null;
         bool m_saveLog = true;
-        bool m_saveBinaryLog = false;
         bool m_userCommands = true;
 
         Option<bool> m_neverTimeout = new Option<bool>(false, false, true);
@@ -247,7 +246,6 @@ namespace Winter
         public string FollowMessage { get { return m_followMessage; } }
 
         public bool SaveLog { get { return m_saveLog; } }
-        public bool SaveBinaryLog { get { return m_saveBinaryLog; } }
 
         public bool UserCommandsEnabled { get { return m_userCommands; } }
         public int UserCommandDelay { get { return m_userCommandDelay; } }
@@ -262,7 +260,6 @@ namespace Winter
                 chat.GetValue("SubscribeMessage", ref m_subMessage);
                 chat.GetValue("FollowMessage", ref m_followMessage);
                 chat.GetValue("SaveLog", ref m_saveLog);
-                chat.GetValue("SaveBinaryLog", ref m_saveBinaryLog);
                 chat.GetValue("UserCommands", ref m_userCommands);
                 chat.GetValue("UserCommandDelay", ref m_userCommandDelay);
                 m_neverTimeout.Init(chat.GetValue, "NeverTimeout", "NeverTimeoutRegulars", "NeverTimeoutSubscribers");

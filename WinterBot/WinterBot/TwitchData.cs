@@ -91,17 +91,17 @@ namespace Winter
         {
             get
             {
-                return m_data.Bot.IsRegular(Name);
+                return m_data.Bot.IsRegular(this);
             }
             internal set
             {
                 var bot = m_data.Bot;
-                if (bot.IsRegular(Name) != value)
+                if (bot.IsRegular(this) != value)
                 {
                     if (value)
-                        bot.AddRegular(Name);
+                        bot.AddRegular(this);
                     else
-                        bot.RemoveRegular(Name);
+                        bot.RemoveRegular(this);
                 }
             }
         }

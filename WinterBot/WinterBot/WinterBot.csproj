@@ -59,11 +59,14 @@
   <ItemGroup>
     <Compile Include="AutoMessage.cs" />
     <Compile Include="BotAsyncTask.cs" />
+    <Compile Include="ConcurrentDictionary.cs" />
+    <Compile Include="ConcurrentHashset.cs" />
+    <Compile Include="SaveQueue.cs" />
     <Compile Include="Quiet.cs" />
     <Compile Include="Regulars.cs" />
     <Compile Include="ChatLogger.cs" />
     <Compile Include="Helpers.cs" />
-    <Compile Include="ConcurrentHashset.cs" />
+    <Compile Include="ConcurrentDataStructures.cs" />
     <Compile Include="TimeoutController.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="TwitchJsonObjects.cs" />

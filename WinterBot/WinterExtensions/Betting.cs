@@ -27,22 +27,52 @@ namespace WinterExtensions
         }
     }
 
+    class PointTable : SavableDictionary<string, int>
+    {
+        public PointTable(WinterBot bot)
+            :base(bot, "points")
+        {
+
+        }
+
+        protected override IEnumerable<Tuple<string, int>> Deserialize(IEnumerable<string> lines)
+        {
+            char[] splitArg = new char[] { ' ' };
+
+            foreach (var line in lines)
+            {
+                string[] s = line.ToLower().Trim().Split(new char[]{' '}, 2);
+                if (s.Length != 2)
+                    continue;
+
+                int amount;
+                if (!int.TryParse(s[1], out amount))
+                    continue;
+
+                yield return new Tuple<string, int>(s[0].ToLower(), amount);
+            }
+        }
+
+        protected override IEnumerable<string> Serialize(IEnumerable<Tuple<string, int>> values)
+        {
+            foreach (var value in values)
+                yield return string.Format("{0} {1}", value.Item1, value.Item2);
+        }
+    }
+
+
     class Betting
     {
-        string m_stream;
-        string m_dataDirectory;
-
-        Dictionary<string, int> m_points = new Dictionary<string, int>();
+        PointTable m_points;
         HashSet<TwitchUser> m_pointsRequest = new HashSet<TwitchUser>();
         Dictionary<TwitchUser, Tuple<string, int>> m_confirmRequest = new Dictionary<TwitchUser, Tuple<string, int>>();
 
         DateTime m_lastMessage = DateTime.Now;
         DateTime m_lastOpenUpdate = DateTime.Now;
         BettingRound m_currentRound, m_lastRound;
-        ConcurrentQueue<BettingRound> m_toSave = new ConcurrentQueue<BettingRound>();
+        StringQueue m_toSave;
 
         WinterBot m_bot;
-        BotAsyncTask m_task;
         object m_sync = new object();
 
         BettingOptions m_options;
@@ -52,22 +82,24 @@ namespace WinterExtensions
             m_bot = bot;
             m_options = new BettingOptions(bot.Options);
             
-            m_dataDirectory = bot.Options.DataDirectory;
-            m_stream = bot.Options.Channel;
+            m_toSave = new StringQueue(bot, "pointlog");
+            m_points = new PointTable(bot);
+            m_points.LoadAsync();
 
-            LoadPoints();
+            bot.BeginShutdown += bot_BeginShutdown;
 
             if (m_options.Enabled)
                 Enable();
         }
 
+        void bot_BeginShutdown(WinterBot sender)
+        {
+            SaveLastRound();
+        }
+
         void Enable()
         {
             m_bot.Tick += bot_Tick;
-            if (m_task == null)
-                m_task = new BotAsyncTask(m_bot, SaveBettingData, new TimeSpan(0, 5, 0));
-            else
-                m_task.Join();
         }
 
         void Disable()
@@ -75,8 +107,7 @@ namespace WinterExtensions
             if (m_lastRound != null)
                 SaveLastRound();
 
-            if (m_task.Started)
-                m_task.Stop();
+            m_bot.Tick -= bot_Tick;
         }
 
         bool IsBettingOpen { get { return m_currentRound != null && m_currentRound.Open; } }
@@ -284,14 +315,12 @@ namespace WinterExtensions
                 if (m_currentRound != null)
                 {
                     if (m_lastRound != null)
-                        m_toSave.Enqueue(m_lastRound);
+                        m_toSave.Add(m_lastRound);
 
                     m_lastRound = m_currentRound;
                     m_currentRound = null;
                 }
             }
-
-            SavePoints();
         }
 
 
@@ -391,23 +420,12 @@ namespace WinterExtensions
             {
                 if (m_lastRound != null)
                 {
-                    m_toSave.Enqueue(m_lastRound);
+                    m_toSave.Add(m_lastRound);
                     m_lastRound = null;
-
-                    if (!m_task.Started)
-                        m_task.StartAsync(true);
                 }
             }
         }
 
-        private bool SaveBettingData(WinterBot bot)
-        {
-            string filename = Path.Combine(m_dataDirectory, "logs", m_stream + "_pointlog.txt");
-            if (m_toSave.Count != 0)
-                File.AppendAllLines(filename, m_toSave.Enumerate().Select(o => o.ToString()));
-
-            return true;
-        }
 
         internal void AddPoints(TwitchUser user, int points)
         {
@@ -432,26 +450,6 @@ namespace WinterExtensions
             }
         }
 
-        private void LoadPoints()
-        {
-            string fullPath = Path.Combine(m_dataDirectory, m_stream + "_points.txt");
-
-            m_points.Clear();
-            if (File.Exists(fullPath))
-            {
-                foreach (string line in File.ReadLines(fullPath))
-                {
-                    string[] values = line.Split(' ');
-                    m_points[values[0].ToLower()] = int.Parse(values[1]);
-                }
-            }
-        }
-
-        private void SavePoints()
-        {
-            string fullPath = Path.Combine(m_dataDirectory, m_stream + "_points.txt");
-            File.WriteAllLines(fullPath, from item in m_points select string.Format("{0} {1}", item.Key, item.Value));
-        }
 
         HashSet<string> ParseOpenBet(WinterBot bot, string value, out bool confirm, out int time)
         {

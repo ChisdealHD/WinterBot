@@ -20,7 +20,7 @@ namespace Winter
         HashSet<TwitchUser> m_permit = new HashSet<TwitchUser>();
 
         AutoResetEvent m_saveEvent = new AutoResetEvent(false);
-        ConcurrentHashset<TwitchUser> m_denyList = new ConcurrentHashset<TwitchUser>();
+        UserSet m_denyList;
 
         Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w-./?%&=]*)?", RegexOptions.IgnoreCase);
         List<Regex> m_urlWhitelist;
@@ -46,13 +46,11 @@ namespace Winter
             m_winterBot = bot;
             LoadOptions(bot.Options);
 
-            ThreadPool.QueueUserWorkItem(LoadDenyList);
-            ThreadPool.QueueUserWorkItem(LoadEmoticons);
+            m_denyList = new UserSet(bot, "deny");
+            m_denyList.LoadAsync();
 
             m_winterBot.MessageReceived += CheckMessage;
-
-            Thread thread = new Thread(SaveDenyListProc);
-            thread.Start();
+            ThreadPool.QueueUserWorkItem(LoadEmoticons);
         }
 
 
@@ -412,32 +410,6 @@ namespace Winter
             }
             
             return urls.Count > 0;
-        }
-
-        string DenyListFilename
-        {
-            get
-            {
-                string dir = m_options.DataDirectory;
-                string chan = m_options.Channel;
-                return Path.Combine(dir, chan + "_deny.txt");
-            }
-        }
-
-        private void LoadDenyList(object state)
-        {
-            if (File.Exists(DenyListFilename))
-                m_denyList.AddRange(File.ReadAllLines(DenyListFilename).Select(name=>m_winterBot.Users.GetUser(name)));
-        }
-        void SaveDenyListProc()
-        {
-            Thread.CurrentThread.Name = "SaveDenyListProc";
-
-            while (true)
-            {
-                m_saveEvent.WaitOne();
-                File.WriteAllLines(DenyListFilename, m_denyList.Select(t=>t.Name));
-            }
         }
 
 

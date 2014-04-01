@@ -11,28 +11,22 @@ namespace WinterExtensions
 {
     class ViewerCountLogger
     {
-        ConcurrentQueue<string> m_queue = new ConcurrentQueue<string>();
-        string m_dataDir;
-        string m_channel;
+        StringQueue m_queue;
         long m_viewerSeconds;
         DateTime m_lastUpdate = DateTime.Now;
 
         public ViewerCountLogger(WinterBot bot)
         {
-            m_dataDir = bot.Options.DataDirectory;
-            m_channel = bot.Channel;
+            m_queue = new StringQueue(bot, "viewers");
 
             bot.ViewerCountChanged += bot_ViewerCountChanged;
             bot.StreamOnline += bot_StreamOnline;
             bot.StreamOffline += bot_StreamOffline;
-            
-            BotAsyncTask task = new BotAsyncTask(bot, SaveViewerTotals, new TimeSpan(0, 5, 0));
-            task.StartAsync();
         }
 
         void WriteLine(string fmt, params object[] objs)
         {
-            m_queue.Enqueue(string.Format("[{0}] {1}", DateTime.Now, string.Format(fmt, objs)));
+            m_queue.Add(string.Format("[{0}] {1}", DateTime.Now, string.Format(fmt, objs)));
         }
 
         void bot_StreamOffline(WinterBot sender)
@@ -54,17 +48,6 @@ namespace WinterExtensions
             m_lastUpdate = DateTime.Now;
 
             WriteLine("{0} viewers.", currentViewerCount);
-        }
-
-        private bool SaveViewerTotals(WinterBot bot)
-        {
-            if (m_queue.Count == 0)
-                return true;
-
-            string filename = Path.Combine(m_dataDir, m_channel + "_viewers.txt");
-            File.AppendAllLines(filename, m_queue.Enumerate());
-
-            return true;
         }
     }
 }

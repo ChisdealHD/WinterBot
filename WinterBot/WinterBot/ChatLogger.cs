@@ -11,7 +11,46 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
-    [Serializable]
+    class ChatLog : SaveQueue<ChatEvent>
+    {
+        public ChatLog(WinterBot bot)
+            : base(bot)
+        {
+        }
+
+        public override string Filename
+        {
+            get
+            {
+                DateTime now = DateTime.Now;
+                string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", Bot.Channel, now.Year, now.Month, now.Day);
+                return Path.Combine(Bot.Options.DataDirectory, "logs", filename);
+            }
+        }
+
+        protected override IEnumerable<string> Serialize(IEnumerable<ChatEvent> data)
+        {
+            foreach (var item in data)
+                yield return item.ToString();
+        }
+
+        public static void Init(WinterBot bot)
+        {
+            var options = bot.Options;
+            if (!options.ChatOptions.SaveLog)
+                return;
+
+            var log = new ChatLog(bot);
+            bot.MessageReceived += delegate(WinterBot sender, TwitchUser user, string text) { log.Add(new ChatMessage(user, text)); };
+            bot.ChatClear += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatClearEvent(user)); };
+            bot.UserSubscribed += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatSubscribeEvent(user)); };
+            bot.UserBanned += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatBanEvent(user)); };
+            bot.UserTimedOut += delegate(WinterBot sender, TwitchUser user, int duration) { log.Add(new ChatTimeout(user, duration)); };
+            bot.ModeratorAdded += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatModEvent(user, true)); };
+            bot.ModeratorRemoved += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatModEvent(user, false)); };
+        }
+    }
+
     abstract class ChatEvent
     {
         public DateTime Timestamp { get; set; }
@@ -29,7 +68,6 @@ namespace Winter
         }
     }
 
-    [Serializable]
     class ChatMessage : ChatEvent
     {
         public string Message { get; set; }
@@ -46,7 +84,6 @@ namespace Winter
         }
     }
 
-    [Serializable]
     class ChatSubscribeEvent : ChatEvent
     {
         public ChatSubscribeEvent(TwitchUser user)
@@ -54,14 +91,12 @@ namespace Winter
         {
         }
 
-
         public override string ToString()
         {
             return base.ToString() + " subscribed!";
         }
     }
 
-    [Serializable]
     class ChatClearEvent : ChatEvent
     {
         public ChatClearEvent(TwitchUser user)
@@ -75,7 +110,6 @@ namespace Winter
         }
     }
 
-    [Serializable]
     class ChatBanEvent : ChatEvent
     {
         public ChatBanEvent(TwitchUser user)
@@ -89,29 +123,22 @@ namespace Winter
         }
     }
 
-    [Serializable]
     class ChatModEvent : ChatEvent
     {
         private bool m_added;
 
-        [NonSerialized]
-        private List<TwitchUser> m_mods;
-
-        public ChatModEvent(TwitchUser user, bool added, IEnumerable<TwitchUser> mods)
+        public ChatModEvent(TwitchUser user, bool added)
             : base(user)
         {
             m_added = added;
-            m_mods = new List<TwitchUser>(mods);
         }
 
         public override string ToString()
         {
-            return base.ToString() + string.Format(" {0} chat. ({1})", m_added ? "joined" : "left", string.Join(", ", m_mods));
+            return base.ToString() + string.Format(" {0} chat.", m_added ? "joined" : "left");
         }
     }
 
-
-    [Serializable]
     class ChatTimeout : ChatEvent
     {
         public int Duration { get; set; }
@@ -124,123 +151,6 @@ namespace Winter
         public override string ToString()
         {
             return string.Format("{0} timed out for {1} seconds by this bot.", base.ToString(), Duration);
-        }
-    }
-
-    public class ChatLogger
-    {
-        object m_saveSync = new object();
-        object m_sync = new object();
-        volatile List<ChatEvent> m_queue = new List<ChatEvent>();
-        HashSet<TwitchUser> m_mods = new HashSet<TwitchUser>();
-        bool m_saveReadableLog = true;
-        bool m_saveCompressedLog = true;
-        string m_dataDirectory;
-        string m_stream;
-
-        public ChatLogger(WinterBot bot)
-        {
-            var options = bot.Options;
-            m_stream = options.Channel;
-            m_dataDirectory = options.DataDirectory;
-            m_saveReadableLog = options.ChatOptions.SaveLog;
-            m_saveCompressedLog = options.ChatOptions.SaveBinaryLog;
-
-            if (m_saveReadableLog || m_saveCompressedLog)
-            {
-                bot.MessageReceived += bot_MessageReceived;
-                bot.ChatClear += bot_ChatClear;
-                bot.UserSubscribed += bot_UserSubscribed;
-                bot.UserBanned += bot_UserBanned;
-                bot.UserTimedOut += bot_UserTimedOut;
-                bot.ModeratorAdded += bot_ModeratorAdded;
-                bot.ModeratorRemoved += bot_ModeratorRemoved;
-
-                BotAsyncTask task = new BotAsyncTask(bot, SaveLog, new TimeSpan(0, 5, 0));
-                task.StartAsync();
-            }
-        }
-
-        void bot_ModeratorRemoved(WinterBot sender, TwitchUser user)
-        {
-            if (m_mods.Contains(user))
-                m_mods.Remove(user);
-
-            lock (m_sync)
-                m_queue.Add(new ChatModEvent(user, false, m_mods));
-        }
-
-        void bot_ModeratorAdded(WinterBot sender, TwitchUser user)
-        {
-            m_mods.Add(user);
-
-            lock (m_sync)
-                m_queue.Add(new ChatModEvent(user, true, m_mods));
-        }
-
-        void bot_UserTimedOut(WinterBot sender, TwitchUser user, int duration)
-        {
-            Enqueue(new ChatTimeout(user, duration));
-        }
-
-        void bot_UserBanned(WinterBot sender, TwitchUser user)
-        {
-            Enqueue(new ChatBanEvent(user));
-        }
-
-        void bot_UserSubscribed(WinterBot sender, TwitchUser user)
-        {
-            Enqueue(new ChatSubscribeEvent(user));
-        }
-
-        void bot_ChatClear(WinterBot sender, TwitchUser user)
-        {
-            Enqueue(new ChatClearEvent(user));
-        }
-
-        void bot_MessageReceived(WinterBot sender, TwitchUser user, string text)
-        {
-            Enqueue(new ChatMessage(user, text));
-        }
-
-        private void Enqueue(ChatEvent evt)
-        {
-            lock (m_sync)
-                m_queue.Add(evt);
-        }
-
-
-        private bool SaveLog(WinterBot bot)
-        {
-            lock (m_saveSync)
-            {
-                List<ChatEvent> events = new List<ChatEvent>();
-                lock (m_sync)
-                {
-                    var tmp = m_queue;
-                    m_queue = events;
-                    events = tmp;
-                }
-
-                if (events.Count == 0)
-                    return true;
-
-                var now = DateTime.Now;
-                string logPath = Path.Combine(m_dataDirectory, "logs");
-                Directory.CreateDirectory(logPath);
-
-                string filename = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", m_stream, now.Year, now.Month, now.Day);
-                if (m_saveReadableLog)
-                    File.AppendAllLines(Path.Combine(logPath, filename), events.Select(evt => evt.ToString()));
-
-                filename = Path.ChangeExtension(filename, "dat");
-                if (m_saveCompressedLog)
-                    using (var stream = new FileStream(Path.Combine(logPath, filename), FileMode.Append, FileAccess.Write, FileShare.None))
-                        using (GZipStream gzStream = new GZipStream(stream, CompressionLevel.Optimal))
-                            new BinaryFormatter().Serialize(gzStream, events);
-            }
-
-            return true;
         }
     }
 }

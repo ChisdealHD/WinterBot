@@ -32,18 +32,32 @@ namespace Winter
         {
         }
 
-        public UserCommand(string line)
-        {
-            string[] values = line.Split(new char[] { ' ' }, 3);
 
+        public UserCommand(string req, string cmd, string value)
+        {
             AccessLevel required;
-            if (Enum.TryParse<AccessLevel>(values[0], true, out required))
+            if (Enum.TryParse<AccessLevel>(req, true, out required))
                 AccessRequired = required;
             else
                 AccessRequired = AccessLevel.Mod;
 
-            Command = values[1];
-            Value = values[2];
+            Command = cmd;
+            Value = value;
+        }
+
+        public string Serialize()
+        {
+            return string.Format("{0} {1} {2}", AccessRequired, Command, Value);
+        }
+
+        public static UserCommand Deserialize(string line)
+        {
+            string[] values = line.Split(new char[] { ' ' }, 3);
+
+            if (values.Length != 3)
+                return null;
+
+            return new UserCommand(values[0], values[1], values[2]);
         }
 
         public override string ToString()
@@ -52,12 +66,38 @@ namespace Winter
         }
     }
 
+
+    class UserCommandTable : SavableDictionary<string, UserCommand>
+    {
+        public UserCommandTable(WinterBot bot)
+            :base(bot, "commands")
+        {
+        }
+
+        protected override IEnumerable<Tuple<string, UserCommand>> Deserialize(IEnumerable<string> lines)
+        {
+            foreach (var line in lines)
+            {
+                var cmd = UserCommand.Deserialize(line);
+                if (cmd != null)
+                    yield return new Tuple<string, UserCommand>(cmd.Command.ToLower(), cmd);
+            }
+        }
+
+        protected override IEnumerable<string> Serialize(IEnumerable<Tuple<string, UserCommand>> values)
+        {
+            foreach (var value in values)
+                yield return value.Item2.Serialize();
+        }
+    }
+
+
     public class UserCommands
     {
         string m_addCommandUsage = "Usage:  !addcommand -ul=[user|regular|sub|mod] !command [text]";
         string m_removeCommandUsage = "Usage:  !removecommand !command";
         string m_stream, m_dataDirectory;
-        Dictionary<string, UserCommand> m_commands = new Dictionary<string, UserCommand>();
+        UserCommandTable m_commands;
         DateTime m_lastMessage = DateTime.Now;
         DateTime m_lastCommand = DateTime.Now;
         ChatOptions m_options;
@@ -68,10 +108,10 @@ namespace Winter
             m_options = options.ChatOptions;
             m_stream = options.Channel;
             m_dataDirectory = bot.Options.DataDirectory;
+            m_commands = new UserCommandTable(bot);
+            m_commands.LoadAsync();
 
             bot.UnknownCommandReceived += UnknownCommandReceived;
-
-            LoadCommands();
         }
 
         [BotCommand(AccessLevel.Normal, "commands", "listcommands")]
@@ -129,14 +169,9 @@ namespace Winter
 
             value = value.ToLower();
             if (m_commands.ContainsKey(value))
-            {
                 m_commands.Remove(value);
-                SaveCommands();
-            }
             else
-            {
                 sender.SendResponse(string.Format("Command {0} not found.", value));
-            }
         }
 
 
@@ -225,8 +260,6 @@ namespace Winter
                 sender.SendResponse(string.Format("Updated command: !{0}.", cmdName));
             else
                 sender.SendResponse(string.Format("Successfully added command: !{0}.", cmdName));
-
-            SaveCommands();
         }
 
         void UnknownCommandReceived(WinterBot sender, TwitchUser user, string cmd, string value)
@@ -249,32 +282,6 @@ namespace Winter
                     }
                 }
             }
-        }
-
-        private void LoadCommands()
-        {
-            string filename = GetFileName();
-            if (!File.Exists(filename))
-                return;
-
-            string[] lines = File.ReadAllLines(filename);
-
-            m_commands.Clear();
-            foreach (var line in lines)
-            {
-                UserCommand cmd = new UserCommand(line);
-                m_commands[cmd.Command.ToLower()] = cmd;
-            }
-        }
-
-        private void SaveCommands()
-        {
-            File.WriteAllLines(GetFileName(), from cmd in m_commands.Values orderby cmd.AccessRequired, cmd.Command select string.Format("{0} {1} {2}", cmd.AccessRequired, cmd.Command, cmd.Value));
-        }
-
-        private string GetFileName()
-        {
-            return Path.Combine(m_dataDirectory, m_stream + "_commands.txt");
         }
     }
 }
