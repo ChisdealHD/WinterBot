@@ -32,7 +32,6 @@ namespace WinterExtensions
         public PointTable(WinterBot bot)
             :base(bot, "points")
         {
-
         }
 
         protected override IEnumerable<Tuple<string, int>> Deserialize(IEnumerable<string> lines)
@@ -84,7 +83,6 @@ namespace WinterExtensions
             
             m_toSave = new StringQueue(bot, "pointlog");
             m_points = new PointTable(bot);
-            m_points.LoadAsync();
 
             bot.BeginShutdown += bot_BeginShutdown;
 

@@ -330,7 +330,6 @@ namespace Winter
             if (m_options.Regulars)
             {
                 m_regulars = new UserSet(this, "regulars");
-                m_regulars.LoadAsync();
                 AddCommands(new Regulars(this));
             }
 

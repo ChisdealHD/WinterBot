@@ -109,7 +109,6 @@ namespace Winter
             m_stream = options.Channel;
             m_dataDirectory = bot.Options.DataDirectory;
             m_commands = new UserCommandTable(bot);
-            m_commands.LoadAsync();
 
             bot.UnknownCommandReceived += UnknownCommandReceived;
         }

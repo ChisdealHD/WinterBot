@@ -22,6 +22,7 @@ namespace Winter
             : base(bot)
         {
             m_filename = Path.Combine(bot.Options.DataDirectory, bot.Channel + "_" + name + ".txt");
+            LoadAsync();
         }
 
         internal bool TryRemove(T target)

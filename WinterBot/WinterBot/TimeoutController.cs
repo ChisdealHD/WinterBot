@@ -47,7 +47,6 @@ namespace Winter
             LoadOptions(bot.Options);
 
             m_denyList = new UserSet(bot, "deny");
-            m_denyList.LoadAsync();
 
             m_winterBot.MessageReceived += CheckMessage;
             ThreadPool.QueueUserWorkItem(LoadEmoticons);
