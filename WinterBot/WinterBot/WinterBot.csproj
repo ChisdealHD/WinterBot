@@ -58,7 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AutoMessage.cs" />
-    <Compile Include="BotAsyncTask.cs" />
+    <Compile Include="AsyncTaskManager.cs" />
     <Compile Include="ConcurrentDictionary.cs" />
     <Compile Include="ConcurrentHashset.cs" />
     <Compile Include="SaveQueue.cs" />

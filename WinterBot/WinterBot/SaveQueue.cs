@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
-    public abstract class SaveQueue<T> : AutoSavable
+    public abstract class SaveQueue<T> : AutoSave
     {
         volatile List<T> m_data = new List<T>();
         volatile List<T> m_saving = new List<T>();

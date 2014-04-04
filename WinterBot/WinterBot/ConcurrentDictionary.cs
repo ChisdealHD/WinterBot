@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
-    public abstract class SavableDictionary<K,V> : AutoSavable
+    public abstract class SavableDictionary<K,V> : AutoSave
     {
         string m_filename;
         Dictionary<K, V> m_data = new Dictionary<K, V>();

@@ -6,7 +6,7 @@ using System.Threading;
 namespace Winter
 {
 
-    abstract public class ConcurrentHashset<T> : AutoSavable, IEnumerable<T>
+    abstract public class ConcurrentHashset<T> : AutoSave, IEnumerable<T>
     {
         HashSet<T> m_data = new HashSet<T>();
         volatile bool m_dirty;
