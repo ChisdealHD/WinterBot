@@ -14,7 +14,7 @@ namespace WinterExtensions
         bool m_streamDead = false;
         DateTime m_lastOffline = DateTime.Now;
         DateTime m_lastMessage = DateTime.Now;
-        string m_message = " The jukebox is OPEN. For a $2.50 donation at http://streamdonations.net/c/zlfreebird you can request a single song. Include a Youtube link to the song in the Message field. Please keep it less than 6 minutes.";
+        string m_message = " The jukebox is OPEN. Want your song played? Donate $2.50 (http://bit.ly/1gBKIqa) and include a Youtube link to the song in the Message field. Please keep it less than 6 minutes.";
 
         public JukeBox(WinterBot bot)
         {
