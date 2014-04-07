@@ -14,7 +14,7 @@ namespace WinterExtensions
         bool m_streamDead = false;
         DateTime m_lastOffline = DateTime.Now;
         DateTime m_lastMessage = DateTime.Now;
-        string m_message = " Tonight we are doing song requests! For a $2.50 donation at http://streamdonations.net/c/zlfreebird you can have a single song played! Just link to youtube in the message, and keep it less than 6 minutes.";
+        string m_message = " The jukebox is OPEN. For a $2.50 donation at http://streamdonations.net/c/zlfreebird you can request a single song. Include a Youtube link to the song in the Message field. Please keep it less than 6 minutes.";
 
         public JukeBox(WinterBot bot)
         {
@@ -57,7 +57,7 @@ namespace WinterExtensions
             {
                 if (!sender.CanUseCommand(user, AccessLevel.Mod))
                 {
-                    sender.SendResponse("Winter is not currently accepting donations for song requests.");
+                    sender.SendResponse("The jukebox is CLOSED. No additional requests are being accepted.");
                     return;
                 }
 
@@ -67,7 +67,7 @@ namespace WinterExtensions
                 {
                     m_enabled = true;
                     m_lastMessage = DateTime.Now;
-                    sender.SendResponse("Jukebox mode enabled!  Use '!JukeboxMode off' to turn it off.");
+                    sender.SendResponse("Jukebox activated.  Use '!JukeboxMode off' to deactivate.");
                 }
                 else if (value == "off")
                 {
@@ -88,7 +88,7 @@ namespace WinterExtensions
                     }
                     else if (value == "off")
                     {
-                        sender.SendResponse("Winter jukebox time is done for the night!  No more donations for songs until next time.");
+                        sender.SendResponse("The jukebox is shutting down for the night. Please hold your song requests for next time.");
                         m_enabled = false;
                     }
                     else
