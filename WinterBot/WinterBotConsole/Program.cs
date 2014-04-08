@@ -28,8 +28,8 @@ namespace Winter
 
             s_errorFile = options.DataDirectory;
 
-            string thisExe = Assembly.GetExecutingAssembly().Location;
-            var verInfo = FileVersionInfo.GetVersionInfo(thisExe);
+            string botDll = typeof(WinterBot).Assembly.Location;
+            var verInfo = FileVersionInfo.GetVersionInfo(botDll);
             string version = string.Format("{0}.{1}", verInfo.ProductMajorPart, verInfo.FileMinorPart);
 
             Console.Title = "WinterBot: " + options.Channel;
