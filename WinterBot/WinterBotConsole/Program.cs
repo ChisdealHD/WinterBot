@@ -46,7 +46,9 @@ namespace Winter
             bot.ChatClear += delegate(WinterBot b, TwitchUser user) { WriteLine("Chat Clear: {0}", user.Name); };
             bot.UserBanned += delegate(WinterBot b, TwitchUser user) { WriteLine("Banned: {0}", user.Name); };
             bot.UserTimedOut += delegate(WinterBot b, TwitchUser user, int duration) { WriteLine("Timeout: {0} for {1} seconds", user.Name, duration); };
-            bot.DiagnosticMessage += delegate(WinterBot b, DiagnosticFacility f, string msg) { WriteLine("Diagnostics: {0}", msg); };
+            bot.DiagnosticMessage += delegate(WinterBot b, DiagnosticFacility f, string msg) { if (f != DiagnosticFacility.IO) WriteLine("Diagnostics: {0}", msg); };
+            bot.StreamOnline += delegate(WinterBot b) { WriteLine("Stream online."); };
+            bot.StreamOffline += delegate(WinterBot b) { WriteLine("Stream offline."); };
             bot.Tick += bot_Tick;
 
             Thread t = new Thread(bot.Go);
