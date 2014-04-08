@@ -261,9 +261,9 @@ namespace Winter
 
         public WinterBot(Options options, string channel, string user, string oauth)
         {
-            m_data = new TwitchUsers(this);
             m_options = options;
             m_channel = channel.ToLower();
+            m_data = new TwitchUsers(this);
 
             Passive = m_options.Passive;
 

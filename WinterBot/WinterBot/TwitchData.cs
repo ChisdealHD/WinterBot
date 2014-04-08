@@ -18,7 +18,7 @@ namespace Winter
         Dictionary<string, TwitchUser> m_users;
         HashSet<TwitchUser> m_moderators;
         object m_sync = new object();
-        public WinterBot Bot { get; set; }
+        public WinterBot Bot { get; private set; }
 
         internal HashSet<TwitchUser> ModeratorSet
         {
@@ -48,6 +48,10 @@ namespace Winter
         {
             m_users = new Dictionary<string, TwitchUser>();
             Bot = bot;
+
+            var streamer = GetUser(bot.Channel);
+            streamer.IsStreamer = true;
+            streamer.IsModerator = true;
         }
 
         public TwitchUser GetUser(string username, bool create=true)
@@ -80,6 +84,16 @@ namespace Winter
         public int[] IconSet { get; internal set; }
 
         public string Name { get; internal set; }
+
+        public bool IsNormalUser
+        {
+            get
+            {
+                return !IsSubscriber && !IsModerator && !IsRegular && !IsStreamer;
+            }
+        }
+
+        public bool IsStreamer { get; internal set; }
 
         public bool IsModerator { get; internal set; }
 

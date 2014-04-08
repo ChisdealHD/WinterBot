@@ -31,6 +31,12 @@ namespace Winter
         HashSet<string> m_defaultImageSet;
         Dictionary<int, HashSet<string>> m_imageSets;
 
+        Tuple<TwitchUser, string>[] m_lastMsgs = new Tuple<TwitchUser, string>[32];
+        int m_currMsg;
+        string m_clearMsg;
+        int? m_spamTimeout = DefaultSpamTimeout;
+        const int DefaultSpamTimeout = 600;
+
         Dictionary<TwitchUser, TimeoutCount> m_timeouts = new Dictionary<TwitchUser, TimeoutCount>();
 
         Options m_options;
@@ -136,10 +142,100 @@ namespace Winter
             }
         }
 
+        [BotCommand(AccessLevel.Mod, "purge", "purgespam")]
+        public void Purge(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            value = value.Trim().ToLower();
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            var users = from msg in m_lastMsgs
+                        where msg != null && msg.Item2 != null
+                        where msg.Item2.Contains(value)
+                        select msg.Item1;
+
+            foreach (var usr in users.Distinct())
+                sender.Timeout(usr, 1);
+        }
+
+        [BotCommand(AccessLevel.Mod, "clearspam", "clearban")]
+        public void ClearSpam(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            m_clearMsg = null;
+            m_spamTimeout = DefaultSpamTimeout;
+        }
+
+        [BotCommand(AccessLevel.Mod, "spam", "banmsg")]
+        public void Spam(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            value = value.ToLower().Trim();
+
+            string timeE = "-time=";
+            bool ban = false;
+            int timeout = DefaultSpamTimeout;
+            if (value.Contains(' '))
+            {
+                string[] split = value.Split(new char[] { ' ' }, 2);
+                if (split[0] == "-ban")
+                {
+                    ban = true;
+                    value = split[1];
+                }
+                else if (split[0].Length > timeE.Length && split[0].StartsWith(timeE))
+                {
+                    string strtime = split[0].Substring(timeE.Length);
+                    if (!int.TryParse(strtime, out timeout))
+                    {
+                        sender.SendResponse("Usage: !spam [-time=??] text to auto timeout");
+                        return;
+                    }
+
+                    value = split[1];
+                    if (timeout <= 0)
+                        timeout = 1;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                // We'll just treat this as turning it off.
+                m_clearMsg = null;
+                m_spamTimeout = DefaultSpamTimeout;
+                return;
+            }
+            else
+            {
+                m_clearMsg = value;
+                m_spamTimeout = ban ? (int?)null : timeout;
+
+                if (ban)
+                    sender.SendResponse("Banning all messages containing '{0}'.", value);
+                else if (timeout <= 1)
+                    sender.SendResponse("All messages containing '{0}' will be purged.", value);
+                else
+                    sender.SendResponse("All messages containing '{0}' will receive a {1} second timeout.", value, timeout);
+            }
+
+            // Apply rule to recent messages
+            HashSet<TwitchUser> timedOut = new HashSet<TwitchUser>();
+            foreach (var msg in m_lastMsgs.Where(p => p != null && !string.IsNullOrWhiteSpace(p.Item2)))
+            {
+                if (timedOut.Contains(msg.Item1))
+                    continue;
+
+                if (CheckAndTimeoutSpam(sender, msg.Item1, msg.Item2))
+                    timedOut.Add(msg.Item1);
+            }
+        }
+
 
         public void CheckMessage(WinterBot bot, TwitchUser user, string text)
         {
             if (user.IsModerator)
+                return;
+
+
+            if (CheckAndTimeoutSpam(bot, user, text))
                 return;
 
             string clearReason = null;
@@ -183,6 +279,29 @@ namespace Winter
 
             if (clearReason != null)
                 ClearChat(bot, user, clearReason);
+            else if (!user.IsModerator && !user.IsStreamer)
+                m_lastMsgs[m_currMsg++ % m_lastMsgs.Length] = new Tuple<TwitchUser, string>(user, text.ToLower());
+        }
+
+        private bool CheckAndTimeoutSpam(WinterBot bot, TwitchUser user, string text)
+        {
+            if (user.IsSubscriber)
+                return false;
+
+            if (String.IsNullOrWhiteSpace(m_clearMsg))
+                return false;
+
+            if (text.ToLower().Contains(m_clearMsg))
+            {
+                if (m_spamTimeout == null)
+                    bot.Ban(user);
+                else
+                    bot.Timeout(user, (int)m_spamTimeout);
+
+                return true;
+            }
+
+            return false;
         }
 
         private bool MessageTooLong(TwitchUser user, string text)
