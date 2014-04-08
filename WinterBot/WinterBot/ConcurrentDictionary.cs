@@ -91,6 +91,10 @@ namespace Winter
                     m_dirty = false;
                 }
 
+                string directory = Path.GetDirectoryName(m_filename);
+                if (!Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
+
                 File.WriteAllLines(m_filename, Serialize(data));
             }
 

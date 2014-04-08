@@ -41,6 +41,10 @@ namespace Winter
                     m_saving = tmp;
                 }
 
+                string directory = Path.GetDirectoryName(fn);
+                if (!Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
+
                 File.AppendAllLines(fn, Serialize(m_saving));
                 m_saving.Clear();
             }
