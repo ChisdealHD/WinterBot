@@ -531,6 +531,8 @@ namespace Winter
 
         public void Go()
         {
+            Thread.CurrentThread.Name = "WinterBot Event Loop";
+
             if (m_streamLiveThread == null)
             {
                 m_streamLiveThread = new Thread(StreamLiveWoker);
