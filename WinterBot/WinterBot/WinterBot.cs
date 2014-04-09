@@ -82,6 +82,11 @@ namespace Winter
         public event MessageHandler MessageReceived;
 
         /// <summary>
+        /// Fired when a chat action is received (that's /me in chat).
+        /// </summary>
+        public event MessageHandler ActionReceived;
+
+        /// <summary>
         /// Fired when a user is timed out or banned (we don't know for how long).
         /// </summary>
         public event UserEventHandler ChatClear;
@@ -274,6 +279,7 @@ namespace Winter
             m_twitch = new TwitchClient(m_data);
             m_twitch.InformChatClear += ClearChatHandler;
             m_twitch.MessageReceived += ChatMessageReceived;
+            m_twitch.ActionReceived += ChatActionReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
             m_twitch.InformModerator += InformModerator;
 
@@ -475,6 +481,16 @@ namespace Winter
         #endregion
 
         #region Giant Switch Statement
+        private void ChatActionReceived(TwitchClient source, TwitchUser user, string text)
+        {
+            var evt = ActionReceived;
+            if (evt != null)
+            {
+                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user, text }));
+                m_event.Set();
+            }
+        }
+
         private void ChatMessageReceived(TwitchClient source, TwitchUser user, string text)
         {
             var evt = MessageReceived;

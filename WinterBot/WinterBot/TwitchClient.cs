@@ -66,6 +66,11 @@ namespace Winter
         /// Fired when a chat message is received.
         /// </summary>
         public event MessageHandler MessageReceived;
+
+        /// <summary>
+        /// Fired when a chat action occurs (such as using /me).
+        /// </summary>
+        public event MessageHandler ActionReceived;
         
         /// <summary>
         /// Event handler for when messages are received from the chat channel.
@@ -219,7 +224,6 @@ namespace Winter
             SendMessage(string.Format(".ban {0}", user));
         }
 
-
         /// <summary>
         /// This is called when someone sends a message to chat.
         /// </summary>
@@ -245,7 +249,10 @@ namespace Winter
                 }
             }
 
-            OnMessageReceived(e);
+            if (e.Text.StartsWith(m_action))
+                OnActionReceived(e);
+            else
+                OnMessageReceived(e);
         }
 
         /// <summary>
@@ -499,6 +506,16 @@ namespace Winter
                 subscribed(this, user);
         }
 
+        protected void OnActionReceived(IrcMessageEventArgs e)
+        {
+            var user = m_data.GetUser(e.Source.Name);
+            var text = e.Text.Substring(m_action.Length, e.Text.Length - m_action.Length - 1);
+
+            var evt = ActionReceived;
+            if (evt != null)
+                evt(this, user, text);
+        }
+
         protected void OnMessageReceived(IrcMessageEventArgs e)
         {
             var user = m_data.GetUser(e.Source.Name);
@@ -547,6 +564,8 @@ namespace Winter
         private IrcChannel m_channel;
         private DateTime m_lastModCheck = DateTime.Now;
         private object m_modSync = new object();
+
+        readonly string m_action = new string((char)1, 1) + "ACTION";
         #endregion
     }
 }

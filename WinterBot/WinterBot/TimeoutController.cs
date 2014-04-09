@@ -55,6 +55,7 @@ namespace Winter
             m_denyList = new UserSet(bot, "deny");
 
             m_winterBot.MessageReceived += CheckMessage;
+            m_winterBot.ActionReceived += CheckAction;
             ThreadPool.QueueUserWorkItem(LoadEmoticons);
         }
 
@@ -251,8 +252,18 @@ namespace Winter
             }
         }
 
+        void CheckAction(WinterBot bot, TwitchUser user, string text)
+        {
+            if (user.IsModerator)
+                return;
 
-        public void CheckMessage(WinterBot bot, TwitchUser user, string text)
+            if (m_chatOptions.CheckFakeSubscribe && IsFakeSubscribe(text))
+                ClearChat(bot, user, m_chatOptions.FakeSubscriberMessage);
+            else
+                CheckMessage(bot, user, text);
+        }
+
+        void CheckMessage(WinterBot bot, TwitchUser user, string text)
         {
             if (user.IsModerator)
                 return;
@@ -325,6 +336,17 @@ namespace Winter
             }
 
             return false;
+        }
+
+        private bool IsFakeSubscribe(string text)
+        {
+            text = text.Trim();
+            string submsg = "just subscribed";
+            
+            if (text.Length != submsg.Length && text.Length != submsg.Length + 1)
+                return false;
+
+            return text.StartsWith(submsg, StringComparison.CurrentCultureIgnoreCase);
         }
 
         private bool MessageTooLong(TwitchUser user, string text)

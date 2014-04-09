@@ -233,6 +233,9 @@ namespace Winter
         string m_followMessage = null;
         bool m_saveLog = true;
         bool m_userCommands = true;
+        
+        bool m_timeoutFakeSubs = true;
+        string m_fakeSubMessage = null;
 
         Option<bool> m_neverTimeout = new Option<bool>(false, false, true);
         private int m_userCommandDelay = 15;
@@ -241,6 +244,9 @@ namespace Winter
         {
             return !m_neverTimeout.GetValue(user);
         }
+
+        public bool CheckFakeSubscribe { get { return m_timeoutFakeSubs; } }
+        public string FakeSubscriberMessage { get { return m_fakeSubMessage; } }
 
         public string SubscribeMessage { get { return m_subMessage; } }
         public string FollowMessage { get { return m_followMessage; } }
@@ -262,6 +268,9 @@ namespace Winter
                 chat.GetValue("SaveLog", ref m_saveLog);
                 chat.GetValue("UserCommands", ref m_userCommands);
                 chat.GetValue("UserCommandDelay", ref m_userCommandDelay);
+                chat.GetValue("TimeoutFakeSubs", ref m_timeoutFakeSubs);
+                chat.GetValue("FakeSubMessage", ref m_fakeSubMessage);
+
                 m_neverTimeout.Init(chat.GetValue, "NeverTimeout", "NeverTimeoutRegulars", "NeverTimeoutSubscribers");
             }
         }
