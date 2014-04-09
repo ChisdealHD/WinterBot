@@ -30,7 +30,8 @@ namespace Winter
         Ban,
         Twitch,
         Error,
-        IO
+        IO,
+        ModeChange
     }
 
     public class WinterBot : IDisposable
