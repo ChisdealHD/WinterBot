@@ -77,7 +77,30 @@ namespace Winter
             // Load URL extensions
             m_urlExtensions = new HashSet<string>(s_urlExtensions.Split(','));
         }
-        
+
+        [BotCommand(AccessLevel.Mod, "caps", "capsmode")]
+        public void CapsMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            bool enable = false;
+
+            value = value.Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                sender.SendResponse("Caps protect is currently {0}.", m_capsOptions.Enabled ? "enabled" : "disabled");
+                return;
+            }
+            else if (value.ParseBool(ref enable))
+            {
+                if (m_capsOptions.Enabled != enable)
+                {
+                    m_capsOptions.Enabled = enable;
+                    string enableStr = m_capsOptions.Enabled ? "enabled" : "disabled";
+                    sender.SendResponse("Caps protect is now {0}.", enableStr);
+                    sender.WriteDiagnostic(DiagnosticFacility.ModeChange, "{0}: Changed caps mode to {1}.", user.Name, enableStr);
+                }
+            }
+        }
+
         [BotCommand(AccessLevel.Mod, "deny")]
         public void Deny(WinterBot sender, TwitchUser user, string cmd, string value)
         {
