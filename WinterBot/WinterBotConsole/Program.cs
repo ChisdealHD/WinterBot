@@ -10,7 +10,7 @@ namespace Winter
 {
     class Program
     {
-        static TimeSpan s_lastHeartbeat = new TimeSpan();
+        static DateTime s_lastHeartbeat = DateTime.Now;
         static volatile int s_messages = 0;
         static string s_errorFile;
 
@@ -180,13 +180,15 @@ namespace Winter
 
         static void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
         {
-            s_lastHeartbeat += timeSinceLastUpdate;
-
-            if (s_messages > 0 && s_lastHeartbeat.TotalMinutes >= 5)
+            if (s_messages > 0 && s_lastHeartbeat.Elapsed().TotalMinutes >= 5)
             {
-                WriteLine("Messsages: {0}", s_messages);
+                if (sender.IsStreamLive)
+                    WriteLine("Messsages: {0,3} Viewers: {1,3}", s_messages, sender.CurrentViewers);
+                else
+                    WriteLine("Messsages: {0}", s_messages);
+
                 s_messages = 0;
-                s_lastHeartbeat = new TimeSpan();
+                s_lastHeartbeat = DateTime.Now;
             }
         }
 
