@@ -42,6 +42,8 @@ namespace Winter
                 return true;
             else if (self.Equals("enabled", StringComparison.CurrentCultureIgnoreCase))
                 return true;
+            else if (self.Equals("on", StringComparison.CurrentCultureIgnoreCase))
+                return true;
 
             result = false;
             if (self.Equals("false", StringComparison.CurrentCultureIgnoreCase))
@@ -57,6 +59,8 @@ namespace Winter
             else if (self.Equals("disable", StringComparison.CurrentCultureIgnoreCase))
                 return true;
             else if (self.Equals("disabled", StringComparison.CurrentCultureIgnoreCase))
+                return true;
+            else if (self.Equals("off", StringComparison.CurrentCultureIgnoreCase))
                 return true;
 
             return false;
