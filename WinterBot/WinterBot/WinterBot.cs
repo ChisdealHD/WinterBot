@@ -394,7 +394,7 @@ namespace Winter
             Send(MessageType.Response, string.Format(msg, param));
         }
 
-        public void TimeoutMessage(string msg, params object[] param)
+        public void SendTimeoutMessage(string msg, params object[] param)
         {
             Send(MessageType.Timeout, string.Format(msg, param));
         }

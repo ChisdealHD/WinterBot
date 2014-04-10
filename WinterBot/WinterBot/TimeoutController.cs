@@ -14,6 +14,7 @@ namespace Winter
 {
     public class TimeoutController
     {
+        #region Private Variables
         const string s_urlExtensions = "arpa,com,edu,firm,gov,int,mil,mobi,nato,net,nom,org,store,web,me,ac,ad,ae,af,ag,ai,al,am,an,ao,aq,ar,as,at,au,aw,az,ba,bb,bd,be,bf,bg,bh,bi,bj,bm,bn,bo,br,bs,bt,bv,bw,by,bz,ca,cc,cf,cg,ch,ci,ck,cl,cm,cn,co,cr,cs,cu,cv,cx,cy,cz,de,dj,dk,dm,do,dz,ec,ee,eg,eh,er,es,et,eu,fi,fj,fk,fm,fo,fr,fx,ga,gb,gd,ge,gf,gh,gi,gl,gm,gn,gp,gq,gr,gs,gt,gu,gw,gy,hk,hm,hn,hr,ht,hu,id,ie,il,in,io,iq,ir,is,it,jm,jo,jp,ke,kg,kh,ki,km,kn,kp,kr,kw,ky,kz,la,lb,lc,li,lk,lr,ls,lt,lu,lv,ly,ma,mc,md,mg,mh,mk,ml,mm,mn,mo,mp,mq,mr,ms,mt,mu,mv,mw,mx,my,mz,na,nc,ne,nf,ng,ni,nl,no,np,nr,nt,nu,nz,om,pa,pe,pf,pg,ph,pk,pl,pm,pn,pr,pt,pw,py,qa,re,ro,ru,rw,sa,sb,sc,sd,se,sg,sh,si,sj,sk,sl,sm,sn,so,sr,st,su,sv,sy,sz,tc,td,tf,tg,th,tj,tk,tm,tn,to,tp,tr,tt,tv,tw,tz,ua,ug,uk,um,us,uy,uz,va,vc,ve,vg,vi,vn,vu,wf,ws,ye,yt,yu,za,zm,zr,zw";
         WinterBot m_winterBot;
 
@@ -46,7 +47,9 @@ namespace Winter
         LengthTimeoutOptions m_lengthOptions;
         SymbolTimeoutOptions m_symbolOptions;
         EmoteTimeoutOptions m_emoteOptions;
+        #endregion
 
+        #region Initialization
         public TimeoutController(WinterBot bot)
         {
             m_winterBot = bot;
@@ -78,30 +81,9 @@ namespace Winter
             // Load URL extensions
             m_urlExtensions = new HashSet<string>(s_urlExtensions.Split(','));
         }
+        #endregion
 
-        [BotCommand(AccessLevel.Mod, "caps", "capsmode")]
-        public void CapsMode(WinterBot sender, TwitchUser user, string cmd, string value)
-        {
-            bool enable = false;
-
-            value = value.Trim();
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                sender.SendResponse("Caps protect is currently {0}.", m_capsOptions.Enabled ? "enabled" : "disabled");
-                return;
-            }
-            else if (value.ParseBool(ref enable))
-            {
-                if (m_capsOptions.Enabled != enable)
-                {
-                    m_capsOptions.Enabled = enable;
-                    string enableStr = m_capsOptions.Enabled ? "enabled" : "disabled";
-                    sender.SendResponse("Caps protect is now {0}.", enableStr);
-                    sender.WriteDiagnostic(DiagnosticFacility.ModeChange, "{0}: Changed caps mode to {1}.", user.Name, enableStr);
-                }
-            }
-        }
-
+        #region Link Commands
         [BotCommand(AccessLevel.Mod, "deny")]
         public void Deny(WinterBot sender, TwitchUser user, string cmd, string value)
         {
@@ -165,7 +147,34 @@ namespace Winter
                 }
             }
         }
+        #endregion
 
+        #region Feature Enable/Disable
+        [BotCommand(AccessLevel.Mod, "caps", "capsmode")]
+        public void CapsMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            bool enable = false;
+
+            value = value.Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                sender.SendResponse("Caps protect is currently {0}.", m_capsOptions.Enabled ? "enabled" : "disabled");
+                return;
+            }
+            else if (value.ParseBool(ref enable))
+            {
+                if (m_capsOptions.Enabled != enable)
+                {
+                    m_capsOptions.Enabled = enable;
+                    string enableStr = m_capsOptions.Enabled ? "enabled" : "disabled";
+                    sender.SendResponse("Caps protect is now {0}.", enableStr);
+                    sender.WriteDiagnostic(DiagnosticFacility.ModeChange, "{0}: Changed caps mode to {1}.", user.Name, enableStr);
+                }
+            }
+        }
+        #endregion
+
+        #region Spam Control
         [BotCommand(AccessLevel.Mod, "purge", "purgespam")]
         public void Purge(WinterBot sender, TwitchUser user, string cmd, string value)
         {
@@ -251,7 +260,9 @@ namespace Winter
                     timedOut.Add(msg.Item1);
             }
         }
+        #endregion
 
+        #region Chat Monitoring
         void CheckAction(WinterBot bot, TwitchUser user, string text)
         {
             if (user.IsModerator)
@@ -282,7 +293,7 @@ namespace Winter
                 {
                     m_winterBot.Ban(user);
                     if (!string.IsNullOrEmpty(m_urlOptions.BanMessage))
-                        bot.TimeoutMessage("{0}: {1}", user.Name, m_urlOptions.BanMessage);
+                        bot.SendTimeoutMessage("{0}: {1}", user.Name, m_urlOptions.BanMessage);
 
                     m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
                 }
@@ -356,82 +367,6 @@ namespace Winter
                 return false;
 
             return text.Length > max;
-        }
-
-        private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
-        {
-            bool shouldMessage = !string.IsNullOrEmpty(clearReason);
-            var now = DateTime.Now;
-            TimeoutCount timeout;
-            if (!m_timeouts.TryGetValue(user, out timeout))
-            {
-                timeout = m_timeouts[user] = new TimeoutCount(now);
-            }
-            else
-            {
-                shouldMessage &= (DateTime.Now > timeout.LastTimeout) && (DateTime.Now - timeout.LastTimeout).TotalMinutes > 60;
-
-                int curr = timeout.Count;
-                int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 15;
-
-                if (diff > 0)
-                    curr -= diff;
-
-                if (curr < 0)
-                    curr = 0;
-
-                timeout.Count = curr + 1;
-            }
-
-            timeout.LastTimeout = now;
-            if (!m_chatOptions.ShouldTimeout(user))
-                timeout.Count = 1;
-
-            int duration = 0;
-            switch (timeout.Count)
-            {
-                case 1:
-                case 2:
-                    if (shouldMessage)
-                        sender.Send(MessageType.Timeout, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
-
-                    sender.ClearChat(user);
-                    break;
-
-                case 3:
-                    duration = 5;
-                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
-                    sender.Timeout(user, duration * 60);
-                    timeout.LastTimeout = now.AddMinutes(duration);
-                    break;
-
-                case 4:
-                    duration = 10;
-                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
-                    sender.Timeout(user, duration * 60);
-                    timeout.LastTimeout = now.AddMinutes(duration);
-                    break;
-
-                default:
-                    Debug.Assert(timeout.Count > 0);
-                    sender.Send(MessageType.Timeout, "{0}: {1} (8 hour timeout.)", user.Name, clearReason);
-                    sender.Timeout(user, 8 * 60 * 60);
-                    timeout.LastTimeout = now.AddHours(8);
-                    break;
-            }
-        }
-
-
-        class TimeoutCount
-        {
-            public TimeoutCount(DateTime time)
-            {
-                LastTimeout = time;
-                Count = 1;
-            }
-
-            public DateTime LastTimeout { get; set; }
-            public int Count { get; set; }
         }
 
         private static bool MatchesAny(List<string> urls, List<Regex> regexes)
@@ -574,7 +509,82 @@ namespace Winter
             
             return urls.Count > 0;
         }
+        #endregion
 
+        #region Helpers
+        private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
+        {
+            bool shouldMessage = !string.IsNullOrEmpty(clearReason);
+            var now = DateTime.Now;
+            TimeoutCount timeout;
+            if (!m_timeouts.TryGetValue(user, out timeout))
+            {
+                timeout = m_timeouts[user] = new TimeoutCount(now);
+            }
+            else
+            {
+                shouldMessage &= (DateTime.Now > timeout.LastTimeout) && (DateTime.Now - timeout.LastTimeout).TotalMinutes > 60;
+
+                int curr = timeout.Count;
+                int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 15;
+
+                if (diff > 0)
+                    curr -= diff;
+
+                if (curr < 0)
+                    curr = 0;
+
+                timeout.Count = curr + 1;
+            }
+
+            timeout.LastTimeout = now;
+            if (!m_chatOptions.ShouldTimeout(user))
+                timeout.Count = 1;
+
+            int duration = 0;
+            switch (timeout.Count)
+            {
+                case 1:
+                case 2:
+                    if (shouldMessage)
+                        sender.Send(MessageType.Timeout, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
+
+                    sender.ClearChat(user);
+                    break;
+
+                case 3:
+                    duration = 5;
+                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Timeout(user, duration * 60);
+                    timeout.LastTimeout = now.AddMinutes(duration);
+                    break;
+
+                case 4:
+                    duration = 10;
+                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Timeout(user, duration * 60);
+                    timeout.LastTimeout = now.AddMinutes(duration);
+                    break;
+
+                default:
+                    Debug.Assert(timeout.Count > 0);
+                    sender.Send(MessageType.Timeout, "{0}: {1} (8 hour timeout.)", user.Name, clearReason);
+                    sender.Timeout(user, 8 * 60 * 60);
+                    timeout.LastTimeout = now.AddHours(8);
+                    break;
+            }
+        }
+        class TimeoutCount
+        {
+            public TimeoutCount(DateTime time)
+            {
+                LastTimeout = time;
+                Count = 1;
+            }
+
+            public DateTime LastTimeout { get; set; }
+            public int Count { get; set; }
+        }
 
         private void LoadEmoticons(object state)
         {
@@ -623,5 +633,6 @@ namespace Winter
             m_defaultImageSet = defaultSet;
             m_imageSets = imageSets;
         }
+        #endregion
     }
 }
