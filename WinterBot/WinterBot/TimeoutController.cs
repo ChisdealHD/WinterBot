@@ -55,6 +55,9 @@ namespace Winter
 
             m_winterBot.MessageReceived += CheckMessage;
             m_winterBot.ActionReceived += CheckAction;
+            m_winterBot.StreamOffline += StreamStateChange;
+            m_winterBot.StreamOnline += StreamStateChange;
+
             ThreadPool.QueueUserWorkItem(LoadEmoticons);
         }
 
@@ -489,6 +492,34 @@ namespace Winter
         #endregion
 
         #region Helpers
+        private void StreamStateChange(WinterBot sender)
+        {
+            // Clean up some memory, no need to keep old timeouts around.
+            if (m_timeouts.Count == 0)
+                return;
+
+            var items = from item in m_timeouts
+                        where GetEffectiveCount(item.Value) > 0
+                        select item;
+
+            m_timeouts = items.ToDictionary(t=>t.Key, t=>t.Value);
+        }
+
+        int GetEffectiveCount(TimeoutCount timeout)
+        {
+            int curr = timeout.Count;
+            int diff = (int)(DateTime.Now - timeout.LastTimeout).TotalMinutes / 15;
+
+            if (diff > 0)
+                curr -= diff;
+
+            if (curr < 0)
+                curr = 0;
+
+            return curr;
+        }
+
+
         private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
         {
             bool shouldMessage = !string.IsNullOrEmpty(clearReason);
@@ -501,17 +532,7 @@ namespace Winter
             else
             {
                 shouldMessage &= (DateTime.Now > timeout.LastTimeout) && (DateTime.Now - timeout.LastTimeout).TotalMinutes > 60;
-
-                int curr = timeout.Count;
-                int diff = (int)(now - timeout.LastTimeout).TotalMinutes / 15;
-
-                if (diff > 0)
-                    curr -= diff;
-
-                if (curr < 0)
-                    curr = 0;
-
-                timeout.Count = curr + 1;
+                timeout.Count = GetEffectiveCount(timeout) + 1;
             }
 
             timeout.LastTimeout = now;
