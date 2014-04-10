@@ -26,7 +26,7 @@ namespace Winter
 
         private void SetRegular(WinterBot sender, string cmd, string value, bool regular)
         {
-            value = value.Trim().ToLower();
+            value = value.Trim();
             if (!TwitchUsers.IsValidUserName(value))
             {
                 sender.WriteDiagnostic(DiagnosticFacility.UserError, "{0}: Invalid username '{1}.", cmd, value);
@@ -37,12 +37,12 @@ namespace Winter
             if (regular)
             {
                 sender.AddRegular(target);
-                sender.SendResponse("{0} added to regular list.", value);
+                sender.SendResponse("{0} added to regular list.", target.Name);
             }
             else
             {
                 sender.RemoveRegular(target);
-                sender.SendResponse("{0} removed from regular list.", value);
+                sender.SendResponse("{0} removed from regular list.", target.Name);
             }
         }
     }

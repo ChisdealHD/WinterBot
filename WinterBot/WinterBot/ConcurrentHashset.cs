@@ -152,7 +152,7 @@ namespace Winter
 
         protected override IEnumerable<TwitchUser> Deserialize(IEnumerable<string> lines)
         {
-            foreach (var line in lines)
+            foreach (var line in lines.Select(l=>l.Trim()))
                 if (string.IsNullOrWhiteSpace(line) && TwitchUsers.IsValidUserName(line))
                     yield return Bot.Users.GetUser(line);
         }

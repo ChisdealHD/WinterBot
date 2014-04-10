@@ -105,7 +105,6 @@ namespace Winter
             m_denyList.Add(target);
             m_saveEvent.Set();
             sender.SendResponse("{0}: {1} is no longer allowed to post links.", user.Name, target.Name);
-            
         }
 
         [BotCommand(AccessLevel.Mod, "permit", "allow")]
@@ -113,7 +112,7 @@ namespace Winter
         {
             Debug.Assert(m_winterBot == sender);
 
-            value = value.Trim().ToLower();
+            value = value.Trim();
             if (!TwitchUsers.IsValidUserName(value))
             {
                 m_winterBot.WriteDiagnostic(DiagnosticFacility.UserError, "{0}: Invalid username '{1}.", cmd, value);
