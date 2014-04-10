@@ -366,6 +366,22 @@ namespace Winter
             }
         }
 
+        public Options()
+        {
+            m_dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "WinterBot").Replace("\\\\", "\\");
+            if (!Directory.Exists(m_dataDirectory))
+                Directory.CreateDirectory(m_dataDirectory);
+
+            m_iniReader = new Winter.IniReader();
+            m_urlOptions = new UrlTimeoutOptions(m_iniReader);
+            m_capsOptions = new CapsTimeoutOptions(m_iniReader);
+            m_lengthOptions = new LengthTimeoutOptions(m_iniReader);
+            m_symbolOptions = new SymbolTimeoutOptions(m_iniReader);
+            m_emoteOptions = new EmoteTimeoutOptions(m_iniReader);
+            m_chatOptions = new ChatOptions(m_iniReader);
+            m_autoMessageOptions = new AutoMessageOptions(m_iniReader);
+        }
+
         public Options(string filename)
         {
             m_iniReader = new IniReader(filename);

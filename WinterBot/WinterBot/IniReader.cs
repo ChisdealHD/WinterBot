@@ -124,6 +124,11 @@ namespace Winter
     public class IniReader
     {
         private List<IniSection> Sections { get; set; }
+        
+        public IniReader()
+        {
+            Sections = new List<IniSection>();
+        }
 
         public IniReader(string file)
         {

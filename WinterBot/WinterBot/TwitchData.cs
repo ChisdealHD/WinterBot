@@ -74,6 +74,9 @@ namespace Winter
 
         public static bool IsValidUserName(string user)
         {
+            if (user == null)
+                return false;
+
             return s_validUsername.IsMatch(user);
         }
     }
