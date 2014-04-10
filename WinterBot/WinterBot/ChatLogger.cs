@@ -42,6 +42,7 @@ namespace Winter
 
             var log = new ChatLog(bot);
             bot.MessageReceived += delegate(WinterBot sender, TwitchUser user, string text) { log.Add(new ChatMessage(user, text)); };
+            bot.ActionReceived += delegate(WinterBot sender, TwitchUser user, string text) { log.Add(new ChatAction(user, text)); };
             bot.ChatClear += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatClearEvent(user)); };
             bot.UserSubscribed += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatSubscribeEvent(user)); };
             bot.UserBanned += delegate(WinterBot sender, TwitchUser user) { log.Add(new ChatBanEvent(user)); };
@@ -83,6 +84,23 @@ namespace Winter
             return string.Format("{0}: {1}", base.ToString(), Message);
         }
     }
+
+    class ChatAction : ChatEvent
+    {
+        public string Message { get; set; }
+
+        public ChatAction(TwitchUser user, string message)
+            : base(user)
+        {
+            Message = message;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0} ACTION {1}", base.ToString(), Message);
+        }
+    }
+
 
     class ChatSubscribeEvent : ChatEvent
     {
