@@ -15,19 +15,15 @@ namespace Winter
     public class TimeoutController
     {
         #region Private Variables
-        const string s_urlExtensions = "arpa,com,edu,firm,gov,int,mil,mobi,nato,net,nom,org,store,web,me,ac,ad,ae,af,ag,ai,al,am,an,ao,aq,ar,as,at,au,aw,az,ba,bb,bd,be,bf,bg,bh,bi,bj,bm,bn,bo,br,bs,bt,bv,bw,by,bz,ca,cc,cf,cg,ch,ci,ck,cl,cm,cn,co,cr,cs,cu,cv,cx,cy,cz,de,dj,dk,dm,do,dz,ec,ee,eg,eh,er,es,et,eu,fi,fj,fk,fm,fo,fr,fx,ga,gb,gd,ge,gf,gh,gi,gl,gm,gn,gp,gq,gr,gs,gt,gu,gw,gy,hk,hm,hn,hr,ht,hu,id,ie,il,in,io,iq,ir,is,it,jm,jo,jp,ke,kg,kh,ki,km,kn,kp,kr,kw,ky,kz,la,lb,lc,li,lk,lr,ls,lt,lu,lv,ly,ma,mc,md,mg,mh,mk,ml,mm,mn,mo,mp,mq,mr,ms,mt,mu,mv,mw,mx,my,mz,na,nc,ne,nf,ng,ni,nl,no,np,nr,nt,nu,nz,om,pa,pe,pf,pg,ph,pk,pl,pm,pn,pr,pt,pw,py,qa,re,ro,ru,rw,sa,sb,sc,sd,se,sg,sh,si,sj,sk,sl,sm,sn,so,sr,st,su,sv,sy,sz,tc,td,tf,tg,th,tj,tk,tm,tn,to,tp,tr,tt,tv,tw,tz,ua,ug,uk,um,us,uy,uz,va,vc,ve,vg,vi,vn,vu,wf,ws,ye,yt,yu,za,zm,zr,zw";
         WinterBot m_winterBot;
 
         HashSet<TwitchUser> m_permit = new HashSet<TwitchUser>();
 
-        AutoResetEvent m_saveEvent = new AutoResetEvent(false);
         UserSet m_denyList;
 
-        Regex m_url = new Regex(@"([\w-]+\.)+([\w-]+)(/[\w-./?%&=]*)?", RegexOptions.IgnoreCase);
-        List<Regex> m_urlWhitelist;
-        List<Regex> m_urlBlacklist;
-        List<Regex> m_urlBanlist;
-        HashSet<string> m_urlExtensions;
+        List<UrlMatch> m_urlWhitelist;
+        List<UrlMatch> m_urlBlacklist;
+        List<UrlMatch> m_urlBanlist;
         
         HashSet<string> m_defaultImageSet;
         Dictionary<int, HashSet<string>> m_imageSets;
@@ -53,7 +49,7 @@ namespace Winter
         public TimeoutController(WinterBot bot)
         {
             m_winterBot = bot;
-            LoadOptions(bot.Options);
+            LoadOptions(bot);
 
             m_denyList = new UserSet(bot, "deny");
 
@@ -63,8 +59,9 @@ namespace Winter
         }
 
 
-        void LoadOptions(Options options)
+        void LoadOptions(WinterBot bot)
         {
+            Options options = bot.Options;
             m_options = options;
             m_chatOptions = options.ChatOptions;
             m_urlOptions = options.UrlOptions;
@@ -74,12 +71,9 @@ namespace Winter
             m_emoteOptions = options.EmoteOptions;
 
             // Load url lists
-            m_urlWhitelist = new List<Regex>(m_urlOptions.Whitelist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
-            m_urlBlacklist = new List<Regex>(m_urlOptions.Blacklist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
-            m_urlBanlist = new List<Regex>(m_urlOptions.Banlist.Select(s => new Regex(s, RegexOptions.IgnoreCase)));
-
-            // Load URL extensions
-            m_urlExtensions = new HashSet<string>(s_urlExtensions.Split(','));
+            m_urlWhitelist = new List<UrlMatch>(m_urlOptions.Whitelist.Select(s => new UrlMatch(bot, s)));
+            m_urlBlacklist = new List<UrlMatch>(m_urlOptions.Blacklist.Select(s => new UrlMatch(bot, s)));
+            m_urlBanlist = new List<UrlMatch>(m_urlOptions.Banlist.Select(s => new UrlMatch(bot, s)));
         }
         #endregion
 
@@ -103,7 +97,6 @@ namespace Winter
                 m_permit.Remove(target);
 
             m_denyList.Add(target);
-            m_saveEvent.Set();
             sender.SendResponse("{0}: {1} is no longer allowed to post links.", user.Name, target.Name);
         }
 
@@ -126,8 +119,6 @@ namespace Winter
             bool removed = m_denyList.TryRemove(target);
             if (removed)
             {
-                m_saveEvent.Set();
-
                 if (m_urlOptions.ShouldEnforce(target))
                     m_winterBot.SendResponse("{0}: {1} was removed from the deny list.", user.Name, target.Name);
                 else
@@ -284,7 +275,7 @@ namespace Winter
 
             string clearReason = null;
 
-            List<string> urls;
+            Url[] urls;
             if (HasUrls(text, out urls))
             {
                 // Check bans.
@@ -294,7 +285,7 @@ namespace Winter
                     if (!string.IsNullOrEmpty(m_urlOptions.BanMessage))
                         bot.SendTimeoutMessage("{0}: {1}", user.Name, m_urlOptions.BanMessage);
 
-                    m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls));
+                    m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls.Select(url => url.FullUrl)));
                 }
                 else if ((m_urlOptions.ShouldEnforce(user) || m_denyList.Contains(user)) && (!MatchesAll(urls, m_urlWhitelist) || MatchesAny(urls, m_urlBlacklist)))
                 {
@@ -368,14 +359,14 @@ namespace Winter
             return text.Length > max;
         }
 
-        private static bool MatchesAny(List<string> urls, List<Regex> regexes)
+        private static bool MatchesAny(Url[] urls, List<UrlMatch> regexes)
         {
-            return urls.Any(url => regexes.Any(regex => regex.IsMatch(url)));
+            return urls.Any(url => regexes.Any(regex => regex.IsMatch(url.FullUrl)));
         }
 
-        private static bool MatchesAll(List<string> urls, List<Regex> regexes)
+        private static bool MatchesAll(Url[] urls, List<UrlMatch> regexes)
         {
-            return urls.All(url => regexes.Any(regex => regex.IsMatch(url)));
+            return urls.All(url => regexes.Any(regex => regex.IsMatch(url.FullUrl)));
         }
 
         private bool TooManyEmotes(TwitchUser user, string message)
@@ -490,23 +481,10 @@ namespace Winter
                 (0xff00 <= c && c <= 0xffef);
         }
 
-        bool HasUrls(string str, out List<string> urls)
+        bool HasUrls(string str, out Url[] urls)
         {
-            urls = null;
-
-            var matches = m_url.Matches(str);
-            if (matches.Count == 0)
-                return false;
-
-            urls = new List<string>(matches.Count);
-            foreach (Match match in matches)
-            {
-                var groups = match.Groups;
-                if (m_urlExtensions.Contains(groups[groups.Count - 2].Value))
-                    urls.Add(groups[0].Value);
-            }
-            
-            return urls.Count > 0;
+            urls = str.FindUrls();
+            return urls != null && urls.Length > 0;
         }
         #endregion
 
@@ -633,5 +611,39 @@ namespace Winter
             m_imageSets = imageSets;
         }
         #endregion
+    }
+
+
+    class UrlMatch
+    {
+        Regex m_reg;
+        string m_str;
+
+        public UrlMatch(WinterBot bot, string str)
+        {
+            if (str.StartsWith("http://", StringComparison.CurrentCultureIgnoreCase))
+                str = str.Substring(7);
+
+            m_str = str.ToLower();
+            if (str.IsRegex())
+            {
+                try
+                {
+                    m_reg = new Regex(str, RegexOptions.IgnoreCase);
+                }
+                catch (ArgumentException)
+                {
+                    bot.WriteDiagnostic(DiagnosticFacility.UserError, "Invalid regex in options: " + str);
+                }
+            }
+        }
+
+        public bool IsMatch(string str)
+        {
+            if (m_reg != null)
+                return m_reg.IsMatch(str);
+
+            return str.ToLower().Contains(m_str);
+        }
     }
 }

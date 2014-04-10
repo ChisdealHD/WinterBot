@@ -9,7 +9,7 @@ namespace WinterBotTests
     {
         
         [TestMethod]
-        public void TestUserNameNegative()
+        public void UserNameNegative()
         {
             Assert.IsFalse(TwitchUsers.IsValidUserName(""));
             Assert.IsFalse(TwitchUsers.IsValidUserName("http://hello.com"));
@@ -20,7 +20,7 @@ namespace WinterBotTests
         }
 
         [TestMethod]
-        public void TestUserName()
+        public void UserName()
         {
             Assert.IsTrue(TwitchUsers.IsValidUserName("soandso"));
             Assert.IsTrue(TwitchUsers.IsValidUserName("Soandso"));
