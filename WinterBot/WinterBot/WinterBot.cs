@@ -620,27 +620,7 @@ namespace Winter
 
         public bool CanUseCommand(TwitchUser user, AccessLevel required)
         {
-            bool isStreamer = m_channel.Equals(user.Name, StringComparison.CurrentCultureIgnoreCase);
-            switch (required)
-            {
-                case AccessLevel.Normal:
-                    return true;
-
-                case AccessLevel.Mod:
-                    return isStreamer || user.IsModerator;
-
-                case AccessLevel.Subscriber:
-                    return isStreamer || user.IsSubscriber || user.IsModerator;
-
-                case AccessLevel.Regular:
-                    return isStreamer || user.IsSubscriber || user.IsModerator || user.IsRegular;
-
-                case AccessLevel.Streamer:
-                    return isStreamer;
-
-                default:
-                    return false;
-            }
+            return user.Access >= required;
         }
 
         internal bool TryReadCommand(string text, out string cmd, out string value)

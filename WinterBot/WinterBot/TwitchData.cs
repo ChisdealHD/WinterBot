@@ -96,6 +96,23 @@ namespace Winter
             }
         }
 
+        public AccessLevel Access
+        {
+            get
+            {
+                if (IsStreamer)
+                    return AccessLevel.Streamer;
+                if (IsModerator)
+                    return AccessLevel.Mod;
+                if (IsSubscriber)
+                    return AccessLevel.Subscriber;
+                if (IsRegular)
+                    return AccessLevel.Regular;
+
+                return AccessLevel.Normal;
+            }
+        }
+
         public bool IsStreamer { get; internal set; }
 
         public bool IsModerator { get; internal set; }
