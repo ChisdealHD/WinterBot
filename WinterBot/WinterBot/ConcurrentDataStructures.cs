@@ -15,7 +15,6 @@ namespace Winter
             ConcurrentSaver.Instance.Add(this);
         }
 
-        public abstract string Filename { get; }
 
         public WinterBot Bot { get; private set; }
 

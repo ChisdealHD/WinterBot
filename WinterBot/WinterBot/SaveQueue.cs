@@ -52,6 +52,7 @@ namespace Winter
             Bot.WriteDiagnostic(DiagnosticFacility.IO, "Saved file: {0}", Path.GetFileName(fn));
         }
 
+        public abstract string Filename { get; }
         protected abstract IEnumerable<string> Serialize(IEnumerable<T> data);
     }
 

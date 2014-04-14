@@ -22,11 +22,6 @@ namespace Winter
             LoadAsync();
         }
 
-        public override string Filename
-        {
-            get { return m_filename; }
-        }
-
 
         public V this[K key]
         {

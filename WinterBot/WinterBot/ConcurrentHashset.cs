@@ -13,11 +13,6 @@ namespace Winter
         string m_filename;
         object m_saveSync = new object();
 
-        public override string Filename
-        {
-            get { return m_filename; }
-        }
-
         public ConcurrentHashset(WinterBot bot, string name)
             : base(bot)
         {
