@@ -35,7 +35,8 @@
     <StartupObject />
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>WinterBot.ico</ApplicationIcon>
+    <ApplicationIcon>
+    </ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -55,23 +56,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Betting.cs" />
+    <Compile Include="ChatSaver.cs" />
     <Compile Include="JukeBox.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewerCountLogger.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
     <None Include="DarkAutumn.snk" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="WinterBot.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WinterBot\WinterBot.csproj">
       <Project>{7463a6b3-6c12-4d9d-83ab-652c11db0f51}</Project>
       <Name>WinterBot</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="WinterBot.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
