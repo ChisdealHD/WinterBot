@@ -131,9 +131,6 @@ namespace Winter
             m_stream = stream.ToLower();
 
             // Create client and hook up events.
-            string server = "irc.twitch.tv";
-            int port = 6667;
-
             WriteDiagnosticMessage("Attempting to connect to server...");
 
             m_client = new IrcClient();
@@ -147,8 +144,7 @@ namespace Winter
             m_client.ErrorMessageReceived += client_ErrorMessageReceived;
             
             // Connect to server.
-            IPHostEntry hostEntry = Dns.GetHostEntry(server);
-            m_client.Connect(new IPEndPoint(hostEntry.AddressList[0], port), false, new IrcUserRegistrationInfo()
+            m_client.Connect("irc.twitch.tv", 6667, false, new IrcUserRegistrationInfo()
             {
                 NickName = user,
                 UserName = user,
@@ -160,14 +156,14 @@ namespace Winter
             // wait on s_connectedEvent which is set when client_Connected is called.
             if (!m_connectedEvent.Wait(10000))
             {
-                WriteDiagnosticMessage("Connection to '{0}' timed out.", server);
+                WriteDiagnosticMessage("Connection to the Twitch IRC server timed out.");
                 return false;
             }
 
             /// Wait for the client to be registered.
             if (!m_registeredEvent.Wait(10000))
             {
-                WriteDiagnosticMessage("Registration timed out.", server);
+                WriteDiagnosticMessage("Registration timed out.");
                 return false;
             }
 
