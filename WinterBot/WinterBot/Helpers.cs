@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -198,6 +199,18 @@ namespace Winter
                 end = self.Length + end;
 
             return self.Substring(start, end - start);
+        }
+    }
+
+    static class NativeMethods
+    {
+        [DllImport("wininet.dll", SetLastError = true)]
+        extern static bool InternetGetConnectedState(out int lpdwFlags, int dwReserved);
+
+        public static bool IsConnectedToInternet()
+        {
+            int flags;
+            return InternetGetConnectedState(out flags, 0);
         }
     }
 }

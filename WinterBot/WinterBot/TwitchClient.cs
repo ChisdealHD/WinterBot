@@ -109,13 +109,14 @@ namespace Winter
         /// Returns the name of the stream we are connected to.
         /// </summary>
         public string Stream { get { return m_stream; } }
+        public DateTime LastEvent { get; set; }
 
 
         public TwitchClient(TwitchUsers data)
         {
             m_data = data;
+            LastEvent = DateTime.Now;
         }
-
 
         /// <summary>
         /// Connect to the given stream, returns true if we successfully connected.  Note
@@ -125,7 +126,7 @@ namespace Winter
         /// <param name="stream">The stream to connect to.</param>
         /// <param name="user">The twitch username this connection will use.</param>
         /// <param name="auth">The twitch API token used to log in.  This must begin with 'oauth:'.</param>
-        public bool Connect(string stream, string user, string auth)
+        public bool Connect(string stream, string user, string auth, int timeout=5000)
         {
             user = user.ToLower();
             m_stream = stream.ToLower();
@@ -138,11 +139,15 @@ namespace Winter
 
             m_client.Connected += client_Connected;
             m_client.ConnectFailed += client_ConnectFailed;
-            m_client.Disconnected += client_Disconnected;
             m_client.Error += client_Error;
             m_client.Registered += client_Registered;
             m_client.ErrorMessageReceived += client_ErrorMessageReceived;
-            
+            m_client.PongReceived += m_client_PongReceived;
+            m_client.PingReceived += m_client_PingReceived;
+
+            int currTimeout = timeout;
+            DateTime started = DateTime.Now;
+
             // Connect to server.
             m_client.Connect("irc.twitch.tv", 6667, false, new IrcUserRegistrationInfo()
             {
@@ -154,14 +159,15 @@ namespace Winter
 
             // Wait for the server to connect.  The connect function on client operates asynchronously, so we
             // wait on s_connectedEvent which is set when client_Connected is called.
-            if (!m_connectedEvent.Wait(10000))
+            if (!m_connectedEvent.Wait(currTimeout))
             {
                 WriteDiagnosticMessage("Connection to the Twitch IRC server timed out.");
                 return false;
             }
 
+            currTimeout = timeout - (int)started.Elapsed().TotalMilliseconds;
             /// Wait for the client to be registered.
-            if (!m_registeredEvent.Wait(10000))
+            if (!m_registeredEvent.Wait(currTimeout))
             {
                 WriteDiagnosticMessage("Registration timed out.");
                 return false;
@@ -169,18 +175,12 @@ namespace Winter
 
             // Attempt to join the channel.  We'll try for roughly 10 seconds to join.  This really shouldn't ever fail.
             m_client.Channels.Join("#" + m_stream);
-            int max = 40;
-            while (m_client.Channels.Count == 0 && !m_joinedEvent.Wait(250))
+            currTimeout = timeout - (int)started.Elapsed().TotalMilliseconds;
+            if (!m_joinedEvent.Wait(currTimeout))
             {
-                max--;
-                if (max < 0)
-                {
-                    WriteDiagnosticMessage("Failed to connect to {0}  Please press Reconnect.", m_stream);
-                    return false;
-                }
+                WriteDiagnosticMessage("Failed to join channel {0}.", m_stream);
+                return false;
             }
-
-            WriteDiagnosticMessage("Connected to channel {0}.", m_stream);
 
             // This command tells twitch that we are a chat bot capable of understanding subscriber/turbo/etc
             // messages.  Without sending this raw command, we would not get that data.
@@ -190,11 +190,29 @@ namespace Winter
             return true;
         }
 
+        void m_client_PingReceived(object sender, IrcPingOrPongReceivedEventArgs e)
+        {
+            LastEvent = DateTime.Now;
+        }
 
-        internal void Disconnect()
+        void m_client_PongReceived(object sender, IrcPingOrPongReceivedEventArgs e)
+        {
+            LastEvent = DateTime.Now;
+        }
+
+        public void Ping()
+        {
+            m_client.Ping();
+        }
+
+        public void Quit(int timeout=1000)
+        {
+            m_client.Quit(timeout);
+        }
+
+        public void Disconnect()
         {
             m_client.Disconnect();
-            m_disconnectedEvent.Wait(1000);
         }
 
         public void SendMessage(string fmt, params object[] param)
@@ -227,6 +245,7 @@ namespace Winter
         /// <param name="e">The user.</param>
         void channel_MessageReceived(object sender, IrcMessageEventArgs e)
         {
+            LastEvent = DateTime.Now;
             if (m_lastModCheck.Elapsed().TotalMinutes >= 15)
                 UpdateMods();
 
@@ -260,6 +279,7 @@ namespace Winter
         /// <param name="e">IRC message event args.</param>
         private void client_LocalUser_MessageReceived(object sender, IrcMessageEventArgs e)
         {
+            LastEvent = DateTime.Now;
             string modMsg = "The moderators of this room are: ";
             if (e.Source.Name.Equals("jtv", StringComparison.CurrentCultureIgnoreCase))
             {
@@ -392,11 +412,6 @@ namespace Winter
         void client_ConnectFailed(object sender, IrcErrorEventArgs e)
         {
             WriteDiagnosticMessage("Connection failed: {0}", e.Error);
-        }
-
-        void client_Disconnected(object sender, EventArgs e)
-        {
-            m_disconnectedEvent.Set();
         }
 
         private void client_Registered(object sender, EventArgs e)
@@ -553,7 +568,6 @@ namespace Winter
         private ManualResetEventSlim m_joinedEvent = new ManualResetEventSlim(false);
         private ManualResetEventSlim m_connectedEvent = new ManualResetEventSlim(false);
         private ManualResetEventSlim m_registeredEvent = new ManualResetEventSlim(false);
-        private ManualResetEventSlim m_disconnectedEvent = new ManualResetEventSlim(false);
         private IrcClient m_client;
         private string m_stream;
         private TwitchUsers m_data;
@@ -563,5 +577,6 @@ namespace Winter
 
         readonly string m_action = new string((char)1, 1) + "ACTION";
         #endregion
+
     }
 }

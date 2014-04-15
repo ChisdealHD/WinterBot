@@ -31,7 +31,8 @@ namespace Winter
         Twitch,
         Error,
         IO,
-        ModeChange
+        ModeChange,
+        Network
     }
 
     public class WinterBot : IDisposable
@@ -117,6 +118,12 @@ namespace Winter
         /// Called when the bot has connected to the user's channel.
         /// </summary>
         public event BotEventHandler Connected;
+
+        /// <summary>
+        /// Called when the bot is disconnected from the Twitch servers.  Note the bot
+        /// will automatically attempt to reconnect to the server.
+        /// </summary>
+        public event BotEventHandler Disconnected;
 
         /// <summary>
         /// Called when the bot begins a clean shutdown (you may not get this event
@@ -275,13 +282,6 @@ namespace Winter
 
             MessageReceived += TryProcessCommand;
             LastMessageSent = DateTime.Now;
-
-            m_twitch = new TwitchClient(m_data);
-            m_twitch.InformChatClear += ClearChatHandler;
-            m_twitch.MessageReceived += ChatMessageReceived;
-            m_twitch.ActionReceived += ChatActionReceived;
-            m_twitch.UserSubscribed += SubscribeHandler;
-            m_twitch.InformModerator += InformModerator;
 
             LoadExtensions();
         }
@@ -478,6 +478,20 @@ namespace Winter
             if (evt != null)
                 evt(this, timeSpan);
         }
+
+        private void OnConnected()
+        {
+            var evt = Connected;
+            if (evt != null)
+                evt(this);
+        }
+
+        void OnDisconnected()
+        {
+            var evt = Disconnected;
+            if (evt != null)
+                evt(this);
+        }
         #endregion
 
         #region Giant Switch Statement
@@ -542,7 +556,7 @@ namespace Winter
             if (evt != null)
                 evt(this);
 
-            m_twitch.Disconnect();
+            m_twitch.Quit();
         }
 
 
@@ -566,6 +580,7 @@ namespace Winter
                 return;
 
             DateTime lastTick = DateTime.Now;
+            DateTime lastPing = DateTime.Now;
 
             while (true)
             {
@@ -585,6 +600,38 @@ namespace Winter
                 {
                     OnTick(elapsed);
                     lastTick = DateTime.Now;
+                }
+
+                const int pingDelay = 20;
+                var lastEvent = m_twitch.LastEvent;
+                if (lastEvent.Elapsed().TotalSeconds >= pingDelay && lastPing.Elapsed().TotalSeconds >= pingDelay)
+                {
+                    m_twitch.Ping();
+                    lastPing = DateTime.Now;
+                }
+
+                if (lastEvent.Elapsed().TotalMinutes >= 1)
+                {
+                    m_twitch.Quit(250);
+                    OnDisconnected();
+
+                    const int sleepTime = 5000;
+                    do
+                    {
+                        if (!NativeMethods.IsConnectedToInternet())
+                        {
+                            WriteDiagnostic(DiagnosticFacility.Network, "Not connected to the internet.");
+
+                            do
+                            {
+                                Thread.Sleep(sleepTime);
+                            } while (!NativeMethods.IsConnectedToInternet());
+
+                            WriteDiagnostic(DiagnosticFacility.Network, "Re-connected to the internet.");
+                        }
+
+                        Thread.Sleep(sleepTime);
+                    } while (!Connect());
                 }
             }
         }
@@ -654,13 +701,26 @@ namespace Winter
         }
         private bool Connect()
         {
+            if (m_twitch != null)
+            {
+                m_twitch.InformChatClear -= ClearChatHandler;
+                m_twitch.MessageReceived -= ChatMessageReceived;
+                m_twitch.ActionReceived -= ChatActionReceived;
+                m_twitch.UserSubscribed -= SubscribeHandler;
+                m_twitch.InformModerator -= InformModerator;
+            }
+
+            m_twitch = new TwitchClient(m_data);
+            m_twitch.InformChatClear += ClearChatHandler;
+            m_twitch.MessageReceived += ChatMessageReceived;
+            m_twitch.ActionReceived += ChatActionReceived;
+            m_twitch.UserSubscribed += SubscribeHandler;
+            m_twitch.InformModerator += InformModerator;
+
+
             bool connected = m_twitch.Connect(m_channel, m_options.Username, m_options.Password);
             if (connected)
-            {
-                var evt = Connected;
-                if (evt != null)
-                    evt(this);
-            }
+                OnConnected();
 
             return connected;
         }

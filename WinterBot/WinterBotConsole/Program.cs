@@ -42,6 +42,7 @@ namespace Winter
             LoadPlugins(options, bot);
 
             bot.Connected += delegate(WinterBot b) { WriteLine("Connected to channel: {0}", options.Channel); };
+            bot.Disconnected += delegate(WinterBot b) { WriteLine("Disconnected."); };
             bot.MessageReceived += delegate(WinterBot b, TwitchUser user, string text) { s_messages++; };
             bot.ChatClear += delegate(WinterBot b, TwitchUser user) { WriteLine("Chat Clear: {0}", user.Name); };
             bot.UserBanned += delegate(WinterBot b, TwitchUser user) { WriteLine("Banned: {0}", user.Name); };
