@@ -591,12 +591,12 @@ namespace Winter
             var response = req.GetResponse();
             var fromStream = response.GetResponseStream();
 
-            StreamReader reader = new StreamReader(fromStream);
-            string data = reader.ReadToEnd();
-
             TwitchEmoticonResponse emotes = null;
             try
             {
+                StreamReader reader = new StreamReader(fromStream);
+                string data = reader.ReadToEnd();
+
                 emotes = JsonConvert.DeserializeObject<TwitchEmoticonResponse>(data);
             }
             catch (Exception e)
