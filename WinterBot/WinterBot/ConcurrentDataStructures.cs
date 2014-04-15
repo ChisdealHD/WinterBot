@@ -20,7 +20,7 @@ namespace Winter
 
         abstract public void Save();
 
-        public TimeSpan Interval
+        public virtual TimeSpan Interval
         {
             get { return s_saveInterval; }
         }

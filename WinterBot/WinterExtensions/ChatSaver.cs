@@ -79,6 +79,14 @@ namespace WinterExtensions
         WinterBot m_bot;
         string m_url;
 
+        public override TimeSpan Interval
+        {
+            get
+            {
+                return new TimeSpan(0, 0, 30);
+            }
+        }
+
         public ChatSaver(WinterBot bot)
             : base(bot)
         {
