@@ -177,7 +177,7 @@ namespace WinterExtensions
             bool succeeded = false;
             DateTime now = DateTime.Now;
             string file = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", Bot.Channel, now.Year, now.Month, now.Day);
-            string url = string.Format("{0}?{1}={2}&CHANNEL={3}", m_url, "APPEND", Path.GetFileName(file), m_channel);
+            string url = string.Format("{0}/control.php?{1}={2}&CHANNEL={3}", m_url, "APPEND", Path.GetFileName(file), m_channel);
 
             try
             {
