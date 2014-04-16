@@ -143,27 +143,57 @@ namespace Winter
         #endregion
 
         #region Feature Enable/Disable
-        [BotCommand(AccessLevel.Mod, "caps", "capsmode")]
+        [BotCommand(AccessLevel.Mod, "capsmode")]
         public void CapsMode(WinterBot sender, TwitchUser user, string cmd, string value)
         {
-            bool enable = false;
+            m_capsOptions.Enabled = ChangeMode(sender, user, value, "Caps", m_capsOptions.Enabled);
+        }
+
+        [BotCommand(AccessLevel.Mod, "linkmode")]
+        public void LinkMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            m_urlOptions.Enabled = ChangeMode(sender, user, value, "Link", m_urlOptions.Enabled);
+        }
+
+        [BotCommand(AccessLevel.Mod, "symbolmode")]
+        public void SymbolMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            m_symbolOptions.Enabled = ChangeMode(sender, user, value, "Symbol", m_symbolOptions.Enabled);
+        }
+
+        [BotCommand(AccessLevel.Mod, "longmessagemode")]
+        public void LongMessageMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            m_lengthOptions.Enabled = ChangeMode(sender, user, value, "Long message", m_lengthOptions.Enabled);
+        }
+
+
+        [BotCommand(AccessLevel.Mod, "emotemode")]
+        public void EmoteMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            m_emoteOptions.Enabled = ChangeMode(sender, user, value, "Emote", m_emoteOptions.Enabled);
+        }
+
+
+        private static bool ChangeMode(WinterBot sender, TwitchUser user, string value, string type, bool curr)
+        {
+            bool result = curr;
 
             value = value.Trim();
             if (string.IsNullOrWhiteSpace(value))
             {
-                sender.SendResponse("Caps protect is currently {0}.", m_capsOptions.Enabled ? "enabled" : "disabled");
-                return;
+                sender.SendResponse("{0} protect is currently {1}.", type, curr ? "enabled" : "disabled");
             }
-            else if (value.ParseBool(ref enable))
+            else if (value.ParseBool(ref result))
             {
-                if (m_capsOptions.Enabled != enable)
+                if (curr != result)
                 {
-                    m_capsOptions.Enabled = enable;
-                    string enableStr = m_capsOptions.Enabled ? "enabled" : "disabled";
-                    sender.SendResponse("Caps protect is now {0}.", enableStr);
-                    sender.WriteDiagnostic(DiagnosticFacility.ModeChange, "{0}: Changed caps mode to {1}.", user.Name, enableStr);
+                    string enableStr = result ? "enabled" : "disabled";
+                    sender.SendResponse("{0} protect is now {1}.", type, enableStr);
+                    sender.WriteDiagnostic(DiagnosticFacility.ModeChange, "{0} changed {1} mode to {2}.", user.Name, type, enableStr);
                 }
             }
+            return result;
         }
         #endregion
 
