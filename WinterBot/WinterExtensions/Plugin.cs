@@ -8,7 +8,7 @@ namespace WinterExtensions
         public static void Init(WinterBot bot)
         {
             bot.AddCommands(new JukeBox(bot));
-            bot.AddCommands(new Betting(bot));
+            bot.AddCommands(new BettingSystem(bot));
             bot.AddCommands(new ViewerCountLogger(bot));
             new ChatSaver(bot);
         }

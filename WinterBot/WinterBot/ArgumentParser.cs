@@ -14,6 +14,12 @@ namespace Winter
 
         public string Error { get; private set; }
 
+        public void Reset()
+        {
+            m_curr = m_argStart;
+            Error = null;
+        }
+
 
         Dictionary<string, string> m_flags;
 
