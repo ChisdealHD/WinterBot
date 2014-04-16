@@ -77,7 +77,7 @@ namespace WinterExtensions
         object m_sync = new object();
         volatile List<ChatMessage> m_messages = new List<ChatMessage>();
         WinterBot m_bot;
-        string m_url;
+        string m_url, m_channel;
 
         public override TimeSpan Interval
         {
@@ -91,6 +91,7 @@ namespace WinterExtensions
             : base(bot)
         {
             m_bot = bot;
+            m_channel = m_bot.Channel.ToLower();
             if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
                 return;
 
@@ -176,7 +177,7 @@ namespace WinterExtensions
             bool succeeded = false;
             DateTime now = DateTime.Now;
             string file = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", Bot.Channel, now.Year, now.Month, now.Day);
-            string url = string.Format("{0}?{1}={2}", m_url, "APPEND", Path.GetFileName(file));
+            string url = string.Format("{0}?{1}={2}&CHANNEL={3}", m_url, "APPEND", Path.GetFileName(file), m_channel);
 
             try
             {
