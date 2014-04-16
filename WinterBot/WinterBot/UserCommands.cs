@@ -101,9 +101,11 @@ namespace Winter
         DateTime m_lastMessage = DateTime.Now;
         DateTime m_lastCommand = DateTime.Now;
         ChatOptions m_options;
+        private WinterBot m_bot;
         
         public UserCommands(WinterBot bot)
         {
+            m_bot = bot;
             var options = bot.Options;
             m_options = options.ChatOptions;
             m_stream = options.Channel;
@@ -120,125 +122,99 @@ namespace Winter
                 return;
 
             int delay = m_options.UserCommandDelay;
-            if (m_lastMessage.Elapsed().TotalSeconds < delay || m_lastCommand.Elapsed().TotalSeconds < delay)
-                return;
+            //if (m_lastMessage.Elapsed().TotalSeconds < delay || m_lastCommand.Elapsed().TotalSeconds < delay)
+            //    return;
 
-            AccessLevel level;
-            string part = null;
-            if (user.IsModerator)
+            Args args = value.ParseArguments(m_bot);
+            AccessLevel level = args.GetAccessFlag("ul", user.Access);
+
+            string part;
+            switch (level)
             {
-                part = "moderators";
-                level = AccessLevel.Mod;
+                case AccessLevel.Streamer:
+                    part = "streamer";
+                    break;
+
+                case AccessLevel.Mod:
+                    part = "moderators";
+                    break;
+
+                case AccessLevel.Normal:
+                    part = "anyone";
+                    break;
+
+                case AccessLevel.Regular:
+                    part = "regulars";
+                    break;
+
+                case AccessLevel.Subscriber:
+                    part = "subscribers";
+                    break;
+
+                default:
+                    return;
             }
-            else if (user.IsSubscriber)
-            {
-                part = "subscribers";
-                level = AccessLevel.Subscriber;
-            }
-            else if (user.IsRegular)
-            {
-                part = "regulars";
-                level = AccessLevel.Regular;
-            }
+
+            string[] cmds = (from c in m_commands.Values where c.AccessRequired <= level orderby c.Command select c.Command).ToArray();
+
+            if (cmds.Length == 0)
+                sender.SendResponse("No commands available.", part);
             else
-            {
-                part = "anyone";
-                level = AccessLevel.Normal;
-            }
-
-            sender.SendResponse("Commands {0} can use: {1}", part, string.Join(", ", (from c in m_commands.Values where  c.AccessRequired <= level orderby c.AccessRequired, c.Command select c.Command)));
+                sender.SendResponse("Commands {0} can use: {1}", part, string.Join(", ", cmds));
         }
         
         [BotCommand(AccessLevel.Mod, "remcom", "removecommand", "delcom", "delcommand")]
-        public void RemoveCommand(WinterBot sender, TwitchUser user, string cmd, string value)
+        public void RemoveCommand(WinterBot sender, TwitchUser user, string c, string a)
         {
             if (!m_options.UserCommandsEnabled)
                 return;
 
-            m_lastCommand = DateTime.Now;
-            value = value.Trim().ToLower();
-            if (value.Length == 0)
+            Args args = a.ParseArguments(m_bot);
+            string cmd = args.GetOneWord();
+            if (cmd == null)
             {
                 sender.SendResponse(m_removeCommandUsage);
                 return;
             }
 
-            if (value[0] == '!')
-                value = value.Substring(1);
+            if (cmd[0] == '!')
+                cmd = cmd.Substring(1);
 
-            value = value.ToLower();
-            if (m_commands.ContainsKey(value))
-                m_commands.Remove(value);
+            cmd = cmd.ToLower();
+            if (m_commands.ContainsKey(cmd))
+                m_commands.Remove(cmd);
             else
-                sender.SendResponse(string.Format("Command {0} not found.", value));
+                sender.SendResponse(string.Format("Command {0} not found.", cmd));
         }
 
 
         [BotCommand(AccessLevel.Mod, "addcom", "addcommand")]
-        public void AddCommand(WinterBot sender, TwitchUser user, string commandText, string value)
+        public void AddCommand(WinterBot sender, TwitchUser user, string c, string v)
         {
             if (!m_options.UserCommandsEnabled)
                 return;
 
-            string cmdValue = value.Trim();
-            if (cmdValue.Length < 2)
+            Args args = v.ParseArguments(m_bot);
+
+            AccessLevel level = args.GetAccessFlag("ul", AccessLevel.Mod);
+            string cmdName = args.GetOneWord();
+            string cmdText = args.GetString();
+
+            if (string.IsNullOrWhiteSpace(cmdName) || string.IsNullOrWhiteSpace(cmdText) || args.Error != null)
             {
                 sender.SendResponse(m_addCommandUsage);
                 return;
             }
-
-            string[] split = cmdValue.ToLower().Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
-            if (split.Length < 2)
-            {
-                sender.SendResponse(m_addCommandUsage);
-                return;
-            }
-
-            AccessLevel level = AccessLevel.Mod;
-
-            int cmd = 0;
-            int len = Math.Min(4, split[0].Length);
-            if (split[0].Substring(0, len) == "-ul=")
-            {
-                cmd = 1;
-                var access = split[0].Substring(4);
-
-                switch (access)
-                {
-                    case "user":
-                        level = AccessLevel.Normal;
-                        break;
-
-                    case "sub":
-                    case "subscriber":
-                        level = AccessLevel.Subscriber;
-                        break;
-
-                    case "regular":
-                    case "reg":
-                        level = AccessLevel.Regular;
-                        break;
-
-                    case "mod":
-                    case "moderator":
-                        level = AccessLevel.Mod;
-                        break;
-
-                    default:
-                        sender.SendResponse(string.Format("Invalid user level {0}. {1}", access, m_addCommandUsage));
-                        return;
-                }
-            }
-
-
-            if (split[cmd].Length < 2 || split[cmd][0] != '!')
+            
+            if (cmdName[0] != '!')
             {
                 sender.SendResponse(string.Format("User commands must start with a '!'. {0}", m_addCommandUsage));
                 return;
             }
-
-            string cmdName = split[cmd].Substring(1);
-            string cmdText = value.Substring(cmdValue.IndexOf(cmdName) + cmdName.Length).Trim();
+            else
+            {
+                cmdName = cmdName.Substring(1);
+            }
 
             if (cmdText[0] == '.' || cmdText[0] == '/')
             {
