@@ -76,7 +76,7 @@ namespace Winter
             }
 
             MovePastWhitespace();
-            return strVal;
+            return string.IsNullOrWhiteSpace(strVal) ? null : strVal;
         }
 
         public string GetString()
@@ -215,11 +215,17 @@ namespace Winter
         {
             MovePastWhitespace();
             char c = CurrentChar();
-            while (!IsComplete() && (c == '-' || c == '/'))
+            while (c == '-' || c == '/')
             {
+                if (IsComplete())
+                    break;
+
                 m_curr++;
                 AddFlag();
                 MovePastWhitespace();
+
+                if (IsComplete())
+                    break;
 
                 c = FullText[m_curr];
             }
