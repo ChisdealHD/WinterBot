@@ -139,58 +139,14 @@ namespace Winter
             return false;
         }
 
-        public static Cmd ParseCommand(this string text, WinterBot bot)
+        public static Args ParseArguments(this string text, WinterBot bot)
         {
-            string cmd;
-            int end;
-
-            if (ParseCommand(text, out cmd, out end))
-                return new Cmd(bot, text, cmd, end);
-
-            return null;
-        }
-        public static Cmd ParseCommand(this string text, TwitchUsers users)
-        {
-            string cmd;
-            int end;
-
-            if (ParseCommand(text, out cmd, out end))
-                return new Cmd(users, text, cmd, end);
-
-            return null;
+            return new Args(bot, text);
         }
 
-        static bool ParseCommand(string text, out string cmd, out int end)
+        public static Args ParseArguments(this string text, TwitchUsers users)
         {
-            cmd = null;
-            end = 0;
-
-            int i = text.IndexOf('!');
-            if (i == -1)
-                return false;
-
-            int start = ++i;
-            if (start >= text.Length)
-                return false;
-
-            end = text.IndexOf(' ', start);
-
-            if (end == -1)
-                end = text.Length;
-
-            if (start == end)
-                return false;
-
-
-            cmd = text.Substring(start, end - start);
-            end++;
-            while (end < text.Length && text[end] == ' ')
-                end++;
-
-            if (end >= text.Length)
-                end = -1;
-
-            return true;
+            return new Args(users, text);
         }
 
         public static string Slice(this string self, int start, int end)

@@ -23,19 +23,18 @@ namespace WinterBotTests
         public void ParseCommand()
         {
             // Ensure it works with preceeding/trailing spaces
-            Cmd cmd = " !CommandName -flag -int=123 -ul=mod UserName 1234 the remainder ".ParseCommand(m_bot);
+            Args cmd = "  -flag -int=123 -ul=mod UserName 1234 the remainder ".ParseArguments(m_bot);
             ParseCommandWorker(cmd);
 
             // Ensure it works without preceeding/trailing spaces
-            cmd = "!CommandName -flag -int=123 -ul=mod UserName 1234 the remainder".ParseCommand(m_bot);
+            cmd = "-flag -int=123 -ul=mod UserName 1234 the remainder".ParseArguments(m_bot);
             ParseCommandWorker(cmd);
         }
 
-        private static void ParseCommandWorker(Cmd cmd)
+        private static void ParseCommandWorker(Args cmd)
         {
             Assert.IsNotNull(cmd);
 
-            Assert.AreEqual("commandname", cmd.Command);
             Assert.IsTrue(cmd.GetFlag("FlAg"));
             Assert.IsNull(cmd.Error);
 
@@ -76,19 +75,26 @@ namespace WinterBotTests
         [TestMethod]
         public void TestEmptyCommand()
         {
-            Cmd cmd = GetEmptyCmd();
+            Args cmd = GetEmptyCmd();
             Assert.IsNotNull(cmd);
-            Assert.AreEqual("commandname", cmd.Command);
 
             Assert.AreEqual("", cmd.GetString());
         }
 
         [TestMethod]
+        public void EmptyCommandUserTest()
+        {
+            Args cmd = GetEmptyCmd();
+            Assert.IsNotNull(cmd);
+
+            Assert.IsNull(cmd.GetUser());
+        }
+
+        [TestMethod]
         public void TestOneMethod()
         {
-            Cmd cmd = " !CommandName one  two 3 ".ParseCommand(m_bot);
+            Args cmd = "  one  two 3 ".ParseArguments(m_bot);
             Assert.IsNotNull(cmd);
-            Assert.AreEqual("commandname", cmd.Command);
 
             Assert.AreEqual("one", cmd.GetOneWord());
             Assert.IsNull(cmd.Error);
@@ -104,9 +110,8 @@ namespace WinterBotTests
         [TestMethod]
         public void NegativeCommandValuesTest()
         {
-            Cmd cmd = GetEmptyCmd();
+            Args cmd = GetEmptyCmd();
             Assert.IsNotNull(cmd);
-            Assert.AreEqual("commandname", cmd.Command);
 
             Assert.IsFalse(cmd.GetFlag("notpresent"));
             Assert.IsNull(cmd.Error);
@@ -129,7 +134,7 @@ namespace WinterBotTests
         [TestMethod]
         public void AccessLevelNegativeTest()
         {
-            Cmd cmd = GetEmptyCmd();
+            Args cmd = GetEmptyCmd();
             AccessLevel accessValue;
             Assert.IsFalse(cmd.GetAccessFlag("ul", out accessValue));
             Assert.AreEqual(AccessLevel.Mod, accessValue);
@@ -148,7 +153,7 @@ namespace WinterBotTests
         [TestMethod]
         public void IntFlagNegativeTest()
         {
-            Cmd cmd = GetEmptyCmd();
+            Args cmd = GetEmptyCmd();
             int intValue;
             Assert.IsFalse(cmd.GetIntFlag("int", out intValue, true));
             Assert.IsNotNull(cmd.Error);
@@ -167,17 +172,16 @@ namespace WinterBotTests
             Assert.IsNull(cmd.Error);
         }
 
-        private Cmd GetEmptyCmd()
+        private Args GetEmptyCmd()
         {
-            return " !CommandName           ".ParseCommand(m_bot);
+            return "            ".ParseArguments(m_bot);
         }
 
         [TestMethod]
         public void UserCommandTest()
         {
-            Cmd cmd = " !AddCommand -ul=reg !SomeTestCommand Some text to go with it. ".ParseCommand(m_bot);
+            Args cmd = "  -ul=reg !SomeTestCommand Some text to go with it. ".ParseArguments(m_bot);
             Assert.IsNotNull(cmd);
-            Assert.AreEqual("addcommand", cmd.Command);
 
             AccessLevel level;
             Assert.IsTrue(cmd.GetAccessFlag("ul", out level, true));

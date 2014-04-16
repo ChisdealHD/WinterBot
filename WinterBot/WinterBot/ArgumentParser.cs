@@ -7,10 +7,9 @@ using System.Threading.Tasks;
 
 namespace Winter
 {
-    public class Cmd
+    public class Args
     {
         public string FullText { get; private set; }
-        public string Command { get; private set; }
         public string Arguments { get { return (m_argStart == -1 || m_argStart >= FullText.Length) ? string.Empty : FullText.Substring(m_argStart).Trim(); } }
 
         public string Error { get; private set; }
@@ -21,26 +20,17 @@ namespace Winter
         int m_curr, m_argStart;
         TwitchUsers m_users;
 
-        internal Cmd(WinterBot bot, string text, string cmd, int args)
+        internal Args(WinterBot bot, string text)
         {
             m_users = bot.Users;
-            Init(text, cmd, args);
+            FullText = text;
+            ParseFlags();
         }
 
-        internal Cmd(TwitchUsers users, string text, string cmd, int args)
+        internal Args(TwitchUsers users, string text)
         {
             m_users = users;
-            Init(text, cmd, args);
-        }
-
-        private void Init(string text, string cmd, int args)
-        {
-            Command = cmd.ToLower();
             FullText = text;
-
-            m_argStart = args;
-            m_curr = args;
-
             ParseFlags();
         }
 
