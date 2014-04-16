@@ -87,6 +87,11 @@ namespace Winter
             return DateTime.Now - self;
         }
 
+        public static string ToSql(this DateTime self)
+        {
+            return self.ToString("yyyy-MM-dd HH:mm:ss");
+        }
+
         public static IEnumerable<T> Enumerate<T>(this ConcurrentQueue<T> self)
         {
             T value;

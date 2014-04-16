@@ -37,7 +37,7 @@ namespace WinterExtensions
 
         public override string ToString()
         {
-            return string.Format("{0}\n{1}{2}{3}\n{4}{5}\n", m_time.ToString("yyyy-MM-dd HH:mm:ss"), m_user.Name, GetSub(), GetMod(), GetAction(), m_text ?? "");
+            return string.Format("{0}\n{1}{2}{3}\n{4}{5}\n", m_time.ToSql(), m_user.Name, GetSub(), GetMod(), GetAction(), m_text ?? "");
         }
 
         private string GetSub()
