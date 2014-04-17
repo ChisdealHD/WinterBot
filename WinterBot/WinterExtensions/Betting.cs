@@ -52,6 +52,48 @@ namespace WinterExtensions
             var section = m_bot.Options.IniReader.GetSectionByName("chat");
             if (section == null || !section.GetValue("httplogger", ref m_url))
                 return;
+
+            ThreadPool.QueueUserWorkItem(LoadPoints);
+        }
+
+        private void LoadPoints(object o)
+        {
+            DateTime now = DateTime.Now;
+            string url = string.Format("{0}/getpoints.php?CHANNEL={1}", m_url, m_channel);
+
+            try
+            {
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "GET";
+                request.ContentType = "application/x-gzip";
+                request.KeepAlive = false;
+
+                WebResponse response = request.GetResponse();
+                using (Stream stream = response.GetResponseStream())
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
+
+                        var arr = line.Split(' ');
+                        if (arr.Length != 2)
+                            continue;
+
+                        int val;
+                        if (!int.TryParse(arr[1], out val))
+                            continue;
+
+                        m_points[m_bot.Users.GetUser(arr[0])] = val;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save points.");
+            }
         }
 
         bool IsBettingClosed { get { return m_state == State.None; } }
@@ -124,7 +166,7 @@ namespace WinterExtensions
         {
             if (m_callback)
                 m_bot.Tick -= m_bot_Tick;
-
+            Console.WriteLine("BETTING CLOSED.");
             m_callback = false;
         }
 
@@ -255,7 +297,7 @@ namespace WinterExtensions
             ClearBetting();
             CancelCallback();
 
-            sender.SendMessage("Betting complete.  {0} winners and {1} losers.", totalWinners, totalLosers);
+            sender.SendMessage("Betting complete.  {0} winners and {1} losers.  Point totals can be found here: http://www.darkautumn.net/winter/chat.php?POINTS", totalWinners, totalLosers);
         }
 
         private void AddPoints(TwitchUser user, int amount)
@@ -273,6 +315,7 @@ namespace WinterExtensions
         {
             if (!IsBettingOpen)
             {
+                sender.SendMessage("Betting is now CLOSED.");
                 CancelCallback();
                 return;
             }
@@ -334,9 +377,10 @@ namespace WinterExtensions
 
             try
             {
-                WebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = "POST";
                 request.ContentType = "application/x-gzip";
+                request.KeepAlive = false;
 
                 Stream requestStream = request.GetRequestStream();
                 using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))
@@ -352,7 +396,7 @@ namespace WinterExtensions
 
                 succeeded = result == "ok";
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save points.");
             }
