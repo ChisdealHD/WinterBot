@@ -394,20 +394,29 @@ namespace Winter
             Send(MessageType.Response, imp, string.Format(msg, param));
         }
 
-        public void SendTimeoutMessage(string msg, params object[] param)
+        public void SendResponse(string msg, params object[] param)
         {
-            Send(MessageType.Timeout, Importance.Med, string.Format(msg, param));
+            Send(MessageType.Response, Importance.Med, string.Format(msg, param));
         }
-
 
         public void SendMessage(Importance imp, string msg, params object[] param)
         {
             Send(MessageType.Message, imp, string.Format(msg, param));
         }
 
+        public void SendMessage(string msg, params object[] param)
+        {
+            Send(MessageType.Message, Importance.Low, string.Format(msg, param));
+        }
+
         public void SendMessage(Importance imp, string msg)
         {
             Send(MessageType.Message, imp, msg);
+        }
+
+        public void SendMessage(string msg)
+        {
+            Send(MessageType.Message, Importance.Low, msg);
         }
 
         internal void SendUnconditional(string msg, params string[] args)

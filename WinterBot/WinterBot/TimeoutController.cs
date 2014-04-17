@@ -316,7 +316,7 @@ namespace Winter
                 {
                     m_winterBot.Ban(user);
                     if (!string.IsNullOrEmpty(m_urlOptions.BanMessage))
-                        bot.SendTimeoutMessage("{0}: {1}", user.Name, m_urlOptions.BanMessage);
+                        bot.SendUnconditional("{0}: {1}", user.Name, m_urlOptions.BanMessage);
 
                     m_winterBot.WriteDiagnostic(DiagnosticFacility.Ban, "Banned {0} for {1}.", user.Name, string.Join(", ", urls.Select(url => url.FullUrl)));
                 }
