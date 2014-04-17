@@ -32,7 +32,8 @@ namespace Winter
         Error,
         IO,
         ModeChange,
-        Network
+        Network,
+        Irc
     }
 
     public class WinterBot : IDisposable
@@ -499,6 +500,11 @@ namespace Winter
         #endregion
 
         #region Giant Switch Statement
+        private void IrcStatusHandler(TwitchClient sender, string message)
+        {
+            WriteDiagnostic(DiagnosticFacility.Irc, message);
+        }
+
         private void ChatActionReceived(TwitchClient source, TwitchUser user, string text)
         {
             var evt = ActionReceived;
@@ -712,6 +718,7 @@ namespace Winter
                 m_twitch.ActionReceived -= ChatActionReceived;
                 m_twitch.UserSubscribed -= SubscribeHandler;
                 m_twitch.InformModerator -= InformModerator;
+                m_twitch.StatusUpdate -= IrcStatusHandler;
             }
 
             m_twitch = new TwitchClient(m_data);
@@ -720,6 +727,7 @@ namespace Winter
             m_twitch.ActionReceived += ChatActionReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
             m_twitch.InformModerator += InformModerator;
+            m_twitch.StatusUpdate += IrcStatusHandler;
 
 
             bool connected = m_twitch.Connect(m_channel, m_options.Username, m_options.Password);

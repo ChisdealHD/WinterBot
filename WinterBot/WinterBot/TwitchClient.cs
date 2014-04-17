@@ -138,11 +138,8 @@ namespace Winter
             user = user.ToLower();
             m_stream = stream.ToLower();
 
-            // Create client and hook up events.
-            WriteDiagnosticMessage("Attempting to connect to server...");
-            
+            // Create client and hook up events.            
             m_client = new IrcClient();
-            m_client.FloodPreventer = m_flood = new FloodPreventer(this);
 
             m_client.Connected += client_Connected;
             m_client.ConnectFailed += client_ConnectFailed;
@@ -152,7 +149,9 @@ namespace Winter
             m_client.PongReceived += m_client_PongReceived;
             m_client.PingReceived += m_client_PingReceived;
 
+            m_flood = new FloodPreventer(this);
             m_flood.RejectedMessage += m_flood_RejectedMessage;
+            m_client.FloodPreventer = m_flood;
 
             int currTimeout = timeout;
             DateTime started = DateTime.Now;
