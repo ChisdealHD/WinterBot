@@ -384,35 +384,30 @@ namespace Winter
             WriteDiagnostic(facility, string.Format(msg, values));
         }
 
-        public void SendResponse(string msg)
+        public void SendResponse(Importance imp, string msg)
         {
-            Send(MessageType.Response, msg);
+            Send(MessageType.Response, imp, msg);
         }
 
-        public void SendResponse(string msg, params object[] param)
+        public void SendResponse(Importance imp, string msg, params object[] param)
         {
-            Send(MessageType.Response, string.Format(msg, param));
+            Send(MessageType.Response, imp, string.Format(msg, param));
         }
 
         public void SendTimeoutMessage(string msg, params object[] param)
         {
-            Send(MessageType.Timeout, string.Format(msg, param));
-        }
-
-        public void TimeoutMessage(string msg)
-        {
-            Send(MessageType.Timeout, msg);
+            Send(MessageType.Timeout, Importance.Med, string.Format(msg, param));
         }
 
 
-        public void SendMessage(string msg, params object[] param)
+        public void SendMessage(Importance imp, string msg, params object[] param)
         {
-            Send(MessageType.Message, string.Format(msg, param));
+            Send(MessageType.Message, imp, string.Format(msg, param));
         }
 
-        public void SendMessage(string msg)
+        public void SendMessage(Importance imp, string msg)
         {
-            Send(MessageType.Message, msg);
+            Send(MessageType.Message, imp, msg);
         }
 
         internal void SendUnconditional(string msg, params string[] args)
@@ -425,12 +420,12 @@ namespace Winter
             if (Passive)
                 return;
 
-            m_twitch.SendMessage(msg);
+            m_twitch.SendMessage(Importance.High, msg);
             LastMessageSent = DateTime.Now;
         }
 
 
-        public void Send(MessageType type, string msg)
+        public void Send(MessageType type, Importance imp, string msg)
         {
             if (Passive)
                 return;
@@ -438,13 +433,13 @@ namespace Winter
             if (!AllowMessage(type))
                 return;
 
-            m_twitch.SendMessage(msg);
+            m_twitch.SendMessage(imp, msg);
             LastMessageSent = DateTime.Now;
         }
 
-        public void Send(MessageType type, string fmt, params object[] param)
+        public void Send(MessageType type, Importance imp, string fmt, params object[] param)
         {
-            Send(type, string.Format(fmt, param));
+            Send(type, imp, string.Format(fmt, param));
         }
 
         private bool AllowMessage(MessageType type)

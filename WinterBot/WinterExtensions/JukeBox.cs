@@ -36,7 +36,7 @@ namespace WinterExtensions
                     {
                         m_enabled = false;
                         m_streamDead = false;
-                        sender.SendResponse("Disabling jukebox mode.");
+                        sender.SendResponse(Importance.Med, "Disabling jukebox mode.");
                     }
                 }
                 else
@@ -57,7 +57,7 @@ namespace WinterExtensions
             {
                 if (!sender.CanUseCommand(user, AccessLevel.Mod))
                 {
-                    sender.SendResponse("The jukebox is CLOSED. No additional requests are being accepted.");
+                    sender.SendResponse(Importance.Low, "The jukebox is CLOSED. No additional requests are being accepted.");
                     return;
                 }
 
@@ -67,15 +67,15 @@ namespace WinterExtensions
                 {
                     m_enabled = true;
                     m_lastMessage = DateTime.Now;
-                    sender.SendResponse("Jukebox activated.  Use '!JukeboxMode off' to deactivate.");
+                    sender.SendResponse(Importance.Med, "Jukebox activated.  Use '!JukeboxMode off' to deactivate.");
                 }
                 else if (value == "off")
                 {
-                    sender.SendResponse("Jukebox mode is off.");
+                    sender.SendResponse(Importance.Med, "Jukebox mode is off.");
                 }
                 else
                 {
-                    sender.SendResponse("Usage: '!jukebox on' and '!jukebox off'.  Mod only.");
+                    sender.SendResponse(Importance.Low, "Usage: '!jukebox on' and '!jukebox off'.  Mod only.");
                 }
             }
             else
@@ -84,11 +84,11 @@ namespace WinterExtensions
                 {
                     if (value == "on")
                     {
-                        sender.SendResponse("Jukebox mode is already enabled.");
+                        sender.SendResponse(Importance.Low, "Jukebox mode is already enabled.");
                     }
                     else if (value == "off")
                     {
-                        sender.SendResponse("The jukebox is shutting down for the night. Please hold your song requests for next time.");
+                        sender.SendResponse(Importance.High, "The jukebox is shutting down for the night. Please hold your song requests for next time.");
                         m_enabled = false;
                     }
                     else
@@ -106,7 +106,7 @@ namespace WinterExtensions
         private void SendMessage(WinterBot bot)
         {
             m_lastMessage = DateTime.Now;
-            bot.SendResponse(m_message);
+            bot.SendResponse(Importance.Low, m_message);
         }
     }
 }

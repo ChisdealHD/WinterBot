@@ -63,11 +63,11 @@ namespace Winter
                         Disable();
                 }
 
-                sender.SendResponse("Auto message now {0}.", shouldEnable ? "enabled" : "disabled");
+                sender.SendResponse(Importance.Med, "Auto message now {0}.", shouldEnable ? "enabled" : "disabled");
             }
             else
             {
-                sender.SendResponse("Auto message is currently {0}.", m_msgOptions.Enabled ? "enabled" : "disabled");
+                sender.SendResponse(Importance.Med, "Auto message is currently {0}.", m_msgOptions.Enabled ? "enabled" : "disabled");
             }
         }
 
@@ -115,14 +115,14 @@ namespace Winter
         {
             var subMessage = m_chatOptions.SubscribeMessage;
             if (!string.IsNullOrWhiteSpace(subMessage))
-                sender.SendMessage("{0}: {1}", user.Name, subMessage);
+                sender.SendMessage(Importance.High, "{0}: {1}", user.Name, subMessage);
         }
 
         private void bot_UserFollowed(WinterBot sender, TwitchUser user)
         {
             var msg = m_chatOptions.FollowMessage;
             if (!string.IsNullOrWhiteSpace(msg))
-                sender.SendMessage("{0}: {1}", user.Name, msg);
+                sender.SendMessage(Importance.Low, "{0}: {1}", user.Name, msg);
         }
 
         void bot_MessageReceived(WinterBot sender, TwitchUser user, string text)
@@ -151,7 +151,7 @@ namespace Winter
                 else
                     msg = messages[m_curr++];
 
-                sender.SendMessage(msg);
+                sender.SendMessage(Importance.Low, msg);
             }
         }
     }

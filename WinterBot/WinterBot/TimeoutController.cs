@@ -88,7 +88,7 @@ namespace Winter
 
             if (!TwitchUsers.IsValidUserName(value))
             {
-                sender.SendResponse("{0}: Usage: !deny [user]", user.Name);
+                sender.SendResponse(Importance.Med, "{0}: Usage: !deny [user]", user.Name);
                 return;
             }
 
@@ -100,7 +100,7 @@ namespace Winter
                 m_permit.Remove(target);
 
             m_denyList.Add(target);
-            sender.SendResponse("{0}: {1} is no longer allowed to post links.", user.Name, target.Name);
+            sender.SendResponse(Importance.High, "{0}: {1} is no longer allowed to post links.", user.Name, target.Name);
         }
 
         [BotCommand(AccessLevel.Mod, "permit", "allow")]
@@ -123,20 +123,20 @@ namespace Winter
             if (removed)
             {
                 if (m_urlOptions.ShouldEnforce(target))
-                    m_winterBot.SendResponse("{0}: {1} was removed from the deny list.", user.Name, target.Name);
+                    m_winterBot.SendResponse(Importance.Med, "{0}: {1} was removed from the deny list.", user.Name, target.Name);
                 else
-                    m_winterBot.SendResponse("{0}: {1} can now post links again.", user.Name, target.Name);
+                    m_winterBot.SendResponse(Importance.Med, "{0}: {1} can now post links again.", user.Name, target.Name);
             }
             else
             {
                 if (m_urlOptions.ShouldEnforce(target))
                 {
                     m_permit.Add(target);
-                    m_winterBot.SendResponse("{0} -> {1} has been granted permission to post a single link.", user.Name, target.Name);
+                    m_winterBot.SendResponse(Importance.Med, "{0} -> {1} has been granted permission to post a single link.", user.Name, target.Name);
                 }
                 else
                 {
-                    m_winterBot.SendResponse("{0}: {1} can posts links.", user.Name, target.Name);
+                    m_winterBot.SendResponse(Importance.Low, "{0}: {1} can posts links.", user.Name, target.Name);
                 }
             }
         }
@@ -182,14 +182,14 @@ namespace Winter
             value = value.Trim();
             if (string.IsNullOrWhiteSpace(value))
             {
-                sender.SendResponse("{0} protect is currently {1}.", type, curr ? "enabled" : "disabled");
+                sender.SendResponse(Importance.Med, "{0} protect is currently {1}.", type, curr ? "enabled" : "disabled");
             }
             else if (value.ParseBool(ref result))
             {
                 if (curr != result)
                 {
                     string enableStr = result ? "enabled" : "disabled";
-                    sender.SendResponse("{0} protect is now {1}.", type, enableStr);
+                    sender.SendResponse(Importance.Med, "{0} protect is now {1}.", type, enableStr);
                     sender.WriteDiagnostic(DiagnosticFacility.ModeChange, "{0} changed {1} mode to {2}.", user.Name, type, enableStr);
                 }
             }
@@ -242,7 +242,7 @@ namespace Winter
                     string strtime = split[0].Substring(timeE.Length);
                     if (!int.TryParse(strtime, out timeout))
                     {
-                        sender.SendResponse("Usage: !spam [-time=??] text to auto timeout");
+                        sender.SendResponse(Importance.High, "Usage: !spam [-time=??] text to auto timeout");
                         return;
                     }
 
@@ -265,11 +265,11 @@ namespace Winter
                 m_spamTimeout = ban ? (int?)null : timeout;
 
                 if (ban)
-                    sender.SendResponse("Banning all messages containing '{0}'.", value);
+                    sender.SendResponse(Importance.High, "Banning all messages containing '{0}'.", value);
                 else if (timeout <= 1)
-                    sender.SendResponse("All messages containing '{0}' will be purged.", value);
+                    sender.SendResponse(Importance.High, "All messages containing '{0}' will be purged.", value);
                 else
-                    sender.SendResponse("All messages containing '{0}' will receive a {1} second timeout.", value, timeout);
+                    sender.SendResponse(Importance.High, "All messages containing '{0}' will receive a {1} second timeout.", value, timeout);
             }
 
             // Apply rule to recent messages
@@ -575,28 +575,28 @@ namespace Winter
                 case 1:
                 case 2:
                     if (shouldMessage)
-                        sender.Send(MessageType.Timeout, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
+                        sender.Send(MessageType.Timeout, Importance.Med, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
 
                     sender.ClearChat(user);
                     break;
 
                 case 3:
                     duration = 5;
-                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Send(MessageType.Timeout, Importance.Med, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
                     sender.Timeout(user, duration * 60);
                     timeout.LastTimeout = now.AddMinutes(duration);
                     break;
 
                 case 4:
                     duration = 10;
-                    sender.Send(MessageType.Timeout, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
+                    sender.Send(MessageType.Timeout, Importance.High, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
                     sender.Timeout(user, duration * 60);
                     timeout.LastTimeout = now.AddMinutes(duration);
                     break;
 
                 default:
                     Debug.Assert(timeout.Count > 0);
-                    sender.Send(MessageType.Timeout, "{0}: {1} (8 hour timeout.)", user.Name, clearReason);
+                    sender.Send(MessageType.Timeout, Importance.High, "{0}: {1} (8 hour timeout.)", user.Name, clearReason);
                     sender.Timeout(user, 8 * 60 * 60);
                     timeout.LastTimeout = now.AddHours(8);
                     break;

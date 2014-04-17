@@ -13,6 +13,13 @@ using System.Xml.Serialization;
 
 namespace Winter
 {
+    public enum Importance
+    {
+        Low,
+        Med,
+        High
+    }
+
     /// <summary>
     /// A Twitch.tv IRC client.
     /// 
@@ -133,9 +140,9 @@ namespace Winter
 
             // Create client and hook up events.
             WriteDiagnosticMessage("Attempting to connect to server...");
-
+            
             m_client = new IrcClient();
-            m_client.FloodPreventer = new IrcStandardFloodPreventer(4, 2000);
+            m_client.FloodPreventer = m_flood = new FloodPreventer(this);
 
             m_client.Connected += client_Connected;
             m_client.ConnectFailed += client_ConnectFailed;
@@ -144,6 +151,8 @@ namespace Winter
             m_client.ErrorMessageReceived += client_ErrorMessageReceived;
             m_client.PongReceived += m_client_PongReceived;
             m_client.PingReceived += m_client_PingReceived;
+
+            m_flood.RejectedMessage += m_flood_RejectedMessage;
 
             int currTimeout = timeout;
             DateTime started = DateTime.Now;
@@ -161,7 +170,7 @@ namespace Winter
             // wait on s_connectedEvent which is set when client_Connected is called.
             if (!m_connectedEvent.Wait(currTimeout))
             {
-                WriteDiagnosticMessage("Connection to the Twitch IRC server timed out.");
+                WriteDiagnosticMessage("Connecting to the Twitch IRC server timed out.");
                 return false;
             }
 
@@ -202,12 +211,14 @@ namespace Winter
 
         public void Ping()
         {
-            m_client.Ping();
+            if (CanSendMessage(Importance.Med, "PING ACTION"))
+                m_client.Ping();
         }
 
         public void Quit(int timeout=1000)
         {
-            m_client.Quit(timeout);
+            if (CanSendMessage(Importance.High, "QUIT ACTION"))
+                m_client.Quit(timeout);
         }
 
         public void Disconnect()
@@ -215,27 +226,42 @@ namespace Winter
             m_client.Disconnect();
         }
 
-        public void SendMessage(string fmt, params object[] param)
+        public void SendMessage(Importance importance, string text)
         {
-            m_client.LocalUser.SendMessage(m_channel, string.Format(fmt, param));
-        }
-
-
-        public void SendMessage(string text)
-        {
-            m_client.LocalUser.SendMessage(m_channel, text);
+            if (CanSendMessage(importance, text))
+                m_client.LocalUser.SendMessage(m_channel, text);
         }
 
         public void Timeout(string user, int duration = 600)
         {
+            // Sleep for 100 msec so that our message is sure to be received AFTER other users
+            // get the message we want to clear.  Also bypass flood check.
             Thread.Sleep(100);
-            SendMessage(string.Format(".timeout {0} {1}", user, duration));
+            m_client.LocalUser.SendMessage(m_channel, string.Format(".timeout {0} {1}", user, duration));
         }
 
         public void Ban(string user)
         {
+            // Sleep for 100 msec so that our message is sure to be received AFTER other users
+            // get the message we want to clear.  Also bypass flood check.
             Thread.Sleep(100);
-            SendMessage(string.Format(".ban {0}", user));
+            SendMessage(Importance.High, string.Format(".ban {0}", user));
+        }
+
+        void m_flood_RejectedMessage()
+        {
+            WriteDiagnosticMessage("Flood prevention rejected a message.");
+        }
+
+        private bool CanSendMessage(Importance importance, string text)
+        {
+            if (!m_flood.ShouldSendMessage(importance))
+            {
+                WriteDiagnosticMessage("Dropped message: {0}.", text);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -494,8 +520,6 @@ namespace Winter
                 evt(this, user, moderator);
         }
 
-
-
         private void client_Connected(object sender, EventArgs e)
         {
             m_connectedEvent.Set();
@@ -576,7 +600,79 @@ namespace Winter
         private object m_modSync = new object();
 
         readonly string m_action = new string((char)1, 1) + "ACTION";
+        FloodPreventer m_flood;
         #endregion
 
+    }
+
+    // 20 commands over 30 seconds = 8 hour ban for twitch irc
+    // We'll limit to 15 messages to be safe.
+    class FloodPreventer : IIrcFloodPreventer
+    {
+        const int MessageLimit = 15;
+        const int Timespan = 30;
+
+        LinkedList<DateTime> m_messages = new LinkedList<DateTime>();
+
+        public event Action RejectedMessage;
+
+        private TwitchClient m_client;
+        public FloodPreventer(TwitchClient client)
+        {
+            m_client = client;
+        }
+
+        public bool ShouldSendMessage(Importance imp)
+        {
+            int remaining = GetRemaining();
+            int threshold = MessageLimit / 3;
+
+            switch (imp)
+            {
+                case Importance.Low:
+                    return remaining >= threshold * 2;
+
+                case Importance.Med:
+                    return remaining >= threshold;
+
+                default:
+                case Importance.High:
+                    return remaining > 0;
+            }
+        }
+
+        public long GetSendDelay()
+        {
+            // IrcDotNet actually only cares if the value is 0, so we won't do a real msec calculation here.
+            int remaining = GetRemaining();
+            if (remaining <= 0)
+            {
+                var evt = RejectedMessage;
+                if (evt != null)
+                    evt();
+
+                return 10000;
+            }
+
+            return 0;
+        }
+
+        public void HandleMessageSent(string line)
+        {
+            m_messages.AddLast(DateTime.Now);
+            Console.WriteLine("HandleMessageSent: {0}", line);
+        }
+
+        int GetRemaining()
+        {
+            if (m_messages.Count == 0)
+                return MessageLimit;
+
+            while (m_messages.Count > 0 && m_messages.First.Value.Elapsed().TotalSeconds >= Timespan)
+                m_messages.RemoveFirst();
+
+            // IrcDotNet actually only cares if the value is 0, so we won't do a big calculation here.
+            return MessageLimit - m_messages.Count;
+        }
     }
 }

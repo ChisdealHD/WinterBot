@@ -108,12 +108,12 @@ namespace WinterExtensions
             bool enable = false;
             if (!value.ParseBool(ref enable))
             {
-                sender.SendMessage("Betting is currently: {0}", Enabled ? "enabled" : "disabled");
+                sender.SendMessage(Importance.Low, "Betting is currently: {0}", Enabled ? "enabled" : "disabled");
                 return;
             }
 
             Enabled = enable;
-            sender.SendMessage("Betting is now {0}.", Enabled ? "enabled" : "disabled");
+            sender.SendMessage(Importance.Med, "Betting is now {0}.", Enabled ? "enabled" : "disabled");
         }
 
 
@@ -125,7 +125,7 @@ namespace WinterExtensions
 
             if (IsBettingOpen || WaitingResult)
             {
-                sender.SendResponse("Betting is currently ongoing.  Use !result to award points, use !cancelbet to cancel the current bet.");
+                sender.SendResponse(Importance.Low, "Betting is currently ongoing.  Use !result to award points, use !cancelbet to cancel the current bet.");
                 return;
             }
 
@@ -139,7 +139,7 @@ namespace WinterExtensions
 
             if (betting.Count < 2)
             {
-                sender.SendResponse("Need at least two people to bet on!");
+                sender.SendResponse(Importance.High, "Need at least two people to bet on!");
                 return;
             }
 
@@ -151,7 +151,7 @@ namespace WinterExtensions
 
             GetCallback();
 
-            sender.SendResponse("Betting is now OPEN.  Use '!bet [player] [amount]' to bet.  Minimum bet is 1, maximum bet is 500.  You start with 3000 points, you can bet even if you have no points.");
+            sender.SendResponse(Importance.High, "Betting is now OPEN.  Use '!bet [player] [amount]' to bet.  Minimum bet is 1, maximum bet is 500.  You start with 3000 points, you can bet even if you have no points.");
         }
 
         private void GetCallback()
@@ -242,7 +242,7 @@ namespace WinterExtensions
 
             if (IsBettingClosed)
             {
-                sender.SendMessage("Betting is not currently open.");
+                sender.SendMessage(Importance.Med, "Betting is not currently open.");
                 return;
             }
 
@@ -251,12 +251,12 @@ namespace WinterExtensions
 
             if (string.IsNullOrWhiteSpace(result))
             {
-                sender.SendMessage("Usage: '!result [player]'.");
+                sender.SendMessage(Importance.Med, "Usage: '!result [player]'.");
                 return;
             }
             else if (!m_betting.Contains(result))
             {
-                sender.SendMessage("'{0}' not a valid player, valid players: {1}", result, string.Join(", ", m_betting));
+                sender.SendMessage(Importance.High, "'{0}' not a valid player, valid players: {1}", result, string.Join(", ", m_betting));
                 return;
             }
 
@@ -297,7 +297,7 @@ namespace WinterExtensions
             ClearBetting();
             CancelCallback();
 
-            sender.SendMessage("Betting complete.  {0} winners and {1} losers.  Point totals can be found here: http://www.darkautumn.net/winter/chat.php?POINTS", totalWinners, totalLosers);
+            sender.SendMessage(Importance.High, "Betting complete.  {0} winners and {1} losers.  Point totals can be found here: http://www.darkautumn.net/winter/chat.php?POINTS", totalWinners, totalLosers);
         }
 
         private void AddPoints(TwitchUser user, int amount)
@@ -315,14 +315,14 @@ namespace WinterExtensions
         {
             if (!IsBettingOpen)
             {
-                sender.SendMessage("Betting is now CLOSED.");
+                sender.SendMessage(Importance.High, "Betting is now CLOSED.");
                 CancelCallback();
                 return;
             }
 
             if (m_bettingStarted.Elapsed().TotalSeconds >= m_time)
             {
-                sender.SendMessage("Betting is now CLOSED.");
+                sender.SendMessage(Importance.High, "Betting is now CLOSED.");
                 CancelCallback();
                 m_state = State.WaitingResult;
             }
@@ -420,7 +420,7 @@ namespace WinterExtensions
             if (m_lastMessage.Elapsed().Seconds < 20)
                 return;
 
-            sender.SendMessage(string.Format(fmt, args));
+            sender.SendMessage(Importance.Low, string.Format(fmt, args));
             m_lastMessage = DateTime.Now;
         }
     }

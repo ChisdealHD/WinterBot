@@ -158,9 +158,9 @@ namespace Winter
             string[] cmds = (from c in m_commands.Values where c.AccessRequired <= level orderby c.Command select c.Command).ToArray();
 
             if (cmds.Length == 0)
-                sender.SendResponse("No commands available.", part);
+                sender.SendResponse(Importance.Low, "No commands available.", part);
             else
-                sender.SendResponse("Commands {0} can use: {1}", part, string.Join(", ", cmds));
+                sender.SendResponse(Importance.Low, "Commands {0} can use: {1}", part, string.Join(", ", cmds));
         }
         
         [BotCommand(AccessLevel.Mod, "remcom", "removecommand", "delcom", "delcommand")]
@@ -173,7 +173,7 @@ namespace Winter
             string cmd = args.GetOneWord();
             if (cmd == null)
             {
-                sender.SendResponse(m_removeCommandUsage);
+                sender.SendResponse(Importance.Med, m_removeCommandUsage);
                 return;
             }
 
@@ -184,7 +184,7 @@ namespace Winter
             if (m_commands.ContainsKey(cmd))
                 m_commands.Remove(cmd);
             else
-                sender.SendResponse(string.Format("Command {0} not found.", cmd));
+                sender.SendResponse(Importance.Med, string.Format("Command {0} not found.", cmd));
         }
 
 
@@ -202,13 +202,13 @@ namespace Winter
 
             if (string.IsNullOrWhiteSpace(cmdName) || string.IsNullOrWhiteSpace(cmdText) || args.Error != null)
             {
-                sender.SendResponse(m_addCommandUsage);
+                sender.SendResponse(Importance.Med, m_addCommandUsage);
                 return;
             }
             
             if (cmdName[0] != '!')
             {
-                sender.SendResponse(string.Format("User commands must start with a '!'. {0}", m_addCommandUsage));
+                sender.SendResponse(Importance.Med, string.Format("User commands must start with a '!'. {0}", m_addCommandUsage));
                 return;
             }
             else
@@ -218,7 +218,7 @@ namespace Winter
 
             if (cmdText[0] == '.' || cmdText[0] == '/')
             {
-                sender.SendResponse(string.Format("Cannot create a command which starts with a '{0}'.", cmdText[0]));
+                sender.SendResponse(Importance.Med, string.Format("Cannot create a command which starts with a '{0}'.", cmdText[0]));
                 return;
             }
 
@@ -232,9 +232,9 @@ namespace Winter
             m_commands[cmdName] = userCommand;
 
             if (exists)
-                sender.SendResponse(string.Format("Updated command: !{0}.", cmdName));
+                sender.SendResponse(Importance.Med, string.Format("Updated command: !{0}.", cmdName));
             else
-                sender.SendResponse(string.Format("Successfully added command: !{0}.", cmdName));
+                sender.SendResponse(Importance.Med, string.Format("Successfully added command: !{0}.", cmdName));
         }
 
         void UnknownCommandReceived(WinterBot sender, TwitchUser user, string cmd, string value)
@@ -252,7 +252,7 @@ namespace Winter
                     // Keep user commands from spamming chat, only one once every 20 seconds (unless you are a mod).
                     if (m_lastMessage.Elapsed().TotalSeconds >= m_options.UserCommandDelay || sender.CanUseCommand(user, AccessLevel.Mod))
                     {
-                        sender.SendResponse(command.Value);
+                        sender.SendResponse(Importance.Low, command.Value);
                         m_lastMessage = DateTime.Now;
                     }
                 }
