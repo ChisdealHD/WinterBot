@@ -24,7 +24,7 @@ namespace WinterExtensions
 
         State m_state = State.None;
         WinterBot m_bot;
-
+        WinterOptions m_options;
 
         HashSet<string> m_betting;
         Dictionary<TwitchUser, Tuple<string, int>> m_bets;
@@ -32,7 +32,6 @@ namespace WinterExtensions
         DateTime m_bettingStarted;
         DateTime m_lastMessage;
         bool m_callback;
-        string m_url, m_channel;
 
         Dictionary<TwitchUser, int> m_points = new Dictionary<TwitchUser, int>();
 
@@ -43,58 +42,15 @@ namespace WinterExtensions
         Thread m_thread;
 
 
-        public BettingSystem(WinterBot bot)
+        public BettingSystem(WinterBot bot, WinterOptions options)
         {
+            m_options = options;
             m_bot = bot;
-            m_channel = m_bot.Channel.ToLower();
             Enabled = true;
-
-            var section = m_bot.Options.IniReader.GetSectionByName("chat");
-            if (section == null || !section.GetValue("httplogger", ref m_url))
-                return;
 
             ThreadPool.QueueUserWorkItem(LoadPoints);
         }
 
-        private void LoadPoints(object o)
-        {
-            DateTime now = DateTime.Now;
-            string url = string.Format("{0}/getpoints.php?CHANNEL={1}", m_url, m_channel);
-
-            try
-            {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "GET";
-                request.ContentType = "application/x-gzip";
-                request.KeepAlive = false;
-
-                WebResponse response = request.GetResponse();
-                using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
-                    {
-                        if (string.IsNullOrWhiteSpace(line))
-                            continue;
-
-                        var arr = line.Split(' ');
-                        if (arr.Length != 2)
-                            continue;
-
-                        int val;
-                        if (!int.TryParse(arr[1], out val))
-                            continue;
-
-                        m_points[m_bot.Users.GetUser(arr[0])] = val;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save points.");
-            }
-        }
 
         bool IsBettingClosed { get { return m_state == State.None; } }
         bool IsBettingOpen { get { return m_state == State.Open; } }
@@ -368,31 +324,58 @@ namespace WinterExtensions
                 }
             }
         }
+        private void LoadPoints(object o)
+        {
+            try
+            {
+                HttpWebRequest request = m_options.CreateGetRequest("getpoints.php", false);
+
+                WebResponse response = request.GetResponse();
+                using (Stream stream = response.GetResponseStream())
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
+
+                        var arr = line.Split(' ');
+                        if (arr.Length != 2)
+                            continue;
+
+                        int val;
+                        if (!int.TryParse(arr[1], out val))
+                            continue;
+
+                        m_points[m_bot.Users.GetUser(arr[0])] = val;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save points.");
+            }
+        }
 
         private bool Save(List<Tuple<TwitchUser, int>> queue)
         {
             bool succeeded = false;
-            DateTime now = DateTime.Now;
-            string url = string.Format("{0}/addpoints.php?CHANNEL={1}", m_url, m_channel);
-
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "POST";
-                request.ContentType = "application/x-gzip";
-                request.KeepAlive = false;
+                HttpWebRequest request = m_options.CreatePostRequest("addpoints.php", true);
 
                 Stream requestStream = request.GetRequestStream();
                 using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))
-                using (StreamWriter stream = new StreamWriter(gzip))
-                    foreach (var item in queue)
-                        stream.Write("{0}\n{1}\n", item.Item1.Name, item.Item2);
+                    using (StreamWriter stream = new StreamWriter(gzip))
+                        foreach (var item in queue)
+                            stream.Write("{0}\n{1}\n", item.Item1.Name, item.Item2);
 
                 string result;
                 WebResponse response = request.GetResponse();
                 using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                    result = reader.ReadToEnd();
+                    using (StreamReader reader = new StreamReader(stream))
+                        result = reader.ReadToEnd();
 
                 succeeded = result == "ok";
             }

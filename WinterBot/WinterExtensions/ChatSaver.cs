@@ -77,7 +77,7 @@ namespace WinterExtensions
         object m_sync = new object();
         volatile List<ChatMessage> m_messages = new List<ChatMessage>();
         WinterBot m_bot;
-        string m_url, m_channel;
+        WinterOptions m_options;
 
         public override TimeSpan Interval
         {
@@ -87,28 +87,19 @@ namespace WinterExtensions
             }
         }
 
-        public ChatSaver(WinterBot bot)
+        public ChatSaver(WinterBot bot, WinterOptions options)
             : base(bot)
         {
             m_bot = bot;
-            m_channel = m_bot.Channel.ToLower();
             if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
                 return;
 
-            var section = m_bot.Options.IniReader.GetSectionByName("chat");
-            if (section == null || !section.GetValue("httplogger", ref m_url))
-                return;
-
-            Uri uri;
-            if (Uri.TryCreate(m_url, UriKind.Absolute, out uri) && uri.Scheme == Uri.UriSchemeHttp)
-            {
-                bot.MessageReceived += bot_MessageReceived;
-                bot.ActionReceived += bot_ActionReceived;
-                bot.UserSubscribed += bot_UserSubscribed;
-                bot.ChatClear += bot_ChatClear;
-                bot.UserBanned += bot_UserBanned;
-                bot.UserTimedOut += bot_UserTimedOut;
-            }
+            bot.MessageReceived += bot_MessageReceived;
+            bot.ActionReceived += bot_ActionReceived;
+            bot.UserSubscribed += bot_UserSubscribed;
+            bot.ChatClear += bot_ChatClear;
+            bot.UserBanned += bot_UserBanned;
+            bot.UserTimedOut += bot_UserTimedOut;
         }
 
         void bot_UserTimedOut(WinterBot sender, TwitchUser user, int duration)
@@ -177,14 +168,10 @@ namespace WinterExtensions
             bool succeeded = false;
             DateTime now = DateTime.Now;
             string file = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", Bot.Channel, now.Year, now.Month, now.Day);
-            string url = string.Format("{0}/control.php?{1}={2}&CHANNEL={3}", m_url, "APPEND", Path.GetFileName(file), m_channel);
 
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "POST";
-                request.ContentType = "application/x-gzip";
-                request.KeepAlive = false;
+                HttpWebRequest request = m_options.CreatePostRequest("control.php", true, "APPEND=" + file);
 
                 Stream requestStream = request.GetRequestStream();
                 using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))

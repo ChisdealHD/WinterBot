@@ -15,9 +15,11 @@ namespace WinterExtensions
         DateTime m_lastOffline = DateTime.Now;
         DateTime m_lastMessage = DateTime.Now;
         string m_message = " The jukebox is OPEN. Want your song played? Donate $2.50 (http://bit.ly/1gBKIqa) and include a Youtube link to the song in the Message field. Please keep it less than 6 minutes.";
+        WinterOptions m_options;
 
-        public JukeBox(WinterBot bot)
+        public JukeBox(WinterBot bot, WinterOptions options)
         {
+            m_options = options;
             bot.Tick += bot_Tick;
         }
 

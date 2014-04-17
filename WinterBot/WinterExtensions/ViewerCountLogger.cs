@@ -15,21 +15,17 @@ namespace WinterExtensions
     {
         List<Tuple<DateTime, int>> m_viewers = new List<Tuple<DateTime, int>>();
         object m_sync = new object();
-        string m_channel;
-        string m_url;
         WinterBot m_bot;
+        WinterOptions m_options;
 
-        public ViewerCountLogger(WinterBot bot)
+        public ViewerCountLogger(WinterBot bot, WinterOptions options)
             : base(bot)
         {
-            m_bot = bot;
-            m_channel = bot.Channel.ToLower();
             if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
                 return;
 
-            var section = m_bot.Options.IniReader.GetSectionByName("chat");
-            if (section == null || !section.GetValue("httplogger", ref m_url))
-                return;
+            m_bot = bot;
+            m_options = options;
 
             bot.ViewerCountChanged += bot_ViewerCountChanged;
         }
@@ -70,27 +66,22 @@ namespace WinterExtensions
         bool Save(List<Tuple<DateTime, int>> viewers)
         {
             bool succeeded = false;
-            DateTime now = DateTime.Now;
-            string url = string.Format("{0}/viewers.php?CHANNEL={1}", m_url, m_channel);
 
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "POST";
-                request.ContentType = "application/x-gzip";
-                request.KeepAlive = false;
+                HttpWebRequest request = m_options.CreatePostRequest("viewers.php", true);
 
                 Stream requestStream = request.GetRequestStream();
                 using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))
-                using (StreamWriter stream = new StreamWriter(gzip))
-                    foreach (var message in viewers)
-                        stream.Write("{0}\n{1}\n", message.Item1.ToSql(), message.Item2);
+                    using (StreamWriter stream = new StreamWriter(gzip))
+                        foreach (var message in viewers)
+                            stream.Write("{0}\n{1}\n", message.Item1.ToSql(), message.Item2);
 
                 string result;
                 WebResponse response = request.GetResponse();
                 using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                    result = reader.ReadToEnd();
+                    using (StreamReader reader = new StreamReader(stream))
+                        result = reader.ReadToEnd();
 
                 succeeded = result == "ok";
             }

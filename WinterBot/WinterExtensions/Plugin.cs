@@ -7,10 +7,12 @@ namespace WinterExtensions
     {
         public static void Init(WinterBot bot)
         {
-            bot.AddCommands(new JukeBox(bot));
-            bot.AddCommands(new BettingSystem(bot));
-            bot.AddCommands(new ViewerCountLogger(bot));
-            new ChatSaver(bot);
+            WinterOptions options = new WinterOptions(bot.Options);
+
+            bot.AddCommands(new JukeBox(bot, options));
+            bot.AddCommands(new BettingSystem(bot, options));
+            bot.AddCommands(new ViewerCountLogger(bot, options));
+            new ChatSaver(bot, options);
         }
     }
 }

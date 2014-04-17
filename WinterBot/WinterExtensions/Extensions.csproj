@@ -61,6 +61,7 @@
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewerCountLogger.cs" />
+    <Compile Include="WinterOptions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="DarkAutumn.snk" />
