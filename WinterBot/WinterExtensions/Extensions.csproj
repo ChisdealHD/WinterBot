@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BetterCommands.cs" />
     <Compile Include="Betting.cs" />
     <Compile Include="ChatSaver.cs" />
     <Compile Include="JukeBox.cs" />

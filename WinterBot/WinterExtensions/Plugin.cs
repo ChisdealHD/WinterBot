@@ -13,6 +13,7 @@ namespace WinterExtensions
             bot.AddCommands(new BettingSystem(bot, options));
             bot.AddCommands(new ViewerCountLogger(bot, options));
             new ChatSaver(bot, options);
+            bot.AddCommands(new BetterCommands(bot, options));
         }
     }
 }
