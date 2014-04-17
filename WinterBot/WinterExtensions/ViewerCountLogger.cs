@@ -75,9 +75,10 @@ namespace WinterExtensions
 
             try
             {
-                WebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = "POST";
                 request.ContentType = "application/x-gzip";
+                request.KeepAlive = false;
 
                 Stream requestStream = request.GetRequestStream();
                 using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))
@@ -91,10 +92,9 @@ namespace WinterExtensions
                 using (StreamReader reader = new StreamReader(stream))
                     result = reader.ReadToEnd();
 
-                Console.WriteLine(result);
                 succeeded = result == "ok";
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save viewer list.");
             }
