@@ -608,8 +608,10 @@ namespace Winter
     // We'll limit to 15 messages to be safe.
     class FloodPreventer : IIrcFloodPreventer
     {
-        const int MessageLimit = 15;
+        const int MessageLimit = 16;
         const int Timespan = 30;
+        const int LowThreshold = 10;
+        const int MediumThreshold = 5;
 
         LinkedList<DateTime> m_messages = new LinkedList<DateTime>();
 
@@ -624,19 +626,20 @@ namespace Winter
         public bool ShouldSendMessage(Importance imp)
         {
             int remaining = GetRemaining();
-            int threshold = MessageLimit / 3;
+            if (remaining == 0)
+                return false;
 
             switch (imp)
             {
                 case Importance.Low:
-                    return remaining >= threshold * 2;
+                    return remaining >= LowThreshold;
 
                 case Importance.Med:
-                    return remaining >= threshold;
+                    return remaining >= MediumThreshold;
 
                 default:
                 case Importance.High:
-                    return remaining > 0;
+                    return true;
             }
         }
 
