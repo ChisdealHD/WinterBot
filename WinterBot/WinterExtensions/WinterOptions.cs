@@ -33,7 +33,7 @@ namespace WinterExtensions
         public HttpWebRequest CreateGetRequest(string api, bool compressed, string values = null)
         {
             values = string.IsNullOrWhiteSpace(values) ? "" : "&" + values;
-            string url = string.Format("{0}/getpoints.php?CHANNEL={1}{2}", m_url, m_channel, values);
+            string url = string.Format("{0}/{1}?CHANNEL={2}{3}", m_url, api, m_channel, values);
 
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.Method = "GET";
@@ -64,6 +64,12 @@ namespace WinterExtensions
                 request.Headers.Add("APIKey", m_key);
 
             return request;
+        }
+
+        public string GetUrl(string api, string values=null)
+        {
+            values = string.IsNullOrWhiteSpace(values) ? "" : "&" + values;
+            return string.Format("{0}/{1}?CHANNEL={2}{3}", m_url, api, m_channel, values);
         }
     }
 }
