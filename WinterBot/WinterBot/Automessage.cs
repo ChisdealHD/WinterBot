@@ -10,35 +10,107 @@ namespace Winter
 {
     class AutoMessage
     {
+        WinterBot m_bot;
         DateTime m_lastMessage = DateTime.Now;
         Random m_random = new Random();
         int m_curr;
         int m_totalMessages;
         AutoMessageOptions m_msgOptions;
         ChatOptions m_chatOptions;
+        bool m_running;
+        bool m_checkingMessages;
+
+        bool ShouldEnable
+        {
+            get
+            {
+                return !m_running && m_msgOptions.Enabled && m_bot.IsStreamLive;
+            }
+        }
 
         public AutoMessage(WinterBot bot)
         {
+            m_bot = bot;
             var options = bot.Options;
             m_msgOptions = options.AutoMessageOptions;
             m_chatOptions = options.ChatOptions;
 
-            // TODO: respond to property changed on these
-            if (m_msgOptions.Enabled)
-            {
-                if (m_msgOptions.MessageDelay > 0)
-                    bot.MessageReceived += bot_MessageReceived;
-
-                bot.Tick += bot_Tick;
-            }
+            if (ShouldEnable)
+                Enable();
 
             if (!string.IsNullOrEmpty(m_chatOptions.SubscribeMessage))
                 bot.UserSubscribed += bot_UserSubscribed;
 
             if (!string.IsNullOrEmpty(m_chatOptions.FollowMessage))
                 bot.UserFollowed += bot_UserFollowed;
+
+            bot.StreamOnline += bot_StreamOnline;
+            bot.StreamOffline += bot_StreamOffline;
+        }
+        
+        [BotCommand(AccessLevel.Mod, "automessage")]
+        public void AutoMessageMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            bool shouldEnable = false;
+            if (value.Trim().ParseBool(ref shouldEnable))
+            {
+                m_msgOptions.Enabled = shouldEnable;
+                if (shouldEnable)
+                {
+                    if (ShouldEnable)
+                        Enable();
+                    else
+                        Disable();
+                }
+
+                sender.SendResponse("Auto message now {0}.", shouldEnable ? "enabled" : "disabled");
+            }
+            else
+            {
+                sender.SendResponse("Auto message is currently {0}.", m_msgOptions.Enabled ? "enabled" : "disabled");
+            }
         }
 
+        void bot_StreamOnline(WinterBot sender)
+        {
+            if (ShouldEnable)
+                Enable();
+        }
+
+        void bot_StreamOffline(WinterBot sender)
+        {
+            if (m_running)
+                Disable();
+        }
+
+        private void Enable()
+        {
+            if (m_running)
+                return;
+
+            m_running = true;
+            m_checkingMessages = m_msgOptions.MessageDelay > 0;
+            if (m_checkingMessages)
+                m_bot.MessageReceived += bot_MessageReceived;
+
+            m_bot.Tick += bot_Tick;
+
+            m_totalMessages = 0;
+            m_lastMessage = DateTime.Now;
+        }
+
+        private void Disable()
+        {
+            if (!m_running)
+                return;
+
+            m_running = false;
+            if (m_checkingMessages)
+                m_bot.MessageReceived -= bot_MessageReceived;
+
+            m_bot.Tick -= bot_Tick;
+        }
+        
         void bot_UserSubscribed(WinterBot sender, TwitchUser user)
         {
             var subMessage = m_chatOptions.SubscribeMessage;
