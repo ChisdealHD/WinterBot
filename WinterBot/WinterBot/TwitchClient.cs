@@ -656,10 +656,9 @@ namespace Winter
             return 0;
         }
 
-        public void HandleMessageSent(string line)
+        public void HandleMessageSent()
         {
             m_messages.AddLast(DateTime.Now);
-            Console.WriteLine("HandleMessageSent: {0}", line);
         }
 
         int GetRemaining()
