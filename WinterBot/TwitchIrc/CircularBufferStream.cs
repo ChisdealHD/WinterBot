@@ -79,6 +79,7 @@ namespace IrcDotNet
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();
+            /*
             switch (origin)
             {
                 case SeekOrigin.Begin:
@@ -95,6 +96,7 @@ namespace IrcDotNet
             }
 
             return this.readPosition;
+             */
         }
 
         public override void SetLength(long value)
