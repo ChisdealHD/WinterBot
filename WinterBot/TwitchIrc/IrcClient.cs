@@ -12,6 +12,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using WinterBotLogging;
 
 #if !SILVERLIGHT
 using System.Net.Security;
@@ -1488,7 +1489,10 @@ namespace IrcDotNet
                     {
                         sendDelay = this.floodPreventer.GetSendDelay();
                         if (sendDelay > 0)
+                        {
+                            IrcSource.Log.FloodPrevented(messageSendQueue.Peek().Item1);
                             break;
+                        }
                     }
 
                     // Send next message in queue.
@@ -1499,6 +1503,7 @@ namespace IrcDotNet
                     SendAsync(lineBuffer, token);
 
                     Logger.WriteLine("!<<< {0}", TraceEventType.Verbose, line);
+                    IrcSource.Log.MessageSent(line);
 
                     // Tell flood preventer mechanism that message has just been sent.
                     if (this.floodPreventer != null)
@@ -1873,6 +1878,7 @@ namespace IrcDotNet
                 OnRawMessageSent(messageSentEventArgs);
 
                 Logger.WriteLine("<<< {0}", TraceEventType.Verbose, messageSentEventArgs.RawContent);
+                IrcSource.Log.MessageSent(messageSentEventArgs.RawContent);
             }
             catch (ObjectDisposedException)
             {
@@ -1931,6 +1937,7 @@ namespace IrcDotNet
                     // Read next line from data stream.
                     var line = this.dataStreamLineReader.ReadLine();
                     Logger.WriteLine(">>> {0}", TraceEventType.Verbose, line);
+                    IrcSource.Log.MessageReceived(line);
                     
                     if (line == null)
                         break;
