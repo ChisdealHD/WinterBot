@@ -90,6 +90,7 @@ namespace WinterExtensions
         public ChatSaver(WinterBot bot, WinterOptions options)
             : base(bot)
         {
+            m_options = options;
             m_bot = bot;
             if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
                 return;
