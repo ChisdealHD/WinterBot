@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Winter.BotEvents;
+using WinterBotLogging;
 
 
 namespace Winter
@@ -36,11 +38,12 @@ namespace Winter
         Irc
     }
 
+
     public class WinterBot : IDisposable
     {
         TwitchClient m_twitch;
         TwitchUsers m_data;
-        ConcurrentQueue<Tuple<Delegate, object[]>> m_events = new ConcurrentQueue<Tuple<Delegate, object[]>>();
+        ConcurrentQueue<WinterBotEvent> m_events = new ConcurrentQueue<WinterBotEvent>();
         AutoResetEvent m_event = new AutoResetEvent(false);
         string m_channel;
 
@@ -237,15 +240,15 @@ namespace Winter
                 if (m_viewers != value)
                 {
                     m_viewers = value;
-                    var evt = ViewerCountChanged;
-                    if (evt != null)
+                    if (ViewerCountChanged != null)
                     {
-                        m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, value }));
+                        m_events.Enqueue(new ViewerCountEvent(value));
                         m_event.Set();
                     }
                 }
             }
         }
+
 
         /// <summary>
         /// Returns the name of the game being played (updates every 60 seconds).
@@ -373,6 +376,7 @@ namespace Winter
             m_commands[cmd] = new CmdValue(command, requiredAccess);
         }
 
+        #region Messages
         public void WriteDiagnostic(DiagnosticFacility facility, string msg)
         {
             var evt = DiagnosticMessage;
@@ -466,6 +470,7 @@ namespace Winter
 
             return true;
         }
+        #endregion
 
 
         #region Event Wrappers
@@ -497,6 +502,63 @@ namespace Winter
             if (evt != null)
                 evt(this);
         }
+
+        void OnStreamStatus(StreamStatusEvent status)
+        {
+            var evt = status.Online ? StreamOnline : StreamOffline;
+            if (evt != null)
+                evt(this);
+        }
+
+        void OnUserFollowed(FollowEvent follow)
+        {
+            var evt = UserFollowed;
+            if (evt != null)
+                evt(this, follow.User);
+        }
+
+        void OnViewerCountChanged(ViewerCountEvent args)
+        {
+            var evt = ViewerCountChanged;
+            if (evt != null)
+                evt(this, args.Viewers);
+        }
+
+        
+        void OnClear(ClearEvent clr)
+        {
+            var evt = ChatClear;
+            if (evt != null)
+                evt(this, clr.User);
+        }
+
+        void OnMessage(MessageEvent msg)
+        {
+            var evt = MessageReceived;
+            if (evt != null)
+                evt(this, msg.User, msg.Text);
+        }
+
+        void OnAction(ActionEvent ae)
+        {
+            var evt = ActionReceived;
+            if (evt != null)
+                evt(this, ae.User, ae.Text);
+        }
+
+        void OnMod(ModEvent mod)
+        {
+            var evt = mod.Mod ? ModeratorAdded : ModeratorRemoved;
+            if (evt != null)
+                evt(this, mod.User);
+        }
+
+        void OnSub(SubscribeEvent sub)
+        {
+            var evt = UserSubscribed;
+            if (evt != null)
+                evt(this, sub.User);
+        }
         #endregion
 
         #region Giant Switch Statement
@@ -507,40 +569,36 @@ namespace Winter
 
         private void ChatActionReceived(TwitchClient source, TwitchUser user, string text)
         {
-            var evt = ActionReceived;
-            if (evt != null)
+            if (ActionReceived != null)
             {
-                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user, text }));
+                m_events.Enqueue(new ActionEvent(user, text));
                 m_event.Set();
             }
         }
 
         private void ChatMessageReceived(TwitchClient source, TwitchUser user, string text)
         {
-            var evt = MessageReceived;
-            if (evt != null)
+            if (MessageReceived != null)
             {
-                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user, text }));
+                m_events.Enqueue(new MessageEvent(user, text));
                 m_event.Set();
             }
         }
 
         private void ClearChatHandler(TwitchClient source, TwitchUser user)
         {
-            var evt = ChatClear;
-            if (evt != null)
+            if (ChatClear != null)
             {
-                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
+                m_events.Enqueue(new ClearEvent(user));
                 m_event.Set();
             }
         }
 
         private void SubscribeHandler(TwitchClient source, TwitchUser user)
         {
-            var evt = UserSubscribed;
-            if (evt != null)
+            if (UserSubscribed != null)
             {
-                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
+                m_events.Enqueue(new SubscribeEvent(user));
                 m_event.Set();
             }
         }
@@ -550,7 +608,7 @@ namespace Winter
             var evt = moderator ? ModeratorAdded : ModeratorRemoved;
             if (evt != null)
             {
-                m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this, user }));
+                m_events.Enqueue(new ModEvent(user, moderator));
                 m_event.Set();
             }
         }
@@ -589,27 +647,108 @@ namespace Winter
             if (!Connect())
                 return;
 
+            WinterBotSource.Log.Connected(m_channel);
+
             DateTime lastTick = DateTime.Now;
             DateTime lastPing = DateTime.Now;
 
             while (true)
             {
-                m_event.WaitOne(200);
+                if (m_events.Count == 0)
+                    m_event.WaitOne(200);
 
-                Tuple<Delegate, object[]> evt;
+                WinterBotEvent evt;
                 while (m_events.TryDequeue(out evt))
                 {
-                    Delegate function = evt.Item1;
-                    object[] args = evt.Item2;
+                    switch (evt.Event)
+                    {
+                        case EventType.Action:
+                            ActionEvent action = (ActionEvent)evt;
+                            WinterBotSource.Log.BeginAction(action.User.Name, action.Text);
 
-                    function.DynamicInvoke(args);
+                            OnAction(action);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Action);
+                            break;
+
+                        case EventType.Clear:
+                            var clear = (ClearEvent)evt;
+                            WinterBotSource.Log.BeginClear(clear.User.Name);
+                            
+                            OnClear(clear);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Clear);
+                            break;
+
+                        case EventType.Message:
+                            var msg = (MessageEvent)evt;
+                            WinterBotSource.Log.BeginMessage(msg.User.Name, msg.Text);
+
+                            OnMessage(msg);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Message);
+                            break;
+
+                        case EventType.Mod:
+                            var mod = (ModEvent)evt;
+                            WinterBotSource.Log.BeginMod(mod.User.Name, mod.Mod);
+
+                            OnMod(mod);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Mod);
+                            break;
+
+                        case EventType.Subscribe:
+                            var sub = (SubscribeEvent)evt;
+                            WinterBotSource.Log.BeginSub(sub.User.Name);
+
+                            OnSub(sub);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Sub);
+                            break;
+
+                        case EventType.ViewerCount:
+                            var viewer = (ViewerCountEvent)evt;
+                            WinterBotSource.Log.BeginViewers(viewer.Viewers);
+
+                            OnViewerCountChanged(viewer);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Viewers);
+                            break;
+
+                        case EventType.StreamStatus:
+                            var status = (StreamStatusEvent)evt;
+                            WinterBotSource.Log.BeginStreamStatus(status.Online);
+
+                            OnStreamStatus(status);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.StreamStatus);
+                            break;
+
+                        case EventType.Follow:
+                            var follow = (FollowEvent)evt;
+                            WinterBotSource.Log.BeginFollow(follow.User.Name);
+
+                            OnUserFollowed(follow);
+
+                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Follow);
+                            break;
+
+                        default:
+                            Debug.Fail("No handler for event!");
+                            break;
+                    }
                 }
 
                 var elapsed = lastTick.Elapsed();
                 if (elapsed.TotalSeconds >= 5)
                 {
+                    WinterBotSource.Log.BeginTick();
+
                     OnTick(elapsed);
                     lastTick = DateTime.Now;
+
+                    WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Tick);
                 }
 
                 const int pingDelay = 20;
@@ -622,6 +761,8 @@ namespace Winter
 
                 if (lastEvent.Elapsed().TotalMinutes >= 1)
                 {
+                    WinterBotSource.Log.BeginReconnect();
+
                     m_twitch.Quit(250);
                     OnDisconnected();
 
@@ -642,6 +783,8 @@ namespace Winter
 
                         Thread.Sleep(sleepTime);
                     } while (!Connect());
+
+                    WinterBotSource.Log.EndReconnect();
                 }
             }
         }
@@ -665,13 +808,21 @@ namespace Winter
             if (m_commands.TryGetValue(cmd, out command))
             {
                 if (!CanUseCommand(user, command.Access))
+                {
+                    WinterBotSource.Log.DenyCommand(user.Name, cmd);
                     return;
+                }
 
+
+                WinterBotSource.Log.BeginCommand();
                 command.Command(this, user, cmd, value);
+                WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Command);
             }
             else
             {
+                WinterBotSource.Log.BeginUnknownCommand();
                 OnUnknownCommand(user, cmd, value);
+                WinterBotSource.Log.EndEvent(WinterBotSource.EventId.UnknownCommand);
             }
         }
 
@@ -778,6 +929,8 @@ namespace Winter
                 // Check stream values
                 string url = @"http://api.justin.tv/api/stream/list.json?channel=" + m_channel;
                 string result = GetUrl(url);
+
+                WinterBotSource.Log.CheckStreamStatus(result != null);
                 if (result != null)
                 {
                     List<TwitchChannelResponse> channels = null;
@@ -799,7 +952,7 @@ namespace Winter
                         var evt = live ? StreamOnline : StreamOffline;
                         if (evt != null)
                         {
-                            m_events.Enqueue(new Tuple<Delegate, object[]>(evt, new object[] { this }));
+                            m_events.Enqueue(new StreamStatusEvent(live));
                             m_event.Set();
                         }
                     }
@@ -862,7 +1015,7 @@ namespace Winter
                                         break;
 
                                     var user = Users.GetUser(follow.user.name);
-                                    m_events.Enqueue(new Tuple<Delegate, object[]>(followedEvt, new object[] { this, user }));
+                                    m_events.Enqueue(new FollowEvent(user));
                                 }
                             }
                         } while (true);

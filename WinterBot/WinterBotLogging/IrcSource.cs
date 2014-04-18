@@ -37,10 +37,5 @@ namespace WinterBotLogging
         {
             public const EventKeywords Communication = (EventKeywords)0x0001;
         }
-
-        public class Tasks
-        {
-            public const EventTask Request = (EventTask)0x1;
-        }
     }
 }

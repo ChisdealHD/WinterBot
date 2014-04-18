@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using WinterBotLogging;
 
 namespace Winter
 {
@@ -194,6 +195,8 @@ namespace Winter
                 return false;
             }
 
+            TwitchSource.Log.Connected(stream);
+
             // This command tells twitch that we are a chat bot capable of understanding subscriber/turbo/etc
             // messages.  Without sending this raw command, we would not get that data.
             m_client.SendRawMessage("TWITCHCLIENT 3");
@@ -210,19 +213,26 @@ namespace Winter
 
         void m_client_PongReceived(object sender, IrcPingOrPongReceivedEventArgs e)
         {
+            TwitchSource.Log.ReceivedPong();
             LastEvent = DateTime.Now;
         }
 
         public void Ping()
         {
             if (CanSendMessage(Importance.Med, "PING ACTION"))
+            {
+                TwitchSource.Log.SentPing();
                 m_client.Ping();
+            }
         }
 
         public void Quit(int timeout=1000)
         {
             if (CanSendMessage(Importance.High, "QUIT ACTION"))
+            {
+                TwitchSource.Log.Quit();
                 m_client.Quit(timeout);
+            }
         }
 
         public void Disconnect()
@@ -233,7 +243,10 @@ namespace Winter
         public void SendMessage(Importance importance, string text)
         {
             if (CanSendMessage(importance, text))
+            {
+                TwitchSource.Log.SentMessage(text);
                 m_client.LocalUser.SendMessage(m_channel, text);
+            }
         }
 
         public void Timeout(string user, int duration = 600)
@@ -241,6 +254,7 @@ namespace Winter
             // Sleep for 100 msec so that our message is sure to be received AFTER other users
             // get the message we want to clear.  Also bypass flood check.
             Thread.Sleep(100);
+            TwitchSource.Log.TimeoutUser(user, duration);
             m_client.LocalUser.SendMessage(m_channel, string.Format(".timeout {0} {1}", user, duration));
         }
 
@@ -249,23 +263,24 @@ namespace Winter
             // Sleep for 100 msec so that our message is sure to be received AFTER other users
             // get the message we want to clear.  Also bypass flood check.
             Thread.Sleep(100);
+            TwitchSource.Log.BanUser(user);
             SendMessage(Importance.High, string.Format(".ban {0}", user));
-        }
-
-        void m_flood_RejectedMessage()
-        {
-            WriteDiagnosticMessage("Flood prevention rejected a message.");
         }
 
         private bool CanSendMessage(Importance importance, string text)
         {
-            if (!m_flood.ShouldSendMessage(importance))
+            if (!m_flood.ShouldSendMessage(importance, text))
             {
                 WriteDiagnosticMessage("Dropped message: {0}.", text);
                 return false;
             }
 
             return true;
+        }
+
+        void m_flood_RejectedMessage()
+        {
+            WriteDiagnosticMessage("Flood prevention rejected a message.");
         }
 
         /// <summary>
@@ -275,6 +290,8 @@ namespace Winter
         /// <param name="e">The user.</param>
         void channel_MessageReceived(object sender, IrcMessageEventArgs e)
         {
+            TwitchSource.Log.ReceivedMessage(e.Source.Name, e.Text);
+
             LastEvent = DateTime.Now;
             if (m_lastModCheck.Elapsed().TotalHours >= 2)
                 UpdateMods();
@@ -315,6 +332,8 @@ namespace Winter
         /// <param name="e">IRC message event args.</param>
         private void client_LocalUser_MessageReceived(object sender, IrcMessageEventArgs e)
         {
+            TwitchSource.Log.ReceivedPrivateMessage(e.Source.Name, e.Text);
+
             LastEvent = DateTime.Now;
             
             if (e.Source.Name.Equals("jtv", StringComparison.CurrentCultureIgnoreCase))
@@ -670,24 +689,31 @@ namespace Winter
             m_client = client;
         }
 
-        public bool ShouldSendMessage(Importance imp)
+        public bool ShouldSendMessage(Importance imp, string msg)
         {
             int remaining = GetRemaining();
-            if (remaining == 0)
-                return false;
+            bool result;
 
             switch (imp)
             {
                 case Importance.Low:
-                    return remaining >= LowThreshold;
+                    result = remaining >= LowThreshold;
+                    break;
 
                 case Importance.Med:
-                    return remaining >= MediumThreshold;
+                    result = remaining >= MediumThreshold;
+                    break;
 
                 default:
                 case Importance.High:
-                    return true;
+                    result = remaining > 0;
+                    break;
             }
+
+            if (!result)
+                TwitchSource.Log.SoftMessageDrop(msg, (int)imp, remaining);
+
+            return result;
         }
 
         public long GetSendDelay()

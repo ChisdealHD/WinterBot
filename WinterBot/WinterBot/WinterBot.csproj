@@ -74,6 +74,7 @@
     <Compile Include="TwitchClient.cs" />
     <Compile Include="UserCommands.cs" />
     <Compile Include="WinterBot.cs" />
+    <Compile Include="WinterBotEvents.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -87,6 +88,10 @@
     <ProjectReference Include="..\TwitchIrc\TwitchIrc.csproj">
       <Project>{47d551da-96ed-4ef6-96bf-4832059d4700}</Project>
       <Name>TwitchIrc</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\WinterBotLogging\WinterBotLogging.csproj">
+      <Project>{f98a3e25-4439-4f6e-b89f-b34321efac3c}</Project>
+      <Name>WinterBotLogging</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
