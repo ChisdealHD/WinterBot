@@ -119,8 +119,6 @@ namespace Winter
 
         public bool IsSubscriber { get; internal set; }
 
-        public bool IsTurbo { get; internal set; }
-
         public bool IsRegular
         {
             get

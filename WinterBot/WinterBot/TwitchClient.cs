@@ -192,7 +192,7 @@ namespace Winter
 
             // This command tells twitch that we are a chat bot capable of understanding subscriber/turbo/etc
             // messages.  Without sending this raw command, we would not get that data.
-            m_client.SendRawMessage("TWITCHCLIENT 2");
+            m_client.SendRawMessage("TWITCHCLIENT 3");
 
             UpdateMods();
             return true;
@@ -271,7 +271,7 @@ namespace Winter
         void channel_MessageReceived(object sender, IrcMessageEventArgs e)
         {
             LastEvent = DateTime.Now;
-            if (m_lastModCheck.Elapsed().TotalMinutes >= 15)
+            if (m_lastModCheck.Elapsed().TotalHours >= 2)
                 UpdateMods();
 
             // Twitchnotify is how subscriber messages "Soandso just subscribed!" comes in:
@@ -284,9 +284,15 @@ namespace Winter
                 {
                     var user = m_data.GetUser(text.Substring(0, i));
                     user.IsSubscriber = true;
+                    user.IconSet = null; // Need to reparse icon set
                     OnUserSubscribed(user);
                     return;
                 }
+            }
+            else if (e.Source.Name.Equals("jtv", StringComparison.CurrentCultureIgnoreCase))
+            {
+                HandleJtvMessage(e.Text);
+                return;
             }
 
             if (e.Text.StartsWith(m_action))
@@ -305,88 +311,119 @@ namespace Winter
         private void client_LocalUser_MessageReceived(object sender, IrcMessageEventArgs e)
         {
             LastEvent = DateTime.Now;
-            string modMsg = "The moderators of this room are: ";
+            
             if (e.Source.Name.Equals("jtv", StringComparison.CurrentCultureIgnoreCase))
+                HandleJtvMessage(e.Text);
+        }
+
+
+        private void HandleJtvMessage(string text)
+        {
+            switch (text[0])
             {
-                string text = e.Text;
+                case 'E':
+                    ParseEmoteSet(text);
+                    break;
 
-                if (text.StartsWith("EMOTESET"))
-                {
-                    string[] items = text.ToLower().Split(new char[] { ' ' }, 3);
+                case 'C':
+                    ParseChatClear(text);
+                    break;
 
-                    if (items.Length == 3)
-                    {
-                        string user = items[1];
-                        string setString = items[2];
-                        setString = setString.Substring(1, setString.Length - 2);
+                case 'S':
+                    ParseSpecialUser(text);
+                    break;
 
-                        int[] iconSet = (from str in setString.Split(',')
-                                         let i = int.Parse(str)
-                                         orderby i
-                                         select i).ToArray();
+                case 'T':
+                    ParseModerators(text);
+                    break;
 
-                        var u = m_data.GetUser(user);
-                        u.IconSet = iconSet;
-                    }
-                }
-                else if (text.StartsWith(modMsg) && text.Length > modMsg.Length)
-                {
-                    lock (m_modSync)
-                    {
-                        TwitchUser streamer = m_data.GetUser(m_stream);
-
-                        string[] modList = text.Substring(modMsg.Length).Split(new string[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
-                        HashSet<TwitchUser> mods = new HashSet<TwitchUser>(modList.Select(name => m_data.GetUser(name)));
-                        mods.Add(streamer);
-
-                        foreach (var mod in mods)
-                            mod.IsModerator = true;
-
-                        var demodded = from mod in m_data.ModeratorSet
-                                       where !mods.Contains(mod)
-                                       select mod;
-
-                        foreach (var former in demodded)
-                            former.IsModerator = false;
-
-                        m_data.ModeratorSet = mods;
-                    }
-                }
-                else
-                {
-                    string[] items = e.Text.ToLower().Split(' ');
-                    if (items.Length >= 2)
-                    {
-                        string cmd = items[0];
-                        string user = items[1];
-
-                        if (items.Length == 3)
-                        {
-                            string param = items[2];
-
-                            if (cmd == "specialuser")
-                            {
-                                var u = m_data.GetUser(user);
-                                if (param == "subscriber")
-                                {
-                                    u.IsSubscriber = true;
-                                    OnInformSubscriber(user);
-                                }
-                                else if (param == "turbo")
-                                {
-                                    u.IsTurbo = true;
-                                    OnInformTurbo(user);
-                                }
-                            }
-                        }
-                        else if (items.Length == 2 && cmd == "clearchat")
-                        {
-                            // This is a timeout or ban.
-                            OnChatClear(user);
-                        }
-                    }
-                }
+                default:
+                    return;
             }
+        }
+
+        private void ParseModerators(string text)
+        {
+            //*  The moderators of this room are: mod1, mod2, mod3
+
+            string modMsg = "The moderators of this room are: ";
+            if (text.Length <= modMsg.Length || text[4] != 'm' || text[31] != ':')
+                return;
+
+            lock (m_modSync)
+            {
+                TwitchUser streamer = m_data.GetUser(m_stream);
+
+                string[] modList = text.Substring(modMsg.Length).Split(new string[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                HashSet<TwitchUser> mods = new HashSet<TwitchUser>(modList.Select(name => m_data.GetUser(name)));
+                mods.Add(streamer);
+
+                foreach (var mod in mods)
+                    mod.IsModerator = true;
+
+                var demodded = from mod in m_data.ModeratorSet
+                               where !mods.Contains(mod)
+                               select mod;
+
+                foreach (var former in demodded)
+                    former.IsModerator = false;
+
+                m_data.ModeratorSet = mods;
+            }
+        }
+
+        private void ParseSpecialUser(string text)
+        {
+            //*  SPECIALUSER username subscriber
+            string[] parts = text.Split(' ');
+
+            if (parts.Length != 3 || parts[0] != "SPECIALUSER" || parts[2] != "subscriber")
+                return;
+
+            var user = m_data.GetUser(parts[1]);
+            if (!user.IsSubscriber)
+            {
+                user.IsSubscriber = true;
+                OnInformSubscriber(user);
+            }
+        }
+
+        private void ParseChatClear(string text)
+        {
+            //CLEARCHAT username
+            if (text.Length <= 10 || text[9] != ' ')
+                return;
+
+            OnChatClear(text.Substring(10));
+        }
+
+        private void ParseEmoteSet(string text)
+        {
+            //EMOTESET username [888,1520,2729]
+            if (text.Length < 12 || text[8] != ' ')
+                return;
+
+            int end = text.IndexOf(' ', 9);
+            if (end == -1)
+                return;
+
+            string username = text.Substring(9, end - 9);
+            TwitchUser user = m_data.GetUser(username);
+            if (user.IconSet != null)
+                return;
+
+            end += 2;
+            if (end+1 >= text.Length)
+                return;
+
+            string items = text.Substring(end, text.Length - end - 1);
+            int[] iconSet = (from str in items.Split(',')
+                                let i = int.Parse(str)
+                                orderby i
+                                select i).ToArray();
+
+            user.IconSet = iconSet;
+
         }
 
         private void UpdateMods()
@@ -559,10 +596,8 @@ namespace Winter
                 msgRcv(this, user, e.Text);
         }
 
-        protected void OnInformSubscriber(string username)
+        protected void OnInformSubscriber(TwitchUser user)
         {
-            var user = m_data.GetUser(username);
-
             var evt = InformSubscriber;
             if (evt != null)
                 evt(this, user);
