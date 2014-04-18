@@ -20,6 +20,7 @@ namespace WinterExtensions
         WinterOptions m_options;
         volatile bool m_dirty;
         Dictionary<string, Command> m_commands = new Dictionary<string, Command>();
+        HashSet<string> m_remove = new HashSet<string>();
         object m_sync = new object();
         DateTime m_lastCommandList = DateTime.Now;
 
@@ -72,7 +73,9 @@ namespace WinterExtensions
                 if (m_commands.ContainsKey(cmd))
                 {
                     m_commands.Remove(cmd);
+                    m_remove.Add(cmd);
                     m_dirty = true;
+                    sender.SendResponse(Importance.Low, string.Format("Removed command {0}.", cmd));
                 }
                 else
                 {
@@ -201,10 +204,17 @@ namespace WinterExtensions
             if (!m_dirty)
                 return;
 
+            HashSet<string> deleted = null;
             List<Tuple<string, int, string>> cmds;
             lock (m_sync)
             {
                 cmds = new List<Tuple<string, int, string>>(from item in m_commands select new Tuple<string, int, string>(item.Key, (int)item.Value.AccessLevel, item.Value.Text));
+                if (m_remove.Count > 0)
+                {
+                    deleted = m_remove;
+                    m_remove = new HashSet<string>();
+                }
+
                 m_dirty = false;
             }
 
@@ -216,8 +226,14 @@ namespace WinterExtensions
 
                 Stream requestStream = request.GetRequestStream();
                 using (StreamWriter stream = new StreamWriter(requestStream))
+                {
                     foreach (var item in cmds)
                         stream.Write("{0}\n{1}\n{2}\n", item.Item1, item.Item2, item.Item3);
+
+                    if (deleted != null)
+                        foreach (var cmd in deleted)
+                            stream.Write("{0}\nDELETE\n", cmd);
+                }
 
                 string result;
                 WebResponse response = request.GetResponse();
@@ -233,7 +249,14 @@ namespace WinterExtensions
             }
 
             if (!succeeded)
+            {
+                if (m_remove.Count == 0)
+                    m_remove = deleted;
+                else
+                    foreach (var item in deleted)
+                        m_remove.Add(item);
                 m_dirty = true;
+            }
         }
 
         class Command
