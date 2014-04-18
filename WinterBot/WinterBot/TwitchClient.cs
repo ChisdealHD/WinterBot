@@ -142,6 +142,7 @@ namespace Winter
             m_client = new IrcClient();
 
             m_client.Connected += client_Connected;
+            m_client.UnsuccessfulLogin += m_client_UnsuccessfulLogin;
             m_client.ConnectFailed += client_ConnectFailed;
             m_client.Error += client_Error;
             m_client.Registered += client_Registered;
@@ -181,6 +182,9 @@ namespace Winter
                 return false;
             }
 
+            if (m_loginFailed)
+                return false;
+
             // Attempt to join the channel.  We'll try for roughly 10 seconds to join.  This really shouldn't ever fail.
             m_client.Channels.Join("#" + m_stream);
             currTimeout = timeout - (int)started.Elapsed().TotalMilliseconds;
@@ -197,6 +201,7 @@ namespace Winter
             UpdateMods();
             return true;
         }
+
 
         void m_client_PingReceived(object sender, IrcPingOrPongReceivedEventArgs e)
         {
@@ -560,6 +565,12 @@ namespace Winter
         {
             m_connectedEvent.Set();
         }
+
+        void m_client_UnsuccessfulLogin(IrcClient source, IIrcMessageSource ircMessageSource, IIrcMessageTarget[] targets)
+        {
+            m_loginFailed = true;
+            m_registeredEvent.Set();
+        }
         #endregion
 
         #region Fire Event Helpers
@@ -635,6 +646,7 @@ namespace Winter
 
         readonly string m_action = new string((char)1, 1) + "ACTION";
         FloodPreventer m_flood;
+        bool m_loginFailed;
         #endregion
 
     }
