@@ -1503,7 +1503,7 @@ namespace IrcDotNet
                     SendAsync(lineBuffer, token);
 
                     Logger.WriteLine("!<<< {0}", TraceEventType.Verbose, line);
-                    IrcSource.Log.MessageSent(line);
+                    IrcSource.Log.MessageQueued(line);
 
                     // Tell flood preventer mechanism that message has just been sent.
                     if (this.floodPreventer != null)
