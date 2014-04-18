@@ -594,7 +594,7 @@ namespace Winter
 
             while (true)
             {
-                m_event.WaitOne(1000);
+                m_event.WaitOne(200);
 
                 Tuple<Delegate, object[]> evt;
                 while (m_events.TryDequeue(out evt))
