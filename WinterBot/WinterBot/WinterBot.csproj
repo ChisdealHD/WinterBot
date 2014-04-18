@@ -41,9 +41,6 @@
     <AssemblyOriginatorKeyFile>..\DarkAutumn.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="IrcDotNet">
-      <HintPath>..\IrcDotNet.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -85,6 +82,12 @@
     <None Include="DarkAutumn.snk" />
     <None Include="options.ini" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TwitchIrc\TwitchIrc.csproj">
+      <Project>{47d551da-96ed-4ef6-96bf-4832059d4700}</Project>
+      <Name>TwitchIrc</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
