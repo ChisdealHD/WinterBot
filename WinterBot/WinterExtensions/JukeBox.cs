@@ -59,6 +59,10 @@ namespace WinterExtensions
             {
                 if (!sender.CanUseCommand(user, AccessLevel.Mod))
                 {
+                    if (m_lastMessage.Elapsed().TotalSeconds <= 30)
+                        return;
+
+                    m_lastMessage = DateTime.Now;
                     sender.SendResponse(Importance.Low, "The jukebox is CLOSED. No additional requests are being accepted.");
                     return;
                 }
@@ -100,6 +104,10 @@ namespace WinterExtensions
                 }
                 else
                 {
+                    if (m_lastMessage.Elapsed().TotalSeconds <= 10)
+                        return;
+
+                    m_lastMessage = DateTime.Now;
                     SendMessage(sender);
                 }
             }
