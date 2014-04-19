@@ -27,6 +27,7 @@ namespace Winter
                 if (m_data.Contains(target))
                 {
                     m_data.Remove(target);
+                    m_dirty = true;
                     return true;
                 }
             }
