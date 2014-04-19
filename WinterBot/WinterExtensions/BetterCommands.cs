@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Winter;
+using WinterBotLogging;
 
 namespace WinterExtensions
 {
@@ -47,7 +48,10 @@ namespace WinterExtensions
         public void ListCommands(WinterBot sender, TwitchUser user, string cmd, string value)
         {
             if (m_lastCommandList.Elapsed().TotalSeconds < 15)
+            {
+                WinterBotSource.Log.DenyCommand(user.Name, cmd, "time");
                 return;
+            }
 
             m_lastCommandList = DateTime.Now;
             sender.SendMessage("A full listing of user commands can be found here: " + HttpManager.Instance.GetUrl("commands.php"));
@@ -77,6 +81,7 @@ namespace WinterExtensions
                     m_remove.Add(cmd);
                     m_dirty = true;
                     sender.SendResponse(Importance.Low, string.Format("Removed command {0}.", cmd));
+                    WinterBotSource.Log.RemoveCommand(user.Name, cmd);
                 }
                 else
                 {
@@ -129,9 +134,15 @@ namespace WinterExtensions
             }
 
             if (exists)
+            {
                 sender.SendResponse(Importance.Med, string.Format("Updated command: !{0}.", cmdName));
+                WinterBotSource.Log.AddCommand(user.Name, cmdName, cmdText);
+            }
             else
+            {
                 sender.SendResponse(Importance.Med, string.Format("Successfully added command: !{0}.", cmdName));
+                WinterBotSource.Log.UpdateCommand(user.Name, cmdName, cmdText);
+            }
         }
 
         void UnknownCommandReceived(WinterBot sender, TwitchUser user, string cmd, string value)
@@ -143,23 +154,32 @@ namespace WinterExtensions
                 if (!m_commands.TryGetValue(cmd, out command))
                     return;
 
-            if (sender.CanUseCommand(user, command.AccessLevel) && CanSendCommand(cmd))
+            if (sender.CanUseCommand(user, command.AccessLevel) && CanSendCommand(user, cmd))
             {
                 sender.SendResponse(Importance.Low, command.Text);
                 m_sent.AddLast(new Tuple<string, DateTime>(cmd, DateTime.Now));
             }
         }
 
-        private bool CanSendCommand(string cmd)
+        private bool CanSendCommand(TwitchUser user, string cmd)
         {
             while (m_sent.Count > 0 && m_sent.First.Value.Item2.Elapsed().TotalSeconds >= TimeSpan)
                 m_sent.RemoveFirst();
 
             foreach (var item in m_sent)
+            {
                 if (item.Item1.Equals(cmd, StringComparison.CurrentCultureIgnoreCase) && item.Item2.Elapsed().TotalSeconds <= 5)
+                {
+                    WinterBotSource.Log.DenyCommand(user.Name, cmd, "time");
                     return false;
+                }
+            }
 
-            return m_sent.Count < MaxMessages;
+            bool res = m_sent.Count < MaxMessages;
+
+            if (!res)
+                WinterBotSource.Log.DenyCommand(user.Name, cmd, "too many user commands");
+            return res;
         }
 
         void Load(Stream stream)
@@ -227,7 +247,6 @@ namespace WinterExtensions
                 AccessLevel = accessLevel;
                 Text = value;
             }
-
         }
     }
 }

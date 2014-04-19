@@ -24,6 +24,7 @@ namespace WinterBotLogging
             WriteEvent(2, url, bytes, result);
         }
 
+
         public class Keywords
         {
             public const EventKeywords Status = (EventKeywords)0x0001;
@@ -31,6 +32,7 @@ namespace WinterBotLogging
         public class Tasks
         {
             public const EventTask Http = (EventTask)1;
+            public const EventTask Commands = (EventTask)2;
         }
     }
 }

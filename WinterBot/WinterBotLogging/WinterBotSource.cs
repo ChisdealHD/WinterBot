@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace WinterBotLogging
 {
-    [EventSource(Name = "WinterBot-WinterBot")]
+    [EventSource(Name = "WinterBot-Bot")]
     public class WinterBotSource : EventSource
     {
         public static WinterBotSource Log = new WinterBotSource();
@@ -188,10 +188,30 @@ namespace WinterBotLogging
         }
         
         [Event(27, Keywords = Keywords.Status, Task = Tasks.Command)]
-        public void DenyCommand(string name, string cmd)
+        public void DenyCommand(string name, string cmd, string reason)
         {
-            WriteEvent(27, name, cmd);
+            WriteEvent(27, name, cmd, reason);
         }
+
+        [Event(28, Keywords = Keywords.Status, Task = Tasks.Command)]
+        public void RemoveCommand(string name, string cmd)
+        {
+            WriteEvent(28, name, cmd);
+        }
+
+        [Event(29, Keywords = Keywords.Status, Task = Tasks.Command)]
+        public void AddCommand(string name, string cmd, string text)
+        {
+            WriteEvent(29, name, cmd);
+        }
+
+
+        [Event(30, Keywords = Keywords.Status, Task = Tasks.Command)]
+        public void UpdateCommand(string name, string cmd, string text)
+        {
+            WriteEvent(30, name, cmd);
+        }
+
 
         public class EventId
         {

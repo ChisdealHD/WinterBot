@@ -809,7 +809,7 @@ namespace Winter
             {
                 if (!CanUseCommand(user, command.Access))
                 {
-                    WinterBotSource.Log.DenyCommand(user.Name, cmd);
+                    WinterBotSource.Log.DenyCommand(user.Name, cmd, "access");
                     return;
                 }
 
