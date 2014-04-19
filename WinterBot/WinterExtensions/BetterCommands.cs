@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Winter;
 
@@ -19,7 +20,7 @@ namespace WinterExtensions
         WinterBot m_bot;
         WinterOptions m_options;
         volatile bool m_dirty;
-        Dictionary<string, Command> m_commands = new Dictionary<string, Command>();
+        Dictionary<string, Command> m_commands = new Dictionary<string,Command>();
         HashSet<string> m_remove = new HashSet<string>();
         object m_sync = new object();
         DateTime m_lastCommandList = DateTime.Now;
@@ -39,7 +40,7 @@ namespace WinterExtensions
             m_options = options;
             m_bot.UnknownCommandReceived += UnknownCommandReceived;
 
-            new Task(Load).Start();
+            HttpManager.Instance.GetAsync("api.php", "GETCMDS=1", Load);
         }
 
         [BotCommand(AccessLevel.Normal, "commands", "listcommands")]
@@ -49,7 +50,7 @@ namespace WinterExtensions
                 return;
 
             m_lastCommandList = DateTime.Now;
-            sender.SendMessage("A full listing of user commands can be found here: " + m_options.GetUrl("commands.php"));
+            sender.SendMessage("A full listing of user commands can be found here: " + HttpManager.Instance.GetUrl("commands.php"));
             m_sent.AddLast(new Tuple<string, DateTime>("commands", DateTime.Now));
         }
 
@@ -160,16 +161,18 @@ namespace WinterExtensions
 
             return m_sent.Count < MaxMessages;
         }
-        
-        void Load()
-        {
-            try
-            {
-                var cmds = new Dictionary<string, Command>();
-                HttpWebRequest request = m_options.CreateGetRequest("commands.php", false, "GETCMDS=1");
 
-                WebResponse response = request.GetResponse();
-                using (Stream stream = response.GetResponseStream())
+        void Load(Stream stream)
+        {
+            if (stream == null)
+            {
+                Thread.Sleep(10000);
+                HttpManager.Instance.GetAsync("api.php", "GETCMDS=1", Load);
+                return;
+            }
+
+            lock (m_sync)
+            {
                 using (StreamReader reader = new StreamReader(stream))
                 {
                     string line;
@@ -186,77 +189,32 @@ namespace WinterExtensions
                         if (!int.TryParse(values[1], out access))
                             continue;
 
-                        cmds[values[0].ToLower()] = new Command((AccessLevel)access, values[2]);
+                        m_commands[values[0].ToLower()] = new Command((AccessLevel)access, values[2]);
                     }
                 }
-
-                m_commands = cmds;
-
-            }
-            catch (Exception e)
-            {
-                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to load commands. " + e.ToString());
             }
         }
-        
+
+
         public override void Save()
         {
             if (!m_dirty)
                 return;
 
-            HashSet<string> deleted = null;
-            List<Tuple<string, int, string>> cmds;
+            StringBuilder sb = new StringBuilder();
             lock (m_sync)
             {
-                cmds = new List<Tuple<string, int, string>>(from item in m_commands select new Tuple<string, int, string>(item.Key, (int)item.Value.AccessLevel, item.Value.Text));
-                if (m_remove.Count > 0)
-                {
-                    deleted = m_remove;
-                    m_remove = new HashSet<string>();
-                }
+                foreach (var item in m_commands)
+                    sb.AppendFormat("{0}\n{1}\n{2}\n", item.Key, (int)item.Value.AccessLevel, item.Value.Text);
 
+                foreach (string cmd in m_remove)
+                    sb.AppendFormat("{0}\nDELETE\n", cmd);
+
+                m_remove.Clear();
                 m_dirty = false;
             }
 
-
-            bool succeeded = false;
-            try
-            {
-                HttpWebRequest request = m_options.CreatePostRequest("commands.php", false, "SETCMDS=1");
-
-                Stream requestStream = request.GetRequestStream();
-                using (StreamWriter stream = new StreamWriter(requestStream))
-                {
-                    foreach (var item in cmds)
-                        stream.Write("{0}\n{1}\n{2}\n", item.Item1, item.Item2, item.Item3);
-
-                    if (deleted != null)
-                        foreach (var cmd in deleted)
-                            stream.Write("{0}\nDELETE\n", cmd);
-                }
-
-                string result;
-                WebResponse response = request.GetResponse();
-                using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                    result = reader.ReadToEnd();
-
-                succeeded = result == "ok";
-            }
-            catch (Exception)
-            {
-                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save points.");
-            }
-
-            if (!succeeded)
-            {
-                if (m_remove.Count == 0)
-                    m_remove = deleted;
-                else
-                    foreach (var item in deleted)
-                        m_remove.Add(item);
-                m_dirty = true;
-            }
+            HttpManager.Instance.PostAsync("api.php", "SETCMDS=1", sb).Wait();
         }
 
         class Command

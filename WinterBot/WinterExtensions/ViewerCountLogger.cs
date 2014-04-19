@@ -38,59 +38,20 @@ namespace WinterExtensions
 
         public override void Save()
         {
-            List<Tuple<DateTime, int>> viewers;
-
+            StringBuilder sb;
             lock (m_sync)
             {
                 if (m_viewers.Count == 0)
                     return;
 
-                viewers = m_viewers;
-                m_viewers = new List<Tuple<DateTime, int>>(viewers.Capacity);
+                sb = new StringBuilder();
+                foreach (var message in m_viewers)
+                    sb.AppendFormat("{0}\n{1}\n", message.Item1.ToSql(), message.Item2);
+
+                m_viewers.Clear();
             }
 
-            if (!Save(viewers))
-            {
-                lock (m_sync)
-                {
-                    var tmp = m_viewers;
-                    m_viewers = viewers;
-
-                    if (m_viewers.Count != 0)
-                        m_viewers.AddRange(tmp);
-                }
-            }
-        }
-
-
-        bool Save(List<Tuple<DateTime, int>> viewers)
-        {
-            bool succeeded = false;
-
-            try
-            {
-                HttpWebRequest request = m_options.CreatePostRequest("viewers.php", true);
-
-                Stream requestStream = request.GetRequestStream();
-                using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))
-                    using (StreamWriter stream = new StreamWriter(gzip))
-                        foreach (var message in viewers)
-                            stream.Write("{0}\n{1}\n", message.Item1.ToSql(), message.Item2);
-
-                string result;
-                WebResponse response = request.GetResponse();
-                using (Stream stream = response.GetResponseStream())
-                    using (StreamReader reader = new StreamReader(stream))
-                        result = reader.ReadToEnd();
-
-                succeeded = result == "ok";
-            }
-            catch (Exception)
-            {
-                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save viewer list.");
-            }
-
-            return succeeded;
+            HttpManager.Instance.PostAsync("api.php", "VIEWERS", sb).Wait();
         }
     }
 }

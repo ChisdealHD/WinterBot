@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -160,6 +161,14 @@ namespace Winter
                 end = self.Length + end;
 
             return self.Substring(start, end - start);
+        }
+
+        public static string ReadToEnd(this Stream stream)
+        {
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                return reader.ReadToEnd();
+            }
         }
     }
 

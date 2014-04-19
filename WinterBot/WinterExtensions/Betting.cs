@@ -48,7 +48,7 @@ namespace WinterExtensions
             m_bot = bot;
             Enabled = true;
 
-            ThreadPool.QueueUserWorkItem(LoadPoints);
+            HttpManager.Instance.GetAsync("points.php", LoadPoints);
         }
 
 
@@ -301,37 +301,38 @@ namespace WinterExtensions
             {
                 m_event.WaitOne(15000);
 
-                List<Tuple<TwitchUser, int>> queue;
+                StringBuilder sb;
                 lock (m_sync)
                 {
                     if (m_queue.Count == 0)
                         continue;
+                    
+                    sb = new StringBuilder();
+                    foreach (var item in m_queue)
+                        sb.AppendFormat("{0}\n{1}\n", item.Item1.Name, item.Item2);
 
-                    queue = m_queue;
-                    m_queue = new List<Tuple<TwitchUser, int>>();
+                    m_queue.Clear();
                 }
-
-                if (!Save(queue))
-                {
-                    lock (m_sync)
-                    {
-                        var tmp = m_queue;
-                        m_queue = queue;
-
-                        if (m_queue.Count != 0)
-                            m_queue.AddRange(tmp);
-                    }
-                }
+                
+                Task t = HttpManager.Instance.PostAsync("points.php", "SET=1", sb);
+                if (m_shutdown)
+                    t.Wait();
             }
         }
-        private void LoadPoints(object o)
-        {
-            try
-            {
-                HttpWebRequest request = m_options.CreateGetRequest("getpoints.php", false);
 
-                WebResponse response = request.GetResponse();
-                using (Stream stream = response.GetResponseStream())
+        private void LoadPoints(Stream stream)
+        {
+            if (stream == null)
+            {
+                // Try again in ten seconds.  We are on a task so we aren't blocking
+                // any main thread.
+                Thread.Sleep(10000);
+                HttpManager.Instance.GetAsync("points.php", LoadPoints);
+                return;
+            }
+
+            lock (m_sync)
+            {
                 using (StreamReader reader = new StreamReader(stream))
                 {
                     string line;
@@ -352,39 +353,6 @@ namespace WinterExtensions
                     }
                 }
             }
-            catch (Exception)
-            {
-                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save points.");
-            }
-        }
-
-        private bool Save(List<Tuple<TwitchUser, int>> queue)
-        {
-            bool succeeded = false;
-            try
-            {
-                HttpWebRequest request = m_options.CreatePostRequest("addpoints.php", true);
-
-                Stream requestStream = request.GetRequestStream();
-                using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))
-                    using (StreamWriter stream = new StreamWriter(gzip))
-                        foreach (var item in queue)
-                            stream.Write("{0}\n{1}\n", item.Item1.Name, item.Item2);
-
-                string result;
-                WebResponse response = request.GetResponse();
-                using (Stream stream = response.GetResponseStream())
-                    using (StreamReader reader = new StreamReader(stream))
-                        result = reader.ReadToEnd();
-
-                succeeded = result == "ok";
-            }
-            catch (Exception)
-            {
-                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save points.");
-            }
-
-            return succeeded;
         }
 
 

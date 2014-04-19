@@ -18,7 +18,7 @@ namespace WinterBotLogging
             WriteEvent(1, url, result);
         }
 
-        [Event(2, Keywords = Keywords.Status, Task = Tasks.Http, Opcode = EventOpcode.Send)]
+        [Event(2, Keywords = Keywords.Status, Task = Tasks.Http, Opcode = EventOpcode.Receive)]
         public void GetHttp(string url, long bytes, string result)
         {
             WriteEvent(2, url, bytes, result);

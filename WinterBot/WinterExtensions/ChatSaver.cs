@@ -92,8 +92,8 @@ namespace WinterExtensions
         {
             m_options = options;
             m_bot = bot;
-            if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
-                return;
+            //if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
+            //    return;
 
             bot.MessageReceived += bot_MessageReceived;
             bot.ActionReceived += bot_ActionReceived;
@@ -141,59 +141,22 @@ namespace WinterExtensions
 
         public override void Save()
         {
-            List<ChatMessage> messages = null;
+            StringBuilder data;
             lock (m_sync)
             {
                 if (m_messages.Count == 0)
                     return;
 
-                messages = m_messages;
-                m_messages = new List<ChatMessage>(m_messages.Count);
+                data = new StringBuilder();
+                foreach (var msg in m_messages)
+                    data.Append(msg.ToString());
+
+                m_messages.Clear();
             }
-
-            if (!Save(messages))
-            {
-                lock (m_sync)
-                {
-                    var tmp = m_messages;
-                    m_messages = messages;
-
-                    if (m_messages.Count != 0)
-                        m_messages.AddRange(tmp);
-                }
-            }
-        }
-
-        private bool Save(List<ChatMessage> messages)
-        {
-            bool succeeded = false;
+            
             DateTime now = DateTime.Now;
-            string file = string.Format("{0}_{1:00}_{2:00}_{3:00}.txt", Bot.Channel, now.Year, now.Month, now.Day);
-
-            try
-            {
-                HttpWebRequest request = m_options.CreatePostRequest("control.php", true, "APPEND=" + file);
-
-                Stream requestStream = request.GetRequestStream();
-                using (GZipStream gzip = new GZipStream(requestStream, CompressionLevel.Optimal))
-                using (StreamWriter stream = new StreamWriter(gzip))
-                    foreach (var message in messages)
-                        stream.Write(message.ToString());
-
-                string result;
-                WebResponse response = request.GetResponse();
-                using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                    result = reader.ReadToEnd();
-
-                succeeded = result == "completed";
-            }
-            catch (Exception)
-            {
-                m_bot.WriteDiagnostic(DiagnosticFacility.Error, "Failed to save remote chat list.");
-            }
-
-            return succeeded;
+            string parameters = string.Format("SAVECHAT={0}_{1:00}_{2:00}_{3:00}.txt", Bot.Channel, now.Year, now.Month, now.Day);
+            HttpManager.Instance.PostAsync("api.php", parameters, data).Wait();
         }
     }
 }
