@@ -12,113 +12,186 @@ namespace WinterBotLogging
     {
         public static WinterBotSource Log = new WinterBotSource();
 
-        [Event(1, Keywords = Keywords.Status)]
-        public void Connected(string channel)
-        {
-            WriteEvent(1, channel);
-        }
-
-        [Event(2, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Stop)]
-        public void EndEvent(int id)
-        {
-            WriteEvent(2, id);
-        }
-
-        [Event(3, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
+        [Event(1, Keywords = Keywords.Events, Task = Tasks.Action, Opcode = EventOpcode.Start)]
         public void BeginAction(string name, string text)
         {
-            WriteEvent(3, name, text);
+            WriteEvent(1, name, text);
+        }
+
+        [Event(2, Keywords = Keywords.Events, Task = Tasks.Action, Opcode = EventOpcode.Stop)]
+        public void EndAction()
+        {
+            WriteEvent(2);
         }
         
-        [Event(4, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
+
+
+        [Event(3, Keywords = Keywords.Events, Task = Tasks.Clear, Opcode = EventOpcode.Start)]
         public void BeginClear(string name)
         {
-            WriteEvent(4, name);
-        } 
+            WriteEvent(3, name);
+        }
 
-        [Event(5, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
+        [Event(4, Keywords = Keywords.Events, Task = Tasks.Clear, Opcode = EventOpcode.Stop)]
+        public void EndClear()
+        {
+            WriteEvent(4);
+        }
+
+        [Event(5, Keywords = Keywords.Events, Task = Tasks.Message, Opcode = EventOpcode.Start)]
         public void BeginMessage(string name, string text)
         {
             WriteEvent(5, name, text);
-        } 
+        }
 
-        [Event(6, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
+        [Event(6, Keywords = Keywords.Events, Task = Tasks.Message, Opcode = EventOpcode.Stop)]
+        public void EndMessage()
+        {
+            WriteEvent(6);
+        }
+
+
+
+        [Event(7, Keywords = Keywords.Events, Task = Tasks.Mod, Opcode = EventOpcode.Start)]
         public void BeginMod(string mod, bool added)
         {
-            WriteEvent(6, mod, added);
+            WriteEvent(7, mod, added);
         } 
+
+        [Event(8, Keywords = Keywords.Events, Task = Tasks.Mod, Opcode = EventOpcode.Stop)]
+        public void EndMod()
+        {
+            WriteEvent(8);
+        }
+
         
-        [Event(7, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
+        [Event(9, Keywords = Keywords.Events, Task = Tasks.Sub, Opcode = EventOpcode.Start)]
         public void BeginSub(string name)
         {
-            WriteEvent(7, name);
-        } 
+            WriteEvent(9, name);
+        }
         
-        [Event(8, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
+
+        [Event(10, Keywords = Keywords.Events, Task = Tasks.Sub, Opcode = EventOpcode.Stop)]
+        public void EndSub()
+        {
+            WriteEvent(10);
+        }
+
+
+        
+        [Event(11, Keywords = Keywords.Events, Task = Tasks.Viewers, Opcode = EventOpcode.Start)]
         public void BeginViewers(int viewers)
         {
-            WriteEvent(8, viewers);
-        }
-        
-        [Event(9, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
-        public void BeginStreamStatus(bool online)
-        {
-            WriteEvent(9, online);
-        } 
-        
-        [Event(10, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
-        public void BeginFollow(string name)
-        {
-            WriteEvent(10, name);
-        }
-
-        [Event(11, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
-        public void BeginTick()
-        {
-            WriteEvent(11);
+            WriteEvent(11, viewers);
         }
 
 
-        [Event(12, Keywords = Keywords.Status, Task = Tasks.Event, Opcode = EventOpcode.Start)]
-        public void BeginReconnect()
+        [Event(12, Keywords = Keywords.Events, Task = Tasks.Viewers, Opcode = EventOpcode.Stop)]
+        public void EndViewers()
         {
             WriteEvent(12);
         }
 
-        [Event(13, Keywords = Keywords.Status, Task = Tasks.Event, Opcode = EventOpcode.Stop)]
-        public void EndReconnect()
+        
+        [Event(13, Keywords = Keywords.Events, Task = Tasks.StreamStatus, Opcode = EventOpcode.Start)]
+        public void BeginStreamStatus(bool online)
         {
-            WriteEvent(13);
+            WriteEvent(13, online);
         }
 
-        [Event(14, Keywords = Keywords.Status, Task = Tasks.Event)]
-        public void DenyCommand(string name, string cmd)
+        [Event(14, Keywords = Keywords.Events, Task = Tasks.StreamStatus, Opcode = EventOpcode.Stop)]
+        public void EndStreamStatus()
         {
-            WriteEvent(14, name, cmd);
-        }
-
-
-        [Event(15, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
-        public void BeginCommand()
-        {
-            WriteEvent(15);
+            WriteEvent(14);
         }
 
 
-        [Event(16, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
-        public void BeginUnknownCommand()
+        
+        [Event(15, Keywords = Keywords.Events, Task = Tasks.Follow, Opcode = EventOpcode.Start)]
+        public void BeginFollow(string name)
+        {
+            WriteEvent(15, name);
+        }
+
+        [Event(16, Keywords = Keywords.Events, Task = Tasks.Follow, Opcode = EventOpcode.Stop)]
+        public void EndFollow()
         {
             WriteEvent(16);
         }
 
 
-
-        [Event(17, Keywords = Keywords.Events, Task = Tasks.Event, Opcode = EventOpcode.Start)]
-        public void CheckStreamStatus(bool result)
+        [Event(17, Keywords = Keywords.Events, Task = Tasks.Tick, Opcode = EventOpcode.Start)]
+        public void BeginTick()
         {
-            WriteEvent(17, result);
+            WriteEvent(17);
         }
 
+        [Event(18, Keywords = Keywords.Events, Task = Tasks.Tick, Opcode = EventOpcode.Stop)]
+        public void EndTick()
+        {
+            WriteEvent(18);
+        }
+
+
+        [Event(19, Keywords = Keywords.Status, Task = Tasks.Reconnect, Opcode = EventOpcode.Start)]
+        public void BeginReconnect()
+        {
+            WriteEvent(19);
+        }
+
+        [Event(20, Keywords = Keywords.Status, Task = Tasks.Reconnect, Opcode = EventOpcode.Stop)]
+        public void EndReconnect()
+        {
+            WriteEvent(20);
+        }
+
+
+
+
+        [Event(21, Keywords = Keywords.Events, Task = Tasks.Command, Opcode = EventOpcode.Start)]
+        public void BeginCommand(string user, string command, string args)
+        {
+            WriteEvent(21, user, command, args);
+        }
+
+        [Event(22, Keywords = Keywords.Events, Task = Tasks.Command, Opcode = EventOpcode.Stop)]
+        public void EndCommand()
+        {
+            WriteEvent(22);
+        }
+
+
+
+        [Event(23, Keywords = Keywords.Events, Task = Tasks.UnknownCommand, Opcode = EventOpcode.Start)]
+        public void BeginUnknownCommand(string user, string command, string args)
+        {
+            WriteEvent(23, user, command, args);
+        }
+
+        [Event(24, Keywords = Keywords.Events, Task = Tasks.UnknownCommand, Opcode = EventOpcode.Stop)]
+        public void EndUnknownCommand()
+        {
+            WriteEvent(24);
+        }
+        
+        [Event(25, Keywords = Keywords.Status)]
+        public void Connected(string channel)
+        {
+            WriteEvent(25, channel);
+        }
+
+        [Event(26, Keywords = Keywords.Events, Task = Tasks.StreamStatus, Opcode = EventOpcode.Start)]
+        public void CheckStreamStatus(bool result)
+        {
+            WriteEvent(26, result);
+        }
+        
+        [Event(27, Keywords = Keywords.Status, Task = Tasks.Command)]
+        public void DenyCommand(string name, string cmd)
+        {
+            WriteEvent(27, name, cmd);
+        }
 
         public class EventId
         {
@@ -143,7 +216,18 @@ namespace WinterBotLogging
         }
         public class Tasks
         {
-            public const EventTask Event = (EventTask)0x1;
+            public const EventTask Action = (EventTask)1;
+            public const EventTask Clear = (EventTask)2;
+            public const EventTask Message = (EventTask)3;
+            public const EventTask Mod = (EventTask)4;
+            public const EventTask Sub = (EventTask)5;
+            public const EventTask Viewers = (EventTask)6;
+            public const EventTask StreamStatus = (EventTask)7;
+            public const EventTask Follow = (EventTask)8;
+            public const EventTask Tick = (EventTask)9;
+            public const EventTask Command = (EventTask)10;
+            public const EventTask UnknownCommand = (EventTask)11;
+            public const EventTask Reconnect = (EventTask)12;
         }
     }
 }

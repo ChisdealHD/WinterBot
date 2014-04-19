@@ -668,7 +668,7 @@ namespace Winter
 
                             OnAction(action);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Action);
+                            WinterBotSource.Log.EndAction();
                             break;
 
                         case EventType.Clear:
@@ -677,7 +677,7 @@ namespace Winter
                             
                             OnClear(clear);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Clear);
+                            WinterBotSource.Log.EndClear();
                             break;
 
                         case EventType.Message:
@@ -686,7 +686,7 @@ namespace Winter
 
                             OnMessage(msg);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Message);
+                            WinterBotSource.Log.EndMessage();
                             break;
 
                         case EventType.Mod:
@@ -695,7 +695,7 @@ namespace Winter
 
                             OnMod(mod);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Mod);
+                            WinterBotSource.Log.EndMod();
                             break;
 
                         case EventType.Subscribe:
@@ -704,7 +704,7 @@ namespace Winter
 
                             OnSub(sub);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Sub);
+                            WinterBotSource.Log.EndSub();
                             break;
 
                         case EventType.ViewerCount:
@@ -713,7 +713,7 @@ namespace Winter
 
                             OnViewerCountChanged(viewer);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Viewers);
+                            WinterBotSource.Log.EndViewers();
                             break;
 
                         case EventType.StreamStatus:
@@ -722,7 +722,7 @@ namespace Winter
 
                             OnStreamStatus(status);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.StreamStatus);
+                            WinterBotSource.Log.EndStreamStatus();
                             break;
 
                         case EventType.Follow:
@@ -731,7 +731,7 @@ namespace Winter
 
                             OnUserFollowed(follow);
 
-                            WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Follow);
+                            WinterBotSource.Log.EndFollow();
                             break;
 
                         default:
@@ -748,7 +748,7 @@ namespace Winter
                     OnTick(elapsed);
                     lastTick = DateTime.Now;
 
-                    WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Tick);
+                    WinterBotSource.Log.EndTick();
                 }
 
                 const int pingDelay = 20;
@@ -814,15 +814,15 @@ namespace Winter
                 }
 
 
-                WinterBotSource.Log.BeginCommand();
+                WinterBotSource.Log.BeginCommand(user.Name, cmd, value);
                 command.Command(this, user, cmd, value);
-                WinterBotSource.Log.EndEvent(WinterBotSource.EventId.Command);
+                WinterBotSource.Log.EndCommand();
             }
             else
             {
-                WinterBotSource.Log.BeginUnknownCommand();
+                WinterBotSource.Log.BeginUnknownCommand(user.Name, cmd, value);
                 OnUnknownCommand(user, cmd, value);
-                WinterBotSource.Log.EndEvent(WinterBotSource.EventId.UnknownCommand);
+                WinterBotSource.Log.EndUnknownCommand();
             }
         }
 
