@@ -154,7 +154,13 @@ namespace WinterExtensions
                 if (!m_commands.TryGetValue(cmd, out command))
                     return;
 
-            if (sender.CanUseCommand(user, command.AccessLevel) && CanSendCommand(user, cmd))
+            if (!sender.CanUseCommand(user, command.AccessLevel))
+            {
+                WinterBotSource.Log.DenyCommand(user.Name, cmd, "access");
+                return;
+            }
+
+            if (CanSendCommand(user, cmd))
             {
                 sender.SendResponse(Importance.Low, command.Text);
                 m_sent.AddLast(new Tuple<string, DateTime>(cmd, DateTime.Now));
