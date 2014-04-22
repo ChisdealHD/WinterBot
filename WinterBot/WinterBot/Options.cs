@@ -86,6 +86,35 @@ namespace Winter
         }
     }
 
+    public class BanWordOptions : FeatureOptions
+    {
+        string[] m_bannedWords;
+        int m_timeoutDuration = -1;
+        string m_message;
+
+        public string[] BanList { get { return m_bannedWords ?? new string[0]; } }
+
+        public int TimeOut { get { return m_timeoutDuration; } }
+
+        public string Message { get { return m_message ?? ""; } }
+
+        public BanWordOptions(IniReader options)
+        {
+            var section = options.GetSectionByName("bannedwords");
+            if (section != null)
+                m_bannedWords = (from r in section.EnumerateRawStrings() where !string.IsNullOrWhiteSpace(r) select r).ToArray();
+
+            section = options.GetSectionByName("BanWords");
+
+            if (section != null)
+            {
+                base.Init(section);
+                section.GetValue("TimeoutDuration", ref m_timeoutDuration);
+                section.GetValue("Message", ref m_message);
+            }
+        }
+    }
+
     public class UrlTimeoutOptions : FeatureOptions
     {
         string[] m_whitelist, m_blacklist, m_banlist;
@@ -332,6 +361,7 @@ namespace Winter
         SymbolTimeoutOptions m_symbolOptions;
         EmoteTimeoutOptions m_emoteOptions;
         AutoMessageOptions m_autoMessageOptions;
+        BanWordOptions m_banWordOptions;
 
         public IniReader IniReader { get { return m_iniReader; } }
 
@@ -351,6 +381,7 @@ namespace Winter
         public SymbolTimeoutOptions SymbolOptions { get { return m_symbolOptions; } }
         public EmoteTimeoutOptions EmoteOptions { get { return m_emoteOptions; } }
         public AutoMessageOptions AutoMessageOptions { get { return m_autoMessageOptions; } }
+        public BanWordOptions BanWordOptions { get { return m_banWordOptions; } }
 
         public IEnumerable<string> Plugins
         {
@@ -380,6 +411,7 @@ namespace Winter
             m_emoteOptions = new EmoteTimeoutOptions(m_iniReader);
             m_chatOptions = new ChatOptions(m_iniReader);
             m_autoMessageOptions = new AutoMessageOptions(m_iniReader);
+            m_banWordOptions = new BanWordOptions(m_iniReader);
         }
 
         public Options(string filename)
@@ -421,6 +453,7 @@ namespace Winter
             m_emoteOptions = new EmoteTimeoutOptions(m_iniReader);
             m_chatOptions = new ChatOptions(m_iniReader);
             m_autoMessageOptions = new AutoMessageOptions(m_iniReader);
+            m_banWordOptions = new BanWordOptions(m_iniReader);
         }
     }
 }

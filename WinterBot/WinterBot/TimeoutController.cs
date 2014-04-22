@@ -21,9 +21,10 @@ namespace Winter
 
         UserSet m_denyList;
 
-        List<UrlMatch> m_urlWhitelist;
-        List<UrlMatch> m_urlBlacklist;
-        List<UrlMatch> m_urlBanlist;
+        List<RegexMatch> m_urlWhitelist;
+        List<RegexMatch> m_urlBlacklist;
+        List<RegexMatch> m_urlBanlist;
+        List<RegexMatch> m_wordBanlist;
         
         HashSet<string> m_defaultImageSet;
         Dictionary<int, HashSet<string>> m_imageSets;
@@ -43,6 +44,7 @@ namespace Winter
         LengthTimeoutOptions m_lengthOptions;
         SymbolTimeoutOptions m_symbolOptions;
         EmoteTimeoutOptions m_emoteOptions;
+        BanWordOptions m_banWordOptions;
         #endregion
 
         #region Initialization
@@ -72,11 +74,13 @@ namespace Winter
             m_lengthOptions = options.LengthOptions;
             m_symbolOptions = options.SymbolOptions;
             m_emoteOptions = options.EmoteOptions;
+            m_banWordOptions = options.BanWordOptions;
 
             // Load url lists
-            m_urlWhitelist = new List<UrlMatch>(m_urlOptions.Whitelist.Select(s => new UrlMatch(bot, s)));
-            m_urlBlacklist = new List<UrlMatch>(m_urlOptions.Blacklist.Select(s => new UrlMatch(bot, s)));
-            m_urlBanlist = new List<UrlMatch>(m_urlOptions.Banlist.Select(s => new UrlMatch(bot, s)));
+            m_urlWhitelist = new List<RegexMatch>(m_urlOptions.Whitelist.Select(s => new UrlMatch(bot, s)));
+            m_urlBlacklist = new List<RegexMatch>(m_urlOptions.Blacklist.Select(s => new UrlMatch(bot, s)));
+            m_urlBanlist = new List<RegexMatch>(m_urlOptions.Banlist.Select(s => new UrlMatch(bot, s)));
+            m_wordBanlist = new List<RegexMatch>(m_banWordOptions.BanList.Select(s => new WordMatch(bot, s)));
         }
         #endregion
 
@@ -307,6 +311,7 @@ namespace Winter
                 return;
 
             string clearReason = null;
+            RegexMatch banWord = null;
 
             Url[] urls;
             if (HasUrls(text, out urls))
@@ -327,6 +332,10 @@ namespace Winter
                     else
                         clearReason = m_urlOptions.Message;
                 }
+            }
+            else if (m_banWordOptions.ShouldEnforce(user) && HasBannedWord(text, out banWord))
+            {
+                clearReason = EnforceBannedWord(bot, user, banWord.String);
             }
             else if (m_symbolOptions.ShouldEnforce(user) && HasSpecialCharacter(text))
             {
@@ -349,6 +358,48 @@ namespace Winter
                 ClearChat(bot, user, clearReason);
             else if (!user.IsModerator && !user.IsStreamer)
                 m_lastMsgs[m_currMsg++ % m_lastMsgs.Length] = new Tuple<TwitchUser, string>(user, text.ToLower());
+        }
+
+        private string EnforceBannedWord(WinterBot bot, TwitchUser user, string word)
+        {
+            int timeout = m_banWordOptions.TimeOut;
+            string msg = m_banWordOptions.Message;
+
+            if (!string.IsNullOrWhiteSpace(msg))
+                msg = msg.Replace("$word", word);
+
+            if (timeout <= 0)
+                return msg;
+            
+            if (!m_chatOptions.ShouldTimeout(user))
+                timeout = 1;
+            
+            bot.Timeout(user, timeout);
+
+            if (!string.IsNullOrWhiteSpace(msg))
+            {
+                if (timeout == 1)
+                    bot.Send(MessageType.Timeout, Importance.Med, "{0}: {1} (This is not a timeout.)", user.Name, msg);
+                else
+                    bot.Send(MessageType.Timeout, Importance.Med, "{0}: {1} ({2} second timeout.)", user.Name, msg, timeout);
+            }
+
+            return null;
+        }
+
+        bool HasBannedWord(string text, out RegexMatch banWord)
+        {
+            banWord = null;
+            foreach (var word in m_wordBanlist)
+            {
+                if (word.IsMatch(text))
+                {
+                    banWord = word;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool CheckAndTimeoutSpam(WinterBot bot, TwitchUser user, string text)
@@ -392,12 +443,12 @@ namespace Winter
             return text.Length > max;
         }
 
-        private static bool MatchesAny(Url[] urls, List<UrlMatch> regexes)
+        private static bool MatchesAny(Url[] urls, List<RegexMatch> regexes)
         {
             return urls.Any(url => regexes.Any(regex => regex.IsMatch(url.FullUrl)));
         }
 
-        private static bool MatchesAll(Url[] urls, List<UrlMatch> regexes)
+        private static bool MatchesAll(Url[] urls, List<RegexMatch> regexes)
         {
             return urls.All(url => regexes.Any(regex => regex.IsMatch(url.FullUrl)));
         }
@@ -664,12 +715,44 @@ namespace Winter
         #endregion
     }
 
-
-    class UrlMatch
+    abstract class RegexMatch
     {
-        Regex m_reg;
-        string m_str;
+        protected Regex m_reg;
+        protected string m_str;
 
+        public string String { get { return m_str; } }
+
+        public bool IsMatch(string str)
+        {
+            if (m_reg != null)
+                return m_reg.IsMatch(str);
+
+            return str.ToLower().Contains(m_str);
+        }
+    }
+
+    class WordMatch : RegexMatch
+    {
+
+        public WordMatch(WinterBot bot, string str)
+        {
+            m_str = str.ToLower();
+            if (str.IsRegex())
+            {
+                try
+                {
+                    m_reg = new Regex(str, RegexOptions.IgnoreCase);
+                }
+                catch (ArgumentException)
+                {
+                    bot.WriteDiagnostic(DiagnosticFacility.UserError, "Invalid regex in options: " + str);
+                }
+            }
+        }
+    }
+
+    class UrlMatch : RegexMatch
+    {
         public UrlMatch(WinterBot bot, string str)
         {
             if (str.StartsWith("http://", StringComparison.CurrentCultureIgnoreCase))
@@ -687,14 +770,6 @@ namespace Winter
                     bot.WriteDiagnostic(DiagnosticFacility.UserError, "Invalid regex in options: " + str);
                 }
             }
-        }
-
-        public bool IsMatch(string str)
-        {
-            if (m_reg != null)
-                return m_reg.IsMatch(str);
-
-            return str.ToLower().Contains(m_str);
         }
     }
 }
