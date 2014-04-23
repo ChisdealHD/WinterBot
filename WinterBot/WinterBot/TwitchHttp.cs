@@ -15,6 +15,7 @@ namespace Winter
         public static TwitchHttp Instance = new TwitchHttp();
 
         Thread m_thread;
+        Thread m_followerThread;
         string m_userAgent;
 
         HashSet<string> m_channelData = new HashSet<string>();
@@ -48,7 +49,16 @@ namespace Winter
         public void PollFollowers(string channel)
         {
             lock (m_sync)
+            {
+                if (m_followerThread == null)
+                {
+                    m_followerThread = new Thread(FollowerThreadProc);
+                    m_followerThread.Name = "Twitch WebAPI Follower Thread";
+                    m_followerThread.Start();
+                }
+
                 m_channelFollowers[channel.ToLower()] = DateTime.MinValue;
+            }
         }
 
         public void StopPolling(string channel)
@@ -65,6 +75,18 @@ namespace Winter
             }
         }
 
+        private void FollowerThreadProc()
+        {
+            while (true)
+            {
+                foreach (var channel in GetFollowChannels())
+                    PollFollower(channel);
+
+                Thread.Sleep(15000);
+            }
+        }
+
+
         private void ThreadProc()
         {
             const int minSleep = 250;
@@ -79,29 +101,28 @@ namespace Winter
                     Thread.Sleep(15000);
                 }
 
-                string[] channels;
-                lock (m_sync)
-                    channels = m_channelData.ToArray();
-
-                foreach (var channel in channels)
+                foreach (var channel in GetChannels())
                 {
                     PollChannel(channel);
                     Thread.Sleep(15000);
                 }
-
-                lock (m_sync)
-                    channels = m_channelFollowers.Keys.ToArray();
-
-                foreach (var channel in channels)
-                {
-                    PollFollower(channel);
-                    Thread.Sleep(15000);
-                }
-
+                
                 totalTime = totalTime.Subtract(DateTime.Now - start);
                 if (totalTime.TotalMilliseconds >= minSleep)
                     Thread.Sleep((int)totalTime.TotalMilliseconds);
             }
+        }
+
+        List<string> GetFollowChannels()
+        {
+            lock (m_sync)
+                return new List<string>(m_channelFollowers.Keys);
+        }
+
+        List<string> GetChannels()
+        {
+            lock (m_sync)
+                return new List<string>(m_channelData);
         }
 
         private void PollFollower(string channel)
@@ -123,22 +144,21 @@ namespace Winter
 
                 var follow = JsonConvert.DeserializeObject<JsonFollows>(GetUrl(url));
 
-                m_lastFollow = DateTime.Parse(follow.follows[0].created_at);
+                lock (m_sync)
+                    m_channelFollowers[channel] = DateTime.Parse(follow.follows[0].created_at);
             }
             else
             {
                 DateTime curr = DateTime.MinValue;
-                bool first = false;
+                bool first = true;
                 int count = 0;
                 int limit = 25;
+                bool done = false;
 
                 List<string> followers = new List<string>();
+                string url = string.Format("https://api.twitch.tv/kraken/channels/{0}/follows?direction=desc&offset={1}&limit={2}", channel, count, limit);
                 do
                 {
-                    if (!first)
-                        Thread.Sleep(15000);
-
-                    string url = string.Format("https://api.twitch.tv/kraken/channels/{0}/follows?direction=desc&offset={1}&limit={2}", channel, count, limit);
                     count += limit;
 
                     JsonFollows follows = GetUrl<JsonFollows>(url);
@@ -151,14 +171,20 @@ namespace Winter
                             curr = last;
 
                         if (last <= m_lastFollow)
+                        {
+                            done = true;
                             break;
+                        }
 
                         followers.Add(follow.user.name);
                         first = false;
                     }
-                } while (true);
 
-                if (first)
+                    done |= follows.follows.Count == 0;
+                    url = follows._links.next;
+                } while (!done);
+
+                if (!first)
                     lock (m_sync)
                         m_channelFollowers[channel] = curr;
 

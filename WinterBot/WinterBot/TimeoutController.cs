@@ -447,6 +447,9 @@ namespace Winter
             int max = m_emoteOptions.GetMax(user);
 
             var imgSet = TwitchHttp.Instance.ImageSet;
+            if (imgSet == null)
+                return false;
+
             return imgSet.TooManySymbols(message, max, user.IconSet);
         }
 

@@ -461,6 +461,9 @@ namespace Winter
         #region Event Wrappers
         void UserFollowedHandler(string channel, IEnumerable<string> users)
         {
+            if (!channel.Equals(m_channel, StringComparison.CurrentCultureIgnoreCase))
+                return;
+
             var evt = UserFollowed;
             if (evt != null)
             {
@@ -474,7 +477,8 @@ namespace Winter
 
         void ChannelDataReceived(string channelName, List<TwitchChannelResponse> result)
         {
-            Debug.Assert(channelName.Equals(m_channel, StringComparison.CurrentCultureIgnoreCase));
+            if (!channelName.Equals(m_channel, StringComparison.CurrentCultureIgnoreCase))
+                return;
 
             bool live = result.Count > 0;
             if (live != IsStreamLive)
