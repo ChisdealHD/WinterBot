@@ -60,7 +60,7 @@
     <Compile Include="ConcurrentDictionary.cs" />
     <Compile Include="ConcurrentHashset.cs" />
     <Compile Include="SaveQueue.cs" />
-    <Compile Include="Quiet.cs" />
+    <Compile Include="BotControl.cs" />
     <Compile Include="Regulars.cs" />
     <Compile Include="ChatLogger.cs" />
     <Compile Include="Helpers.cs" />
