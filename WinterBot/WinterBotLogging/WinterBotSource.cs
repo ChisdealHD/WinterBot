@@ -218,6 +218,12 @@ namespace WinterBotLogging
             WriteEvent(31);
         }
 
+        [Event(32, Keywords = Keywords.Status, Task = Tasks.Kill)]
+        public void TwitchWebApiError(string url, string msg)
+        {
+            WriteEvent(32, url, msg);
+        }
+
 
         public class EventId
         {

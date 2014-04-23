@@ -1,9 +1,7 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Winter.BotEvents;
@@ -40,7 +38,7 @@ namespace Winter
     }
 
 
-    public class WinterBot : IDisposable
+    public class WinterBot
     {
         TwitchClient m_twitch;
         TwitchUsers m_data;
@@ -53,10 +51,8 @@ namespace Winter
         private Options m_options;
         UserSet m_regulars;
 
-        volatile bool m_checkUpdates = true;
-
-        Thread m_streamLiveThread, m_streamFollowerThread;
         int m_viewers;
+        bool m_checkingFollowers;
 
         #region Events
         public event DiagnosticEventHandler DiagnosticMessage;
@@ -292,19 +288,6 @@ namespace Winter
             LoadExtensions();
         }
 
-        ~WinterBot()
-        {
-            if (m_streamLiveThread != null)
-            {
-                Dispose();
-            }
-        }
-
-        public void Dispose()
-        {
-            m_checkUpdates = false;
-        }
-
         public void Ban(TwitchUser user)
         {
             if (Passive)
@@ -476,6 +459,51 @@ namespace Winter
 
 
         #region Event Wrappers
+        void UserFollowedHandler(string channel, IEnumerable<string> users)
+        {
+            var evt = UserFollowed;
+            if (evt != null)
+            {
+                foreach (var user in users)
+                {
+                    if (TwitchUsers.IsValidUserName(user))
+                        evt(this, Users.GetUser(user));
+                }
+            }
+        }
+
+        void ChannelDataReceived(string channelName, List<TwitchChannelResponse> result)
+        {
+            Debug.Assert(channelName.Equals(m_channel, StringComparison.CurrentCultureIgnoreCase));
+
+            bool live = result.Count > 0;
+            if (live != IsStreamLive)
+            {
+                IsStreamLive = live;
+
+                var evt = live ? StreamOnline : StreamOffline;
+                if (evt != null)
+                {
+                    m_events.Enqueue(new StreamStatusEvent(live));
+                    m_event.Set();
+                }
+            }
+
+            if (result.Count > 0)
+            {
+                var channel = result[0];
+                TotalViewers = channel.channel_view_count;
+                CurrentViewers = channel.channel_count;
+                Game = channel.meta_game;
+                Title = channel.title;
+                // TODO: Uptime = channel.up_time;
+            }
+            else
+            {
+                CurrentViewers = 0;
+            }
+        }
+
         private void OnUnknownCommand(TwitchUser user, string cmd, string value)
         {
             var evt = UnknownCommandReceived;
@@ -684,22 +712,12 @@ namespace Winter
         public void Go()
         {
             Thread.CurrentThread.Name = "WinterBot Event Loop";
-
-            if (m_streamLiveThread == null)
-            {
-                m_streamLiveThread = new Thread(StreamLiveWoker);
-                m_streamLiveThread.Start();
-            }
-
-            if (m_streamFollowerThread == null)
-            {
-                m_streamFollowerThread = new Thread(StreamFollowerWorker);
-                m_streamFollowerThread.Start();
-            }
-
             Connect();
 
             WinterBotSource.Log.Connected(m_channel);
+
+            TwitchHttp.Instance.ChannelDataReceived += ChannelDataReceived;
+            TwitchHttp.Instance.PollChannelData(m_channel);
 
             DateTime lastTick = DateTime.Now;
             DateTime lastPing = DateTime.Now;
@@ -801,6 +819,23 @@ namespace Winter
                     lastTick = DateTime.Now;
 
                     WinterBotSource.Log.EndTick();
+
+                    bool followedListeners = UserFollowed != null;
+                    if (m_checkingFollowers != followedListeners)
+                    {
+                        if (m_checkingFollowers)
+                        {
+                            m_checkingFollowers = false;
+                            TwitchHttp.Instance.StopPollingFollowers(m_channel);
+                            TwitchHttp.Instance.UserFollowed -= UserFollowedHandler;
+                        }
+                        else
+                        {
+                            m_checkingFollowers = true;
+                            TwitchHttp.Instance.PollFollowers(m_channel);
+                            TwitchHttp.Instance.UserFollowed += UserFollowedHandler;
+                        }
+                    }
                 }
 
                 const int pingDelay = 20;
@@ -823,6 +858,11 @@ namespace Winter
                     WinterBotSource.Log.EndReconnect();
                 }
             }
+
+            TwitchHttp.Instance.StopPolling(m_channel);
+            TwitchHttp.Instance.ChannelDataReceived -= ChannelDataReceived;
+            if (m_checkingFollowers)
+                TwitchHttp.Instance.UserFollowed -= UserFollowedHandler;
         }
         #endregion
 
@@ -928,134 +968,6 @@ namespace Winter
         internal bool IsRegular(TwitchUser user)
         {
             return m_regulars != null ? m_regulars.Contains(user) : false;
-        }
-
-        private void StreamLiveWoker()
-        {
-            while (m_checkUpdates)
-            {
-                // One minute between updates.
-                Thread.Sleep(60000);
-
-                // Check stream values
-                string url = @"http://api.justin.tv/api/stream/list.json?channel=" + m_channel;
-                string result = GetUrl(url);
-
-                WinterBotSource.Log.CheckStreamStatus(result != null);
-                if (result != null)
-                {
-                    List<TwitchChannelResponse> channels = null;
-                    try
-                    {
-                        channels = JsonConvert.DeserializeObject<List<TwitchChannelResponse>>(result);
-                    }
-                    catch (Exception e)
-                    {
-                        WriteDiagnostic(DiagnosticFacility.Error, "Exception while processing stream JSON data: " + e.ToString());
-                        continue;
-                    }
-                    
-                    bool live = channels.Count > 0;
-                    if (live != IsStreamLive)
-                    {
-                        IsStreamLive = live;
-
-                        var evt = live ? StreamOnline : StreamOffline;
-                        if (evt != null)
-                        {
-                            m_events.Enqueue(new StreamStatusEvent(live));
-                            m_event.Set();
-                        }
-                    }
-                    
-
-                    if (channels.Count > 0)
-                    {
-                        var channel = channels[0];
-                        TotalViewers = channel.channel_view_count;
-                        CurrentViewers = channel.channel_count;
-                        Game = channel.meta_game;
-                        Title = channel.title;
-                        // TODO: Uptime = channel.up_time;
-                    }
-                    else
-                    {
-                        CurrentViewers = 0;
-                    }
-                }
-            }
-        }
-        private void StreamFollowerWorker()
-        {
-            bool checkedFollowers = false;
-            DateTime lastFollow = DateTime.Now;
-            string url, result;
-
-            while (m_checkUpdates)
-            {
-                var followedEvt = UserFollowed;
-                if (followedEvt != null)
-                {
-                    // Check followers
-                    if (!checkedFollowers)
-                    {
-                        url = string.Format("https://api.twitch.tv/kraken/channels/{0}/follows?direction=desc&limit=1&offset=0", m_channel); ;
-                        var follow = JsonConvert.DeserializeObject<JsonFollows>(GetUrl(url));
-
-                        lastFollow = DateTime.Parse(follow.follows[0].created_at);
-                        checkedFollowers = true;
-                    }
-                    else
-                    {
-                        int count = 0;
-                        int limit = 25;
-
-                        do
-                        {
-                            url = string.Format("https://api.twitch.tv/kraken/channels/{0}/follows?direction=desc&offset={1}&limit={2}", m_channel, count, limit);
-                            count += limit;
-
-                            result = GetUrl(url);
-                            if (result != null)
-                            {
-                                JsonFollows follows = JsonConvert.DeserializeObject<JsonFollows>(result);
-                                foreach (var follow in follows.follows)
-                                {
-                                    DateTime last = DateTime.Parse(follow.created_at);
-                                    if (last <= lastFollow)
-                                        break;
-
-                                    var user = Users.GetUser(follow.user.name);
-                                    m_events.Enqueue(new FollowEvent(user));
-                                }
-                            }
-                        } while (true);
-                    }
-                }
-
-                Thread.Sleep(15000);
-            }
-        }
-
-        private static string GetUrl(string url)
-        {
-            try
-            {
-                var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(url);
-                req.UserAgent = "WinterBot/0.2.0.0";
-                var response = req.GetResponse();
-                var fromStream = response.GetResponseStream();
-
-                StreamReader reader = new StreamReader(fromStream);
-                string result = reader.ReadToEnd();
-                return result;
-            }
-            catch (Exception)
-            {
-                // We ignore exceptions (mostly network issues), just leave the values alone for this iteration
-            }
-
-            return null;
         }
     }
 

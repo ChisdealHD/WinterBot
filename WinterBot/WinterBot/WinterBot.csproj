@@ -67,6 +67,7 @@
     <Compile Include="ConcurrentDataStructures.cs" />
     <Compile Include="TimeoutController.cs" />
     <Compile Include="Options.cs" />
+    <Compile Include="TwitchHttp.cs" />
     <Compile Include="TwitchJsonObjects.cs" />
     <Compile Include="IniReader.cs" />
     <Compile Include="TwitchData.cs" />

@@ -1,15 +1,8 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Winter
 {
@@ -26,9 +19,6 @@ namespace Winter
         List<RegexMatch> m_urlBlacklist;
         List<RegexMatch> m_urlBanlist;
         List<RegexMatch> m_wordBanlist;
-        
-        HashSet<string> m_defaultImageSet;
-        Dictionary<int, HashSet<string>> m_imageSets;
 
         Tuple<TwitchUser, string>[] m_lastMsgs = new Tuple<TwitchUser, string>[32];
         int m_currMsg;
@@ -60,8 +50,6 @@ namespace Winter
             m_winterBot.ActionReceived += CheckAction;
             m_winterBot.StreamOffline += StreamStateChange;
             m_winterBot.StreamOnline += StreamStateChange;
-
-            ThreadPool.QueueUserWorkItem(LoadEmoticons);
         }
 
 
@@ -456,51 +444,10 @@ namespace Winter
 
         private bool TooManyEmotes(TwitchUser user, string message)
         {
-            int count = 0;
             int max = m_emoteOptions.GetMax(user);
 
-            if (m_defaultImageSet != null)
-            {
-                foreach (string item in m_defaultImageSet)
-                {
-                    count += CountEmote(message, item);
-                    if (count > max)
-                        return true;
-                }
-            }
-
-            int[] userSets = user.IconSet;
-            if (userSets != null && m_imageSets != null)
-            {
-                foreach (int setId in userSets)
-                {
-                    HashSet<string> imageSet;
-                    if (!m_imageSets.TryGetValue(setId, out imageSet))
-                        continue;
-
-                    foreach (string item in imageSet)
-                    {
-                        count += CountEmote(message, item);
-                        if (count > max)
-                            return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private int CountEmote(string message, string item)
-        {
-            int count = 0;
-            int i = message.IndexOf(item);
-            while (i != -1)
-            {
-                count++;
-                i = message.IndexOf(item, i + 1);
-            }
-
-            return count;
+            var imgSet = TwitchHttp.Instance.ImageSet;
+            return imgSet.TooManySymbols(message, max, user.IconSet);
         }
 
         private bool TooManyCaps(TwitchUser user, string message)
@@ -664,54 +611,6 @@ namespace Winter
 
             public DateTime LastTimeout { get; set; }
             public int Count { get; set; }
-        }
-
-        private void LoadEmoticons(object state)
-        {
-            TwitchEmoticonResponse emotes = null;
-            try
-            {
-                var req = (HttpWebRequest)HttpWebRequest.Create(@"https://api.twitch.tv/kraken/chat/emoticons");
-                req.UserAgent = "WinterBot/0.0.1.0";
-                var response = req.GetResponse();
-                var fromStream = response.GetResponseStream();
-
-                StreamReader reader = new StreamReader(fromStream);
-                string data = reader.ReadToEnd();
-
-                emotes = JsonConvert.DeserializeObject<TwitchEmoticonResponse>(data);
-            }
-            catch (Exception e)
-            {
-                m_winterBot.WriteDiagnostic(DiagnosticFacility.Error, "Error reading emoticon response: " + e.ToString());
-                return;
-            }
-
-            HashSet<string> defaultSet = new HashSet<string>();
-            Dictionary<int, HashSet<string>> imageSets = new Dictionary<int, HashSet<string>>();
-
-            foreach (var emote in emotes.emoticons)
-            {
-                foreach (var image in emote.images)
-                {
-                    if (image.emoticon_set == null)
-                    {
-                        defaultSet.Add(emote.regex);
-                    }
-                    else
-                    {
-                        int setId = (int)image.emoticon_set;
-                        HashSet<string> set;
-                        if (!imageSets.TryGetValue(setId, out set))
-                            imageSets[setId] = set = new HashSet<string>();
-
-                        set.Add(emote.regex);
-                    }
-                }
-            }
-
-            m_defaultImageSet = defaultSet;
-            m_imageSets = imageSets;
         }
         #endregion
     }
