@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace WinterBotLogging
 {
-    [EventSource(Name = "WinterBot-TwitchClient")]
+    [EventSource(Name = "WinterBot-Twitch")]
     public class TwitchSource : EventSource
     {
         public static TwitchSource Log = new TwitchSource();
