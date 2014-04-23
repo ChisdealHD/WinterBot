@@ -21,6 +21,14 @@ namespace Winter
         High
     }
 
+    public enum ConnectResult
+    {
+        Success,
+        LoginFailed,
+        NetworkFailed,
+        Failed,
+    }
+
     /// <summary>
     /// A Twitch.tv IRC client.
     /// 
@@ -134,7 +142,7 @@ namespace Winter
         /// <param name="stream">The stream to connect to.</param>
         /// <param name="user">The twitch username this connection will use.</param>
         /// <param name="auth">The twitch API token used to log in.  This must begin with 'oauth:'.</param>
-        public bool Connect(string stream, string user, string auth, int timeout=5000)
+        public ConnectResult Connect(string stream, string user, string auth, int timeout = 5000)
         {
             user = user.ToLower();
             m_stream = stream.ToLower();
@@ -172,27 +180,29 @@ namespace Winter
             if (!m_connectedEvent.Wait(currTimeout))
             {
                 WriteDiagnosticMessage("Connecting to the Twitch IRC server timed out.");
-                return false;
+                return ConnectResult.NetworkFailed;
             }
 
             currTimeout = timeout - (int)started.Elapsed().TotalMilliseconds;
             /// Wait for the client to be registered.
             if (!m_registeredEvent.Wait(currTimeout))
             {
+                // Shouldn't really happen
                 WriteDiagnosticMessage("Registration timed out.");
-                return false;
+                return ConnectResult.Failed;
             }
 
             if (m_loginFailed)
-                return false;
+                return ConnectResult.LoginFailed;
 
             // Attempt to join the channel.  We'll try for roughly 10 seconds to join.  This really shouldn't ever fail.
             m_client.Channels.Join("#" + m_stream);
             currTimeout = timeout - (int)started.Elapsed().TotalMilliseconds;
             if (!m_joinedEvent.Wait(currTimeout))
             {
+                // Shouldn't really happen
                 WriteDiagnosticMessage("Failed to join channel {0}.", m_stream);
-                return false;
+                return ConnectResult.Failed;
             }
 
             TwitchSource.Log.Connected(stream);
@@ -202,7 +212,7 @@ namespace Winter
             m_client.SendRawMessage("TWITCHCLIENT 3");
 
             UpdateMods();
-            return true;
+            return ConnectResult.Success;
         }
 
 

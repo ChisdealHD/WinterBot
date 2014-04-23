@@ -630,6 +630,56 @@ namespace Winter
             m_shutdown = true;
         }
 
+        void Connect()
+        {
+            if (m_twitch != null)
+            {
+                m_twitch.InformChatClear -= ClearChatHandler;
+                m_twitch.MessageReceived -= ChatMessageReceived;
+                m_twitch.ActionReceived -= ChatActionReceived;
+                m_twitch.UserSubscribed -= SubscribeHandler;
+                m_twitch.InformModerator -= InformModerator;
+                m_twitch.StatusUpdate -= IrcStatusHandler;
+            }
+
+            m_twitch = new TwitchClient(m_data);
+            m_twitch.InformChatClear += ClearChatHandler;
+            m_twitch.MessageReceived += ChatMessageReceived;
+            m_twitch.ActionReceived += ChatActionReceived;
+            m_twitch.UserSubscribed += SubscribeHandler;
+            m_twitch.InformModerator += InformModerator;
+            m_twitch.StatusUpdate += IrcStatusHandler;
+
+            bool first = true;
+            ConnectResult result;
+            const int sleepTime = 5000;
+            do
+            {
+                if (!NativeMethods.IsConnectedToInternet())
+                {
+                    WriteDiagnostic(DiagnosticFacility.Network, "Not connected to the internet.");
+
+                    do
+                    {
+                        Thread.Sleep(sleepTime);
+                    } while (!NativeMethods.IsConnectedToInternet());
+
+                    WriteDiagnostic(DiagnosticFacility.Network, "Re-connected to the internet.");
+                }
+
+                if (!first)
+                    Thread.Sleep(sleepTime);
+
+                first = false;
+                result = m_twitch.Connect(m_channel, m_options.Username, m_options.Password);
+
+                if (result == ConnectResult.LoginFailed)
+                        throw new TwitchLoginException(m_options.Username);
+
+            } while (result != ConnectResult.Success);
+
+            OnConnected();
+        }
 
         public void Go()
         {
@@ -647,8 +697,7 @@ namespace Winter
                 m_streamFollowerThread.Start();
             }
 
-            if (!Connect())
-                return;
+            Connect();
 
             WinterBotSource.Log.Connected(m_channel);
 
@@ -769,23 +818,7 @@ namespace Winter
                     m_twitch.Quit(250);
                     OnDisconnected();
 
-                    const int sleepTime = 5000;
-                    do
-                    {
-                        if (!NativeMethods.IsConnectedToInternet())
-                        {
-                            WriteDiagnostic(DiagnosticFacility.Network, "Not connected to the internet.");
-
-                            do
-                            {
-                                Thread.Sleep(sleepTime);
-                            } while (!NativeMethods.IsConnectedToInternet());
-
-                            WriteDiagnostic(DiagnosticFacility.Network, "Re-connected to the internet.");
-                        }
-
-                        Thread.Sleep(sleepTime);
-                    } while (!Connect());
+                    Connect();
 
                     WinterBotSource.Log.EndReconnect();
                 }
@@ -863,33 +896,8 @@ namespace Winter
 
             return true;
         }
-        private bool Connect()
-        {
-            if (m_twitch != null)
-            {
-                m_twitch.InformChatClear -= ClearChatHandler;
-                m_twitch.MessageReceived -= ChatMessageReceived;
-                m_twitch.ActionReceived -= ChatActionReceived;
-                m_twitch.UserSubscribed -= SubscribeHandler;
-                m_twitch.InformModerator -= InformModerator;
-                m_twitch.StatusUpdate -= IrcStatusHandler;
-            }
-
-            m_twitch = new TwitchClient(m_data);
-            m_twitch.InformChatClear += ClearChatHandler;
-            m_twitch.MessageReceived += ChatMessageReceived;
-            m_twitch.ActionReceived += ChatActionReceived;
-            m_twitch.UserSubscribed += SubscribeHandler;
-            m_twitch.InformModerator += InformModerator;
-            m_twitch.StatusUpdate += IrcStatusHandler;
 
 
-            bool connected = m_twitch.Connect(m_channel, m_options.Username, m_options.Password);
-            if (connected)
-                OnConnected();
-
-            return connected;
-        }
         #endregion
 
         struct CmdValue
@@ -1076,6 +1084,14 @@ namespace Winter
 
     [AttributeUsage(AttributeTargets.Class)]
     public class WinterBotPluginAttribute : Attribute
+    {
+    }
+}
+
+public class TwitchLoginException : Exception
+{
+    public TwitchLoginException(string user)
+        :base("Login failed for twitch user: " + user)
     {
     }
 }
