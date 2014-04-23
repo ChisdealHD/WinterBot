@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WinterBotLogging;
 
 namespace Winter
 {
@@ -24,6 +25,15 @@ namespace Winter
         {
             bot.Quiet = !bot.Quiet;
             bot.SendUnconditional("Quiet mode now {0}.", bot.Quiet ? "enabled" : "disabled");
+        }
+
+        [BotCommand(AccessLevel.Streamer, "kill")]
+        public void Kill(WinterBot bot, TwitchUser user, string cmd, string value)
+        {
+            bot.WriteDiagnostic(DiagnosticFacility.Info, "Bot killed by streamer.");
+            WinterBotSource.Log.Kill();
+
+            bot.Shutdown();
         }
     }
 }

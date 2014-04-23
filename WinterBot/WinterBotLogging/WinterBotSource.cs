@@ -212,6 +212,12 @@ namespace WinterBotLogging
             WriteEvent(30, name, cmd);
         }
 
+        [Event(31, Keywords = Keywords.Status, Task = Tasks.Kill)]
+        public void Kill()
+        {
+            WriteEvent(31);
+        }
+
 
         public class EventId
         {
@@ -248,6 +254,7 @@ namespace WinterBotLogging
             public const EventTask Command = (EventTask)10;
             public const EventTask UnknownCommand = (EventTask)11;
             public const EventTask Reconnect = (EventTask)12;
+            public const EventTask Kill = (EventTask)13;
         }
     }
 }

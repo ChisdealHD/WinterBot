@@ -35,7 +35,8 @@ namespace Winter
         IO,
         ModeChange,
         Network,
-        Irc
+        Irc,
+        Info
     }
 
 
@@ -46,6 +47,7 @@ namespace Winter
         ConcurrentQueue<WinterBotEvent> m_events = new ConcurrentQueue<WinterBotEvent>();
         AutoResetEvent m_event = new AutoResetEvent(false);
         string m_channel;
+        bool m_shutdown;
 
         Dictionary<string, CmdValue> m_commands = new Dictionary<string, CmdValue>();
         private Options m_options;
@@ -625,6 +627,7 @@ namespace Winter
                 evt(this);
 
             m_twitch.Quit();
+            m_shutdown = true;
         }
 
 
@@ -652,7 +655,7 @@ namespace Winter
             DateTime lastTick = DateTime.Now;
             DateTime lastPing = DateTime.Now;
 
-            while (true)
+            while (!m_shutdown)
             {
                 if (m_events.Count == 0)
                     m_event.WaitOne(200);
