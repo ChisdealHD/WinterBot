@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -667,14 +668,14 @@ namespace Winter
 
         private void LoadEmoticons(object state)
         {
-            var req = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(@"https://api.twitch.tv/kraken/chat/emoticons");
-            req.UserAgent = "WinterBot/0.0.1.0";
-            var response = req.GetResponse();
-            var fromStream = response.GetResponseStream();
-
             TwitchEmoticonResponse emotes = null;
             try
             {
+                var req = (HttpWebRequest)HttpWebRequest.Create(@"https://api.twitch.tv/kraken/chat/emoticons");
+                req.UserAgent = "WinterBot/0.0.1.0";
+                var response = req.GetResponse();
+                var fromStream = response.GetResponseStream();
+
                 StreamReader reader = new StreamReader(fromStream);
                 string data = reader.ReadToEnd();
 
