@@ -191,6 +191,16 @@ namespace Winter
         #endregion
 
         #region Spam Control
+        [BotCommand(AccessLevel.Mod, "banurl")]
+        public void Banliust(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            UrlMatch match = new UrlMatch(sender, value);
+            m_urlBanlist.Add(match);
+        }
+
         [BotCommand(AccessLevel.Mod, "purge", "purgespam")]
         public void Purge(WinterBot sender, TwitchUser user, string cmd, string value)
         {
@@ -362,8 +372,10 @@ namespace Winter
             
             if (!m_chatOptions.ShouldTimeout(user))
                 timeout = 1;
-            
-            bot.Timeout(user, timeout);
+
+            ClearChat(bot, user, null, timeout);
+            if (m_timeouts[user].Count == 1)
+                m_timeouts[user].Count++;
 
             if (!string.IsNullOrWhiteSpace(msg))
             {
@@ -502,7 +514,7 @@ namespace Winter
             if (0x2010 <= c && c <= 0x2049)
                 return true;
 
-            return c == '♥' || c == '…' || c == '€' || (m_symbolOptions.AllowKorean && IsKoreanCharacter(c));
+            return c == '™' || c == '♥' || c == '…' || c == '€' || (m_symbolOptions.AllowKorean && IsKoreanCharacter(c));
         }
 
         static bool IsKoreanCharacter(char c)
@@ -552,7 +564,7 @@ namespace Winter
         }
 
 
-        private void ClearChat(WinterBot sender, TwitchUser user, string clearReason)
+        private void ClearChat(WinterBot sender, TwitchUser user, string clearReason, int minTimeout=1)
         {
             bool shouldMessage = !string.IsNullOrEmpty(clearReason);
             var now = DateTime.Now;
@@ -571,39 +583,45 @@ namespace Winter
             if (!m_chatOptions.ShouldTimeout(user))
                 timeout.Count = 1;
 
+            if (minTimeout < 1)
+                minTimeout = 1;
+
             int duration = 0;
             switch (timeout.Count)
             {
                 case 1:
                 case 2:
-                    if (shouldMessage)
-                        sender.Send(MessageType.Timeout, Importance.Med, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
-
-                    sender.ClearChat(user);
+                    duration = 1;
                     break;
 
                 case 3:
-                    duration = 5;
-                    sender.Send(MessageType.Timeout, Importance.Med, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
-                    sender.Timeout(user, duration * 60);
-                    timeout.LastTimeout = now.AddMinutes(duration);
+                    duration = 5 * 60;
                     break;
 
                 case 4:
-                    duration = 10;
-                    sender.Send(MessageType.Timeout, Importance.High, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration);
-                    sender.Timeout(user, duration * 60);
-                    timeout.LastTimeout = now.AddMinutes(duration);
+                    duration = 10 * 60;
                     break;
 
-                default:
-                    Debug.Assert(timeout.Count > 0);
-                    sender.Send(MessageType.Timeout, Importance.High, "{0}: {1} (8 hour timeout.)", user.Name, clearReason);
-                    sender.Timeout(user, 8 * 60 * 60);
-                    timeout.LastTimeout = now.AddHours(8);
+                case 5:
+                    duration = 8 * 60 * 60;
                     break;
             }
+
+            if (duration < minTimeout)
+                duration = minTimeout;
+
+            if (shouldMessage)
+            {
+                if (duration == 1)
+                    sender.Send(MessageType.Timeout, Importance.Med, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
+                else
+                    sender.Send(MessageType.Timeout, Importance.High, "{0}: {1}", user.Name, clearReason);
+            }
+
+            sender.Timeout(user, duration);
+            timeout.LastTimeout = now.AddSeconds(duration);
         }
+
         class TimeoutCount
         {
             public TimeoutCount(DateTime time)
