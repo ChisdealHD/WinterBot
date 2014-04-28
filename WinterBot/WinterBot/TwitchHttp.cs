@@ -240,7 +240,8 @@ namespace Winter
             List<TwitchChannelResponse> channels = GetUrl<List<TwitchChannelResponse>>(url);
 
             WinterBotSource.Log.CheckStreamStatus(channels != null);
-            evt(channel, channels);
+            if (channels != null)
+                evt(channel, channels);
         }
         
         void LoadEmoticons()
