@@ -142,7 +142,7 @@ namespace Winter
         /// <param name="stream">The stream to connect to.</param>
         /// <param name="user">The twitch username this connection will use.</param>
         /// <param name="auth">The twitch API token used to log in.  This must begin with 'oauth:'.</param>
-        public ConnectResult Connect(string stream, string user, string auth, int timeout = 5000)
+        public ConnectResult Connect(string stream, string user, string auth, int timeout = 10000)
         {
             user = user.ToLower();
             m_stream = stream.ToLower();
