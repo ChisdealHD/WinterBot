@@ -231,11 +231,17 @@ namespace TwitchChat
 
         private void ChatActionReceived(TwitchClient sender, TwitchUser user, string text)
         {
+            if (m_options.Ignore.Contains(user.Name))
+                return;
+
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(DispatcherAddMessage), new ChatAction(this, user, text));
         }
 
         private void ChatMessageReceived(TwitchClient sender, TwitchUser user, string text)
         {
+            if (m_options.Ignore.Contains(user.Name))
+                return;
+
             bool question = false;
             foreach (var highlight in m_options.Highlights)
             {

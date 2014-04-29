@@ -11,6 +11,7 @@ namespace TwitchChat
     {
         string m_stream, m_user, m_oath;
         string[] m_highlightList;
+        HashSet<string> m_ignore = new HashSet<string>();
         IniReader m_iniReader;
 
         bool m_timeouts = false,
@@ -28,6 +29,8 @@ namespace TwitchChat
         public bool ConfirmBans { get { return m_bans; } }
         public bool HighlightQuestions { get { return m_questions; } }
         public bool PlaySounds { get { return m_sounds; } }
+
+        public HashSet<string> Ignore { get { return m_ignore; } }
 
         public ChatOptions()
         {
@@ -48,6 +51,13 @@ namespace TwitchChat
                     highlights.Add(DoReplacements(line.ToLower()));
 
             m_highlightList = highlights.ToArray();
+
+            section = m_iniReader.GetSectionByName("ignore");
+            if (section != null)
+            
+            m_ignore = new HashSet<string>((from s in section.EnumerateRawStrings()
+                                            where !string.IsNullOrWhiteSpace(s)
+                                            select s.ToLower()));
 
             section = m_iniReader.GetSectionByName("options");
             if (section != null)
