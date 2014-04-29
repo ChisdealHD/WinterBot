@@ -378,9 +378,24 @@ namespace Winter
                     ParseModerators(text);
                     break;
 
+                case 'U':
+                    ParseUserColor(text);
+                    break;
+
                 default:
                     return;
             }
+        }
+
+        private void ParseUserColor(string text)
+        {
+            //USERCOLOR username #8A2BE2
+            string[] parts = text.Split(' ');
+            if (parts.Length != 3 || parts[0] != "USERCOLOR" || parts[2].Length < 2 || parts[2][0] != '#')
+                return;
+
+            var user = m_data.GetUser(parts[1]);
+            user.Color = parts[2];
         }
 
         private void ParseModerators(string text)

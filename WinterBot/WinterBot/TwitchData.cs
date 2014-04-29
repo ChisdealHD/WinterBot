@@ -95,6 +95,7 @@ namespace Winter
     public class TwitchUser
     {
         private TwitchUsers m_data;
+        public string Color { get; internal set; }
         public int[] IconSet { get; internal set; }
 
         public string Name { get; internal set; }
