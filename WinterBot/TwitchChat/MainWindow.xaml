@@ -21,9 +21,11 @@
                         <DockPanel ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <local:ChatLine
                                 Value="{Binding}"
-                                FontSize="16"
-                                Margin="0"
-                                TextWrapping="Wrap" />
+                                FontSize="12"
+                                TextWrapping="Wrap"
+                                FontFamily="Arial"
+                                Margin="0,4,0,4"
+                                VerticalAlignment="Center"/>
                         </DockPanel>
                     </DataTemplate>
                 </ListView.ItemTemplate>

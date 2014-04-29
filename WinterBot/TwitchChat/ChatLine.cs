@@ -134,6 +134,7 @@ namespace TwitchChat
 
         private void SetMessage(ChatMessage msg)
         {
+            this.VerticalAlignment = System.Windows.VerticalAlignment.Center;
             m_ban = new InlineUIContainer(GetImage(s_ban));
             m_ban.MouseUp += ban_MouseUp;
             Inlines.Add(m_ban);
@@ -157,19 +158,19 @@ namespace TwitchChat
             if (user.IsModerator)
                 userColor = Brushes.Red;
 
-            Inlines.Add(new Run(user.Name) { FontWeight = FontWeights.Bold, Foreground = userColor });
+            Inlines.Add(new Run(user.Name) { FontWeight = FontWeights.Bold, Foreground = userColor, BaselineAlignment = BaselineAlignment.Center });
 
             if (msg.Type != ItemType.Action)
-                Inlines.Add(new Run(": "));
+                Inlines.Add(new Run(": ") { BaselineAlignment = BaselineAlignment.Center });
 
             if (msg.Type == ItemType.Question)
             {
-                m_message = new Run(msg.Message) { FontWeight = FontWeights.Bold };
+                m_message = new Run(msg.Message) { FontWeight = FontWeights.Bold, BaselineAlignment = BaselineAlignment.Center };
                 Inlines.Add(m_message);
             }
             else
             {
-                m_message = new Run(msg.Message);
+                m_message = new Run(msg.Message) { BaselineAlignment = BaselineAlignment.Center };
                 Inlines.Add(m_message);
             }
         }
@@ -214,9 +215,9 @@ namespace TwitchChat
         {
             Image img = new Image();
             img.Source = bitmap;
-            img.Width = 24;
-            img.Height = 24;
-            img.Margin = new Thickness(0, 10, 0, 0);
+            img.Width = 18;
+            img.Height = 18;
+            img.Margin = new Thickness(0, 0, 0, 0);
             img.VerticalAlignment = VerticalAlignment.Bottom;
             return img;
         }
