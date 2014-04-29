@@ -217,7 +217,6 @@ namespace TwitchChat
             img.Source = bitmap;
             img.Width = 18;
             img.Height = 18;
-            img.Margin = new Thickness(0, 0, 0, 0);
             img.VerticalAlignment = VerticalAlignment.Bottom;
             return img;
         }
