@@ -277,12 +277,18 @@ namespace TwitchChat
 
         void DispatcherAddMessage(ChatItem msg)
         {
+            bool gotoEnd = ScrollBar.VerticalOffset == ScrollBar.ScrollableHeight;
             Messages.Add(msg);
+            if (gotoEnd)
+                ScrollBar.ScrollToEnd();
         }
 
         private void DispatcherUserSubscribed(TwitchUser user)
         {
+            bool gotoEnd = ScrollBar.VerticalOffset == ScrollBar.ScrollableHeight;
             Messages.Add(new Subscriber(this, user));
+            if (gotoEnd)
+                ScrollBar.ScrollToEnd();
         }
         #endregion
 
