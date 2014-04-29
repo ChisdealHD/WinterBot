@@ -133,6 +133,10 @@ namespace Winter
             m_data = data;
             LastEvent = DateTime.Now;
         }
+        public TwitchClient()
+        {
+            LastEvent = DateTime.Now;
+        }
 
         /// <summary>
         /// Connect to the given stream, returns true if we successfully connected.  Note
@@ -146,6 +150,9 @@ namespace Winter
         {
             user = user.ToLower();
             m_stream = stream.ToLower();
+
+            if (m_data == null)
+                m_data = new TwitchUsers(m_stream);
 
             // Create client and hook up events.            
             m_client = new IrcClient();

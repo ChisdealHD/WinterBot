@@ -54,6 +54,17 @@ namespace Winter
             streamer.IsModerator = true;
         }
 
+
+        public TwitchUsers(string channel)
+        {
+            m_users = new Dictionary<string, TwitchUser>();
+
+            var streamer = GetUser(channel);
+            streamer.IsStreamer = true;
+            streamer.IsModerator = true;
+        }
+
+
         public TwitchUser GetUser(string username, bool create=true)
         {
             username = username.ToLower();
@@ -123,12 +134,16 @@ namespace Winter
         {
             get
             {
+                var bot = m_data.Bot;
+                if (bot == null)
+                    return false;
+
                 return m_data.Bot.IsRegular(this);
             }
             internal set
             {
                 var bot = m_data.Bot;
-                if (bot.IsRegular(this) != value)
+                if (bot != null && bot.IsRegular(this) != value)
                 {
                     if (value)
                         bot.AddRegular(this);

@@ -172,7 +172,7 @@ namespace Winter
         }
     }
 
-    static class NativeMethods
+    public static class NativeMethods
     {
         [DllImport("wininet.dll", SetLastError = true)]
         extern static bool InternetGetConnectedState(out int lpdwFlags, int dwReserved);
