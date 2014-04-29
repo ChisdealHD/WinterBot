@@ -199,6 +199,7 @@ namespace Winter
 
             UrlMatch match = new UrlMatch(sender, value);
             m_urlBanlist.Add(match);
+            sender.SendResponse(Importance.Med, "Added {0} to the url ban list.", value);
         }
 
         [BotCommand(AccessLevel.Mod, "purge", "purgespam")]
