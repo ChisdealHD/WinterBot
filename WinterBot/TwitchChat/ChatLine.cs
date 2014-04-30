@@ -17,7 +17,7 @@ namespace TwitchChat
 
     public class ChatLine : TextBlock
     {
-        static BitmapImage s_sub, s_timeout, s_ban, s_eight, s_logs, s_check;
+        static BitmapImage s_sub, s_timeout, s_ban, s_eight, s_logs, s_check, s_mod;
         public static readonly DependencyProperty ItemsProperty =
             DependencyProperty.Register(
                 "Value",
@@ -27,7 +27,7 @@ namespace TwitchChat
 
         Run m_message;
 
-
+        InlineUIContainer m_mod;
         TimeOutIcon m_timeout, m_eight, m_ban;
         Winter.TwitchUser m_user;
 
@@ -42,6 +42,7 @@ namespace TwitchChat
             s_eight = GetBitmapImage(TwitchChat.Properties.Resources.eight);
             s_logs = GetBitmapImage(TwitchChat.Properties.Resources.logs);
             s_check = GetBitmapImage(TwitchChat.Properties.Resources.check);
+            s_mod = GetBitmapImage(TwitchChat.Properties.Resources.mod);
         }
 
         private static BitmapImage GetBitmapImage(System.Drawing.Bitmap bitmap)
@@ -227,6 +228,12 @@ namespace TwitchChat
                 Inlines.Add(m_ban);
                 Inlines.Add(m_eight);
                 Inlines.Add(m_timeout);
+            }
+
+            if (m_user.IsModerator)
+            {
+                m_mod = new InlineUIContainer(GetImage(s_mod));
+                Inlines.Add(m_mod);
             }
 
             var user = msg.User;
