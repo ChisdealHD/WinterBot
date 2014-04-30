@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,10 +15,7 @@ namespace TwitchChat
         HashSet<string> m_ignore = new HashSet<string>();
         IniReader m_iniReader;
 
-        bool m_timeouts = false,
-            m_bans = true,
-            m_questions = true,
-            m_sounds = true;
+        private RegistryKey m_reg;
 
         public string Stream { get { return m_stream; } }
         public string User { get { return m_user; } }
@@ -25,15 +23,13 @@ namespace TwitchChat
 
         public string[] Highlights { get { return m_highlightList; } }
 
-        public bool ConfirmTimeouts { get { return m_timeouts; } }
-        public bool ConfirmBans { get { return m_bans; } }
-        public bool HighlightQuestions { get { return m_questions; } }
-        public bool PlaySounds { get { return m_sounds; } }
-
         public HashSet<string> Ignore { get { return m_ignore; } }
 
         public ChatOptions()
         {
+            RegistryKey key = Registry.CurrentUser.OpenSubKey("Software", true);
+            m_reg = key.CreateSubKey("TwitchChatClient");
+
             m_iniReader = new IniReader("options.ini");
 
             IniSection section = m_iniReader.GetSectionByName("stream");
@@ -58,15 +54,6 @@ namespace TwitchChat
             m_ignore = new HashSet<string>((from s in section.EnumerateRawStrings()
                                             where !string.IsNullOrWhiteSpace(s)
                                             select s.ToLower()));
-
-            section = m_iniReader.GetSectionByName("options");
-            if (section != null)
-            {
-                section.GetValue("ConfirmTimeouts", ref m_timeouts);
-                section.GetValue("ConfirmBans", ref m_bans);
-                section.GetValue("HighlightQuestions", ref m_questions);
-                section.GetValue("PlaySounds", ref m_sounds);
-            }
         }
 
         string DoReplacements(string value)
@@ -78,6 +65,26 @@ namespace TwitchChat
                 i = value.IndexOf("$stream");
             }
             return value;
+        }
+
+        internal bool GetOption(string key, bool defaultValue)
+        {
+            object res = m_reg.GetValue(key, defaultValue);
+            if (res == null)
+                return defaultValue;
+
+            if (res is bool)
+                return (bool)res;
+
+            if (res is string)
+                ((string)res).ParseBool(ref defaultValue);
+
+            return defaultValue;
+        }
+
+        public void SetOption(string key, bool value)
+        {
+            m_reg.SetValue(key, value);
         }
     }
 }

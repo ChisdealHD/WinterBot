@@ -47,10 +47,11 @@ namespace TwitchChat
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
             m_options = new ChatOptions();
-            PlaySounds = m_options.PlaySounds;
-            HighlightQuestions = m_options.HighlightQuestions;
-            ConfirmBans = m_options.ConfirmBans;
-            ConfirmTimeouts = m_options.ConfirmTimeouts;
+            m_playSounds = m_options.GetOption("PlaySounds", true);
+            m_highlightQuestions = m_options.GetOption("HighlightQuestions", true);
+            m_confirmBans = m_options.GetOption("ConfirmBans", true);
+            m_confirmTimeouts = m_options.GetOption("ConfirmTimeouts", false);
+            m_showIcons = m_options.GetOption("ShowIcons", true);
             m_channel = m_options.Stream;
             m_thread = new Thread(ThreadProc);
             m_thread.Start();
@@ -328,6 +329,7 @@ namespace TwitchChat
             {
                 if (m_playSounds != value)
                 {
+                    m_options.SetOption("PlaySounds", value);
                     m_playSounds = value;
                     OnPropertyChanged("PlaySounds");
                 }
@@ -344,6 +346,7 @@ namespace TwitchChat
             {
                 if (m_confirmTimeouts != value)
                 {
+                    m_options.SetOption("ConfirmTimeouts", value);
                     m_confirmTimeouts = value;
                     OnPropertyChanged("ConfirmTimeouts");
                 }
@@ -360,6 +363,7 @@ namespace TwitchChat
             {
                 if (m_confirmBans != value)
                 {
+                    m_options.SetOption("ConfirmBans", value);
                     m_confirmBans = value;
                     OnPropertyChanged("ConfirmBans");
                 }
@@ -377,6 +381,7 @@ namespace TwitchChat
             {
                 if (m_showIcons != value)
                 {
+                    m_options.SetOption("ShowIcons", value);
                     m_showIcons = value;
                     OnPropertyChanged("ShowIcons");
                 }
@@ -393,6 +398,7 @@ namespace TwitchChat
             {
                 if (m_highlightQuestions != value)
                 {
+                    m_options.SetOption("HighlightQuestions", value);
                     m_highlightQuestions = value;
                     OnPropertyChanged("HighlightQuestions");
                 }
