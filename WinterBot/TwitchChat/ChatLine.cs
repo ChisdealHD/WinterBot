@@ -26,8 +26,10 @@ namespace TwitchChat
                 typeof(ChatLine),
                 new PropertyMetadata(default(ChatItem), OnItemsPropertyChanged));
 
-        List<Run> m_messages = new List<Run>();
+        static Dictionary<TwitchEmoticon, BitmapImage> s_emotes = new Dictionary<TwitchEmoticon, BitmapImage>();
 
+        Run m_name;
+        List<Run> m_messages = new List<Run>();
         InlineUIContainer m_mod;
         TimeOutIcon m_timeout, m_eight, m_ban;
         Winter.TwitchUser m_user;
@@ -188,6 +190,9 @@ namespace TwitchChat
 
         void value_Clear()
         {
+            m_name.TextDecorations.Add(System.Windows.TextDecorations.Strikethrough);
+            m_name.Foreground = Brushes.Gray;
+
             foreach (var msg in m_messages)
             {
                 msg.TextDecorations.Add(System.Windows.TextDecorations.Strikethrough);
@@ -261,7 +266,8 @@ namespace TwitchChat
                 }
             }
 
-            Inlines.Add(new Run(user.Name) { FontWeight = FontWeights.Bold, Foreground = userColor, BaselineAlignment = BaselineAlignment.Center });
+            m_name = new Run(user.Name) { FontWeight = FontWeights.Bold, Foreground = userColor, BaselineAlignment = BaselineAlignment.Center };
+            Inlines.Add(m_name);
 
             if (msg.Type != ItemType.Action)
                 Inlines.Add(new Run(": ") { BaselineAlignment = BaselineAlignment.Center });
@@ -326,7 +332,6 @@ namespace TwitchChat
             }
         }
 
-        static Dictionary<TwitchEmoticon, BitmapImage> s_emotes = new Dictionary<TwitchEmoticon, BitmapImage>();
         private static Image GetImage(TwitchEmoticon emote)
         {
             BitmapImage src;
