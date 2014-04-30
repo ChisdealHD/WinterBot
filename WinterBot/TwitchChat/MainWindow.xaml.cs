@@ -394,6 +394,11 @@ namespace TwitchChat
         {
             m_channel = Channel.Text;
         }
+        private void AllItems_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            ScrollBar.ScrollToVerticalOffset(ScrollBar.VerticalOffset - e.Delta);
+            e.Handled = true;
+        }
         #endregion
     }
 }

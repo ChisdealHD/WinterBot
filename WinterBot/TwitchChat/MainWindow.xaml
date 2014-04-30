@@ -15,13 +15,7 @@
         </Grid.RowDefinitions>
 
         <ScrollViewer Grid.Row="1" Name="ScrollBar">
-            <ListView Name="AllItems" BorderThickness="0" Background="AliceBlue" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Messages}">
-
-                <ListBox.Template>
-                    <ControlTemplate>
-                    <ItemsPresenter />
-                    </ControlTemplate>
-                </ListBox.Template>
+            <ListView Name="AllItems" BorderThickness="0" Background="#E4E4E4" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="AllItems_PreviewMouseWheel" ItemsSource="{Binding Messages}">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <DockPanel ScrollViewer.HorizontalScrollBarVisibility="Disabled">
