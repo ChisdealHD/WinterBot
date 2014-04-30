@@ -148,15 +148,22 @@ namespace TwitchChat
             Inlines.Add(m_timeout);
 
             var user = msg.User;
-            var userColor = Brushes.Black;
             if (user.IsSubscriber)
-            {
                 Inlines.Add(GetImage(s_sub));
-                userColor = Brushes.Blue;
+
+
+            Brush userColor = Brushes.Black;
+            if (user.Color != null)
+            {
+                try
+                {
+                    userColor = (SolidColorBrush)(new BrushConverter().ConvertFrom(msg.User.Color));
+                }
+                catch (NotSupportedException)
+                {
+                }
             }
 
-            if (user.IsModerator)
-                userColor = Brushes.Red;
 
             Inlines.Add(new Run(user.Name) { FontWeight = FontWeights.Bold, Foreground = userColor, BaselineAlignment = BaselineAlignment.Center });
 
