@@ -28,7 +28,8 @@ namespace TwitchChat
         Run m_message;
 
 
-        InlineUIContainer m_timeout, m_eight, m_ban;
+        TimeOutIcon m_timeout, m_eight, m_ban;
+        Winter.TwitchUser m_user;
 
         MainWindow Controller { get { return Value != null ? Value.Controller : null; } }
 
@@ -79,6 +80,78 @@ namespace TwitchChat
         public ChatLine()
         {
             this.Initialized += ChatLine_Initialized;
+            ContextMenu = new ContextMenu();
+            ContextMenu.Opened += ContextMenu_Opened;
+        }
+
+        void ContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (ContextMenu.Items.Count > 0)
+                return;
+
+            if (m_user == null)
+            {
+                AddMenuItem("Copy", null, copy_line);
+                e.Handled = true;
+                return;
+            }
+
+            AddMenuItem("Copy", null, copy_line);
+            AddMenuItem("Chat Logs", s_logs, showlogs_Click);
+            AddMenuItem("Purge", null, purge_click);
+            AddMenuItem("Timeout", s_timeout, timeout_click);
+            AddMenuItem("8 Hour Timeout", s_eight, eight_click);
+            AddMenuItem("Ban", s_ban, ban_click);
+        }
+
+        private void copy_line(object sender, RoutedEventArgs e)
+        {
+            string text = null;
+            if (Value is ChatMessage)
+                text = ((ChatMessage)Value).Message;
+            else if (Value is StatusMessage)
+                text = ((StatusMessage)Value).Message;
+
+            if (text != null)
+                Clipboard.SetText(text);
+        }
+
+        private void showlogs_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start(string.Format("www.darkautumn.net/winter/chat.php?CHANNEL={0}&USER={1}", Controller.Channel.Text.ToLower(), m_user.Name));
+        }
+
+        private void timeout_click(object sender, RoutedEventArgs e)
+        {
+            if (Controller.Timeout(m_user, 600) && m_timeout != null)
+                m_timeout.ShowAlternate();
+        }
+
+        private void eight_click(object sender, RoutedEventArgs e)
+        {
+            if (Controller.Timeout(m_user, 28800) && m_eight != null)
+                m_eight.ShowAlternate();
+        }
+
+        private void ban_click(object sender, RoutedEventArgs e)
+        {
+            if (Controller.Ban(m_user) && m_ban != null)
+                m_ban.ShowAlternate();
+        }
+
+        private void purge_click(object sender, RoutedEventArgs e)
+        {
+            Controller.Timeout(m_user, 1);
+        }
+
+        private void AddMenuItem(string title, BitmapImage image, RoutedEventHandler handler)
+        {
+            MenuItem item = new MenuItem();
+            item.Header = title;
+            item.Click += handler;
+            if (image != null)
+                item.Icon = GetImage(image);
+            ContextMenu.Items.Add(item);
         }
 
         void ChatLine_Initialized(object sender, EventArgs e)
@@ -134,27 +207,31 @@ namespace TwitchChat
 
         private void SetMessage(ChatMessage msg)
         {
+            m_user = msg.User;
             this.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+
+            m_ban = new TimeOutIcon(GetImage(s_ban), GetImage(s_check));
+            m_ban.Clicked += m_ban_Clicked;
+            m_ban.Restore += Unban;
+
+            m_eight = new TimeOutIcon(GetImage(s_eight), GetImage(s_check));
+            m_eight.Clicked += m_eight_Clicked;
+            m_eight.Restore += Unban;
+
+            m_timeout = new TimeOutIcon(GetImage(s_timeout), GetImage(s_check));
+            m_timeout.Clicked += m_timeout_Clicked;
+            m_timeout.Restore += Unban;
 
             if (Controller.ShowIcons)
             {
-                m_ban = new InlineUIContainer(GetImage(s_ban));
-                m_ban.MouseUp += ban_MouseUp;
                 Inlines.Add(m_ban);
-
-                m_eight = new InlineUIContainer(GetImage(s_eight));
-                m_eight.MouseUp += eight_MouseUp;
                 Inlines.Add(m_eight);
-
-                m_timeout = new InlineUIContainer(GetImage(s_timeout));
-                m_timeout.MouseUp += timeout_MouseUp;
                 Inlines.Add(m_timeout);
             }
 
             var user = msg.User;
             if (user.IsSubscriber)
                 Inlines.Add(GetImage(s_sub));
-
 
             Brush userColor = Brushes.Black;
             if (user.Color != null)
@@ -185,41 +262,34 @@ namespace TwitchChat
             }
         }
 
-        private void timeout_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        void m_timeout_Clicked(TimeOutIcon obj)
         {
-            var value = Value;
-            var user = value != null ? value.User : null;
-
-            if (user != null)
-            {
-                if (Controller.Timeout(user, 600))
-                    m_timeout.Child = GetImage(s_check);
-            }
+            if (m_user != null)
+                if (Controller.Timeout(m_user, 600))
+                    m_timeout.ShowAlternate();
         }
 
-        private void eight_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        void m_eight_Clicked(TimeOutIcon obj)
         {
-            var value = Value;
-            var user = value != null ? value.User : null;
-
-            if (user != null)
-            {
-                if (Controller.Timeout(user, 28800))
-                    m_eight.Child = GetImage(s_check);
-            }
+            if (m_user != null)
+                if (Controller.Timeout(m_user, 28800))
+                    m_eight.ShowAlternate();
         }
 
-        private void ban_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        void Unban(TimeOutIcon icon)
         {
-            var value = Value;
-            var user = value != null ? value.User : null;
-
-            if (user != null)
-            {
-                if (Controller.Ban(user))
-                    m_ban.Child = GetImage(s_check);
-            }
+            Controller.Unban(m_user);
+            icon.ShowIcon();
         }
+
+        void m_ban_Clicked(TimeOutIcon icon)
+        {
+            if (m_user != null)
+                if (Controller.Ban(m_user))
+                    m_ban.ShowAlternate();
+        }
+
+
 
         private static Image GetImage(BitmapImage bitmap)
         {
@@ -229,6 +299,53 @@ namespace TwitchChat
             img.Height = 18;
             img.VerticalAlignment = VerticalAlignment.Bottom;
             return img;
+        }
+    }
+
+    class TimeOutIcon : InlineUIContainer
+    {
+        UIElement m_icon, m_check;
+
+        public event Action<TimeOutIcon> Clicked;
+        public event Action<TimeOutIcon> Restore;
+        
+        public TimeOutIcon(UIElement icon, UIElement check)
+            : base(icon)
+        {
+            m_icon = icon;
+            m_check = check;
+
+            this.MouseUp += TimeOutIcon_MouseUp;
+        }
+
+        void TimeOutIcon_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            Click();
+        }
+
+        public void Click()
+        {
+            if (Child == m_icon)
+            {
+                var evt = Clicked;
+                if (evt != null)
+                    evt(this);
+            }
+            else
+            {
+                var evt = Restore;
+                if (evt != null)
+                    evt(this);
+            }
+        }
+
+        public void ShowAlternate()
+        {
+            Child = m_check;
+        }
+        public void ShowIcon()
+        {
+            Child = m_icon;
         }
     }
 }

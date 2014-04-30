@@ -86,6 +86,12 @@ namespace TwitchChat
             }
         }
 
+        public void Unban(TwitchUser user)
+        {
+            m_twitch.Unban(user.Name);
+            WriteStatus(string.Format("Unbanned user {0}.", user.Name));
+        }
+
         public bool Ban(TwitchUser user)
         {
             MessageBoxResult res = MessageBoxResult.Yes;
@@ -95,6 +101,7 @@ namespace TwitchChat
             if (res == MessageBoxResult.Yes)
             {
                 m_twitch.Ban(user.Name);
+                WriteStatus(string.Format("Banned user {0}.", user.Name));
                 return true;
             }
 
@@ -103,13 +110,22 @@ namespace TwitchChat
 
         public bool Timeout(TwitchUser user, int duration)
         {
+            if (duration <= 0)
+                duration = 1;
+
             MessageBoxResult res = MessageBoxResult.Yes;
-            if (ConfirmTimeouts)
+            if (ConfirmTimeouts && duration > 1)
                 res = MessageBox.Show(string.Format("Timeout user {0}?", user.Name), "Timeout User", MessageBoxButton.YesNo);
 
             if (res == MessageBoxResult.Yes)
             {
                 m_twitch.Timeout(user.Name, duration);
+
+                if (duration > 1)
+                    WriteStatus(string.Format("Timed out user {0} for {1} seconds", user.Name, duration));
+                else
+                    WriteStatus(string.Format("Purged user {0}.", user.Name));
+
                 return true;
             }
 
@@ -239,7 +255,9 @@ namespace TwitchChat
         #region Event Handlers
         private void SubscribeHandler(TwitchClient sender, TwitchUser user)
         {
-            m_subSound.Play();
+            if (PlaySounds)
+                m_subSound.Play();
+
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action<TwitchUser>(DispatcherUserSubscribed), user);
         }
 
@@ -248,7 +266,7 @@ namespace TwitchChat
             if (m_options.Ignore.Contains(user.Name))
                 return;
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(DispatcherAddMessage), new ChatAction(this, user, text));
+            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new ChatAction(this, user, text));
         }
 
         private void ChatMessageReceived(TwitchClient sender, TwitchUser user, string text)
@@ -257,16 +275,19 @@ namespace TwitchChat
                 return;
 
             bool question = false;
-            foreach (var highlight in m_options.Highlights)
+            if (HighlightQuestions)
             {
-                if (text.ToLower().Contains(highlight))
+                foreach (var highlight in m_options.Highlights)
                 {
-                    question = true;
-                    break;
+                    if (text.ToLower().Contains(highlight))
+                    {
+                        question = true;
+                        break;
+                    }
                 }
             }
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(DispatcherAddMessage), new ChatMessage(this, user, text, question));
+            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new ChatMessage(this, user, text, question));
         }
 
 
@@ -295,7 +316,7 @@ namespace TwitchChat
             if (args.Length > 0)
                 msg = string.Format(msg, args);
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(DispatcherAddMessage), new StatusMessage(this, msg));
+            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new StatusMessage(this, msg));
         }
 
 
@@ -311,18 +332,16 @@ namespace TwitchChat
         }
 
 
-        void DispatcherAddMessage(ChatItem msg)
-        {
-            bool gotoEnd = ScrollBar.VerticalOffset == ScrollBar.ScrollableHeight;
-            Messages.Add(msg);
-            if (gotoEnd)
-                ScrollBar.ScrollToEnd();
-        }
 
         private void DispatcherUserSubscribed(TwitchUser user)
         {
+            AddItem(new Subscriber(this, user));
+        }
+
+        void AddItem(ChatItem item)
+        {
             bool gotoEnd = ScrollBar.VerticalOffset == ScrollBar.ScrollableHeight;
-            Messages.Add(new Subscriber(this, user));
+            Messages.Add(item);
             if (gotoEnd)
                 ScrollBar.ScrollToEnd();
         }
@@ -432,6 +451,7 @@ namespace TwitchChat
             Application.Current.Shutdown();
             Environment.Exit(0);
         }
+
         private void OnReconnect(object sender, RoutedEventArgs e)
         {
             m_reconnect = true;
@@ -462,11 +482,14 @@ namespace TwitchChat
                 string text = Chat.Text;
                 text = text.Replace('\n', ' ');
                 m_twitch.SendMessage(Importance.High, text);
+
                 Chat.Text = "";
+                
+                var user = m_twitch.ChannelData.GetUser(m_options.User);
+                AddItem(new ChatMessage(this, ItemType.Message, user, text));
                 return;
             }
         }
         #endregion
-
     }
 }

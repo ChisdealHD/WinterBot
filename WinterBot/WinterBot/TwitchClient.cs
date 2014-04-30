@@ -284,6 +284,15 @@ namespace Winter
             SendMessage(Importance.High, string.Format(".ban {0}", user));
         }
 
+        public void Unban(string user)
+        {
+            // Sleep for 100 msec so that our message is sure to be received AFTER other users
+            // get the message we want to clear.  Also bypass flood check.
+            Thread.Sleep(100);
+            TwitchSource.Log.UnbanUser(user);
+            SendMessage(Importance.High, string.Format(".unban {0}", user));
+        }
+
         private bool CanSendMessage(Importance importance, string text)
         {
             if (!m_flood.ShouldSendMessage(importance, text))

@@ -59,17 +59,23 @@ namespace WinterBotLogging
         {
             WriteEvent(8, user);
         }
-        
+
         [Event(9, Keywords = Keywords.Messages)]
-        public void ReceivedMessage(string name, string text)
+        public void UnbanUser(string user)
         {
-            WriteEvent(9, name, text);
+            WriteEvent(9, user);
         }
         
         [Event(10, Keywords = Keywords.Messages)]
-        public void ReceivedPrivateMessage(string name, string text)
+        public void ReceivedMessage(string name, string text)
         {
             WriteEvent(10, name, text);
+        }
+        
+        [Event(11, Keywords = Keywords.Messages)]
+        public void ReceivedPrivateMessage(string name, string text)
+        {
+            WriteEvent(11, name, text);
         }
 
         public class Keywords
