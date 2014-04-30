@@ -54,6 +54,18 @@ namespace Winter
 
             m_cacheFolder = folder;
         }
+        
+        public void EnsureEmoticonsLoaded()
+        {
+            lock (m_sync)
+            {
+                if (!m_loadedSets.Contains(-1))
+                {
+                    ThreadPool.QueueUserWorkItem(DownloadSet, new Tuple<IEnumerable<TwitchEmoticon>, int>(ImageSet.DefaultSet, -1));
+                    m_loadedSets.Add(-1);
+                }
+            }
+        }
 
         public void EnsureEmoticonsLoaded(int set)
         {

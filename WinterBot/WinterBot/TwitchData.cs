@@ -170,8 +170,14 @@ namespace Winter
         {
             var sets = IconSet;
             if (sets != null)
+            {
                 foreach (int i in sets)
                     TwitchHttp.Instance.EnsureEmoticonsLoaded(i);
+            }
+            else
+            {
+                TwitchHttp.Instance.EnsureEmoticonsLoaded();
+            }
         }
     }
 }
