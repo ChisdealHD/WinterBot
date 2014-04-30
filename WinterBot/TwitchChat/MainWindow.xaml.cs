@@ -140,8 +140,8 @@ namespace TwitchChat
                 return;
 
             const int pingDelay = 20;
-            DateTime lastPing = DateTime.UtcNow;
-            DateTime lastPurge = DateTime.UtcNow;
+            DateTime lastPing = DateTime.Now;
+            DateTime lastPurge = DateTime.Now;
             while (true)
             {
                 Thread.Sleep(1000);
@@ -150,7 +150,7 @@ namespace TwitchChat
                 if (lastEvent.Elapsed().TotalSeconds >= pingDelay && lastPing.Elapsed().TotalSeconds >= pingDelay)
                 {
                     m_twitch.Ping();
-                    lastPing = DateTime.UtcNow;
+                    lastPing = DateTime.Now;
                 }
 
                 if (lastEvent.Elapsed().TotalMinutes >= 1)
@@ -175,7 +175,7 @@ namespace TwitchChat
 
                 if (lastPurge.Elapsed().TotalMinutes >= 5)
                 {
-                    lastPurge = DateTime.UtcNow;
+                    lastPurge = DateTime.Now;
                     Dispatcher.Invoke(DispatcherPriority.Normal, new Action(ClearMessages));
                 }
             }
@@ -183,7 +183,7 @@ namespace TwitchChat
 
         private void ClearMessages()
         {
-            DateTime now = DateTime.UtcNow;
+            DateTime now = DateTime.Now;
             while (Messages.Count > 500 && (now - Messages[0].Time).TotalMinutes >= 5)
                 Messages.RemoveAt(0);
         }

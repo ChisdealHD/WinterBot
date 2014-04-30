@@ -32,7 +32,7 @@ namespace TwitchChat
         {
             Controller = controller;
             Type = type;
-            Time = DateTime.UtcNow;
+            Time = DateTime.Now;
         }
 
         public void ClearChat()
