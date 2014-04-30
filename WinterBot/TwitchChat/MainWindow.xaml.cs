@@ -52,7 +52,10 @@ namespace TwitchChat
             m_confirmBans = m_options.GetOption("ConfirmBans", true);
             m_confirmTimeouts = m_options.GetOption("ConfirmTimeouts", false);
             m_showIcons = m_options.GetOption("ShowIcons", true);
-            m_channel = m_options.Stream;
+            m_channel = m_options.Stream.ToLower();
+            TwitchHttp.Instance.PollChannelData(m_channel);
+            TwitchHttp.Instance.ChannelDataReceived += Instance_ChannelDataReceived;
+
             m_thread = new Thread(ThreadProc);
             m_thread.Start();
 
@@ -266,6 +269,22 @@ namespace TwitchChat
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(DispatcherAddMessage), new ChatMessage(this, user, text, question));
         }
 
+
+        void Instance_ChannelDataReceived(string arg1, List<TwitchChannelResponse> arg2)
+        {
+            string text = "OFFLINE";
+            if (arg2.Count == 1)
+                text = arg2[0].channel_count.ToString() + " viewers";
+
+            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<string>(SetViewers), text);
+        }
+
+        private void SetViewers(string value)
+        {
+            Viewers.Content = value;
+        }
+
+
         private void ClearChatHandler(TwitchClient sender, TwitchUser user)
         {
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action<TwitchUser>(DispatcherClearChat), user);
@@ -425,7 +444,9 @@ namespace TwitchChat
 
         private void Channel_TextChanged(object sender, TextChangedEventArgs e)
         {
-            m_channel = Channel.Text;
+            TwitchHttp.Instance.StopPolling();
+            m_channel = Channel.Text.ToLower();
+            TwitchHttp.Instance.PollChannelData(m_channel);
         }
         private void AllItems_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
