@@ -29,7 +29,7 @@ namespace TwitchChat
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions;
+        bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions, m_showIcons;
         Thread m_thread;
         ChatOptions m_options;
         TwitchClient m_twitch;
@@ -366,6 +366,22 @@ namespace TwitchChat
             }
         }
 
+
+        public bool ShowIcons
+        {
+            get
+            {
+                return m_showIcons;
+            }
+            set
+            {
+                if (m_showIcons != value)
+                {
+                    m_showIcons = value;
+                    OnPropertyChanged("ShowIcons");
+                }
+            }
+        }
 
         public bool HighlightQuestions
         {

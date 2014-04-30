@@ -135,17 +135,21 @@ namespace TwitchChat
         private void SetMessage(ChatMessage msg)
         {
             this.VerticalAlignment = System.Windows.VerticalAlignment.Center;
-            m_ban = new InlineUIContainer(GetImage(s_ban));
-            m_ban.MouseUp += ban_MouseUp;
-            Inlines.Add(m_ban);
 
-            m_eight = new InlineUIContainer(GetImage(s_eight));
-            m_eight.MouseUp += eight_MouseUp;
-            Inlines.Add(m_eight);
+            if (Controller.ShowIcons)
+            {
+                m_ban = new InlineUIContainer(GetImage(s_ban));
+                m_ban.MouseUp += ban_MouseUp;
+                Inlines.Add(m_ban);
 
-            m_timeout = new InlineUIContainer(GetImage(s_timeout));
-            m_timeout.MouseUp += timeout_MouseUp;
-            Inlines.Add(m_timeout);
+                m_eight = new InlineUIContainer(GetImage(s_eight));
+                m_eight.MouseUp += eight_MouseUp;
+                Inlines.Add(m_eight);
+
+                m_timeout = new InlineUIContainer(GetImage(s_timeout));
+                m_timeout.MouseUp += timeout_MouseUp;
+                Inlines.Add(m_timeout);
+            }
 
             var user = msg.User;
             if (user.IsSubscriber)
