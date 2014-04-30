@@ -7,7 +7,7 @@ namespace Winter
         public string self { get; set; }
     }
 
-    public class Image
+    public class JsonImage
     {
         public int? width { get; set; }
         public int? height { get; set; }
@@ -18,7 +18,7 @@ namespace Winter
     public class Emoticon
     {
         public string regex { get; set; }
-        public List<Image> images { get; set; }
+        public List<JsonImage> images { get; set; }
     }
 
     public class TwitchEmoticonResponse

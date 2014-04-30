@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading;
 using WinterBotLogging;
 
@@ -20,13 +21,17 @@ namespace Winter
 
         HashSet<string> m_channelData = new HashSet<string>();
         Dictionary<string, DateTime> m_channelFollowers = new Dictionary<string, DateTime>();
+        HashSet<int> m_loadedSets = new HashSet<int>();
 
         object m_sync = new object();
 
         public TwitchImageSet ImageSet { get; private set; }
+        public string EmoticonFolder { get; private set; }
 
         public event Action<string, List<TwitchChannelResponse>> ChannelDataReceived;
         public event Action<string, IEnumerable<string>> UserFollowed;
+
+        string m_cacheFolder;
 
 
         TwitchHttp()
@@ -38,6 +43,82 @@ namespace Winter
             string botDll = typeof(WinterBot).Assembly.Location;
             var verInfo = FileVersionInfo.GetVersionInfo(botDll);
             m_userAgent = string.Format("WinterBot/{0}.{1}.0.0", verInfo.ProductMajorPart, verInfo.FileMinorPart);
+
+            SetEmoticonCache(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Twitch"));
+        }
+
+        public void SetEmoticonCache(string folder)
+        {
+            if (!string.IsNullOrEmpty(folder))
+                Directory.CreateDirectory(folder);
+
+            m_cacheFolder = folder;
+        }
+
+        public void EnsureEmoticonsLoaded(int set)
+        {
+            if (ImageSet == null || string.IsNullOrEmpty(m_cacheFolder))
+                return;
+
+            lock (m_sync)
+            {
+                if (!m_loadedSets.Contains(-1))
+                {
+                    ThreadPool.QueueUserWorkItem(DownloadSet, new Tuple<IEnumerable<TwitchEmoticon>, int>(ImageSet.DefaultSet, -1));
+                    m_loadedSets.Add(-1);
+                }
+
+                if (!m_loadedSets.Contains(set))
+                {
+                    ThreadPool.QueueUserWorkItem(DownloadSet, new Tuple<IEnumerable<TwitchEmoticon>, int>(ImageSet.GetEmoticons(set), set));
+                    m_loadedSets.Add(set);
+                }
+            }
+        }
+
+        void DownloadSet(object param)
+        {
+            var tmp = (Tuple<IEnumerable<TwitchEmoticon>, int>)param;
+            IEnumerable<TwitchEmoticon> set = tmp.Item1;
+            int id = tmp.Item2;
+
+            string cache = m_cacheFolder;
+            if (string.IsNullOrWhiteSpace(cache))
+                return;
+
+            WebClient client = new WebClient();
+            foreach (var emote in set)
+            {
+                if (!string.IsNullOrWhiteSpace(emote.LocalFile))
+                    continue;
+
+                string filename = GetUrlFilename(emote.Url);
+                filename = Path.Combine(cache, filename);
+                if (File.Exists(filename))
+                {
+                    emote.LocalFile = filename;
+                    continue;
+                }
+
+                try
+                {
+                    client.DownloadFile(emote.Url, filename);
+                    emote.LocalFile = filename;
+                }
+                catch (Exception e)
+                {
+                    
+                }
+            }
+        }
+
+        private static string GetUrlFilename(string url)
+        {
+            string filename = string.Empty;
+            int i = url.LastIndexOf('/');
+            if (i > -1)
+                filename = url.Substring(i + 1);
+            return filename;
         }
 
         public void PollChannelData(string channel)
@@ -276,8 +357,8 @@ namespace Winter
                 return;
             }
 
-            HashSet<string> defaultSet = new HashSet<string>();
-            Dictionary<int, HashSet<string>> imageSets = new Dictionary<int, HashSet<string>>();
+            List<TwitchEmoticon> defaultSet = new List<TwitchEmoticon>();
+            List<List<TwitchEmoticon>> imageSets = new List<List<TwitchEmoticon>>(4096);
 
             foreach (var emote in emotes.emoticons)
             {
@@ -285,16 +366,24 @@ namespace Winter
                 {
                     if (image.emoticon_set == null)
                     {
-                        defaultSet.Add(emote.regex);
+                        defaultSet.Add(new TwitchEmoticon(emote, image, true));
                     }
                     else
                     {
                         int setId = (int)image.emoticon_set;
-                        HashSet<string> set;
-                        if (!imageSets.TryGetValue(setId, out set))
-                            imageSets[setId] = set = new HashSet<string>();
 
-                        set.Add(emote.regex);
+                        Debug.Assert(setId <= 6000);
+                        if (setId > 6000)
+                            continue;
+
+                        while (setId >= imageSets.Count)
+                            imageSets.Add(null);
+
+                        List<TwitchEmoticon> set = imageSets[setId];
+                        if (set == null)
+                            imageSets[setId] = set = new List<TwitchEmoticon>();
+
+                        set.Add(new TwitchEmoticon(emote, image, false));
                     }
                 }
             }
@@ -304,19 +393,118 @@ namespace Winter
 
         internal void StopPollingFollowers(string m_channel)
         {
-            throw new NotImplementedException();
+            lock (m_sync)
+                m_channelFollowers.Clear();
+        }
+    }
+
+    public class TwitchEmoticon
+    {
+        Regex m_reg;
+
+        internal TwitchEmoticon(Emoticon e, JsonImage i, bool deflt)
+        {
+            Name = e.regex.Trim();
+            Width = i.width;
+            Height = i.height;
+            Url = i.url;
+            Default = deflt;
+
+            if (Name.IsRegex())
+            {
+                Name = Name.Replace(@"&gt\;", ">").Replace(@"&lt\;", "<");
+                try
+                {
+                    m_reg = new Regex(Name);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        public string Name { get; set; }
+
+        public int? Width { get; set; }
+
+        public int? Height { get; set; }
+
+        public string Url { get; set; }
+
+        public string LocalFile { get; set; }
+
+        public bool Default { get; set; }
+
+        public IEnumerable<Tuple<TwitchEmoticon, int, int>> Find(string str)
+        {
+            if (m_reg != null)
+            {
+                var matches = m_reg.Matches(str);
+                foreach (Match match in matches)
+                    yield return new Tuple<TwitchEmoticon, int, int>(this, match.Index, match.Length);
+            }
+            else
+            {
+                int i = -1;
+
+                while (i + Name.Length <= str.Length)
+                {
+                    i = str.IndexOf(Name, i + 1);
+                    if (i == -1)
+                        break;
+
+                    yield return new Tuple<TwitchEmoticon, int, int>(this, i, Name.Length);
+                }
+            }
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 
     public class TwitchImageSet
     {
-        HashSet<string> m_defaultImageSet;
-        Dictionary<int, HashSet<string>> m_imageSets;
+        List<TwitchEmoticon> m_defaultImageSet;
+        List<List<TwitchEmoticon>> m_imageSets;
 
-        public TwitchImageSet(HashSet<string> defaultSet, Dictionary<int, HashSet<string>> imageSets)
+        public IEnumerable<TwitchEmoticon> DefaultSet { get { return m_defaultImageSet; } }
+
+        public IEnumerable<int> Sets
+        {
+            get
+            {
+                for (int i = 0; i < m_imageSets.Count; ++i)
+                {
+                    if (m_imageSets[i] != null)
+                        yield return i;
+                }
+            }
+        }
+
+        public TwitchImageSet(List<TwitchEmoticon> defaultSet, List<List<TwitchEmoticon>> imageSets)
         {
             m_defaultImageSet = defaultSet;
             m_imageSets = imageSets;
+        }
+        
+        public IEnumerable<Tuple<TwitchEmoticon, int, int>> Find(string str, int[] imageSets)
+        {
+            if (imageSets != null)
+                foreach (int set in imageSets)
+                    foreach (var emoticon in GetImageSet(set))
+                        foreach (var found in emoticon.Find(str))
+                            yield return found;
+
+            foreach (var emoticon in m_defaultImageSet)
+                foreach (var found in emoticon.Find(str))
+                    yield return found;
+        }
+
+        public IEnumerable<TwitchEmoticon> GetEmoticons(int set)
+        {
+            return GetImageSet(set);
         }
 
         public bool TooManySymbols(string message, int max, int[] userSets)
@@ -325,7 +513,7 @@ namespace Winter
 
             if (m_defaultImageSet != null)
             {
-                foreach (string item in m_defaultImageSet)
+                foreach (string item in m_defaultImageSet.Select(p=>p.Name))
                 {
                     count += CountEmote(message, item);
                     if (count > max)
@@ -337,11 +525,7 @@ namespace Winter
             {
                 foreach (int setId in userSets)
                 {
-                    HashSet<string> imageSet;
-                    if (!m_imageSets.TryGetValue(setId, out imageSet))
-                        continue;
-
-                    foreach (string item in imageSet)
+                    foreach (string item in GetImageSet(setId).Select(p=>p.Name))
                     {
                         count += CountEmote(message, item);
                         if (count > max)
@@ -351,6 +535,15 @@ namespace Winter
             }
 
             return false;
+        }
+
+        static List<TwitchEmoticon> s_emptyList = new List<TwitchEmoticon>(0);
+        private List<TwitchEmoticon> GetImageSet(int setId)
+        {
+            if (setId >= m_imageSets.Count)
+                return s_emptyList;
+
+            return m_imageSets[setId] ?? s_emptyList;
         }
 
         int CountEmote(string message, string item)

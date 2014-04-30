@@ -176,7 +176,7 @@ namespace TwitchChat
                 if (lastPurge.Elapsed().TotalMinutes >= 5)
                 {
                     lastPurge = DateTime.Now;
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(ClearMessages));
+                    Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(ClearMessages));
                 }
             }
         }
@@ -258,7 +258,7 @@ namespace TwitchChat
             if (PlaySounds)
                 m_subSound.Play();
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<TwitchUser>(DispatcherUserSubscribed), user);
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action<TwitchUser>(DispatcherUserSubscribed), user);
         }
 
         private void ChatActionReceived(TwitchClient sender, TwitchUser user, string text)
@@ -266,7 +266,8 @@ namespace TwitchChat
             if (m_options.Ignore.Contains(user.Name))
                 return;
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new ChatAction(this, user, text));
+            user.EnsureIconsDownloaded();
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new ChatAction(this, user, text));
         }
 
         private void ChatMessageReceived(TwitchClient sender, TwitchUser user, string text)
@@ -274,6 +275,7 @@ namespace TwitchChat
             if (m_options.Ignore.Contains(user.Name))
                 return;
 
+            user.EnsureIconsDownloaded();
             bool question = false;
             if (HighlightQuestions)
             {
@@ -287,7 +289,7 @@ namespace TwitchChat
                 }
             }
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new ChatMessage(this, user, text, question));
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new ChatMessage(this, user, text, question));
         }
 
 
@@ -297,7 +299,7 @@ namespace TwitchChat
             if (arg2.Count == 1)
                 text = arg2[0].channel_count.ToString() + " viewers";
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<string>(SetViewers), text);
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action<string>(SetViewers), text);
         }
 
         private void SetViewers(string value)
@@ -308,7 +310,7 @@ namespace TwitchChat
 
         private void ClearChatHandler(TwitchClient sender, TwitchUser user)
         {
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<TwitchUser>(DispatcherClearChat), user);
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action<TwitchUser>(DispatcherClearChat), user);
         }
 
         void WriteStatus(string msg, params string[] args)
@@ -316,7 +318,7 @@ namespace TwitchChat
             if (args.Length > 0)
                 msg = string.Format(msg, args);
 
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new StatusMessage(this, msg));
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new StatusMessage(this, msg));
         }
 
 

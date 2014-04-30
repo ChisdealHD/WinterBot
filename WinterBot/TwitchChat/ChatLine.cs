@@ -11,6 +11,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using TwitchChat.Properties;
+using Winter;
 
 namespace TwitchChat
 {
@@ -25,7 +26,7 @@ namespace TwitchChat
                 typeof(ChatLine),
                 new PropertyMetadata(default(ChatItem), OnItemsPropertyChanged));
 
-        Run m_message;
+        List<Run> m_messages = new List<Run>();
 
         InlineUIContainer m_mod;
         TimeOutIcon m_timeout, m_eight, m_ban;
@@ -187,11 +188,11 @@ namespace TwitchChat
 
         void value_Clear()
         {
-            if (m_message == null)
-                return;
-
-            m_message.TextDecorations.Add(System.Windows.TextDecorations.Strikethrough);
-            m_message.Foreground = Brushes.Gray;
+            foreach (var msg in m_messages)
+            {
+                msg.TextDecorations.Add(System.Windows.TextDecorations.Strikethrough);
+                msg.Foreground = Brushes.Gray;
+            }
         }
 
         private void SetSubscriber(Subscriber subscriber)
@@ -212,15 +213,18 @@ namespace TwitchChat
             this.VerticalAlignment = System.Windows.VerticalAlignment.Center;
 
             m_ban = new TimeOutIcon(GetImage(s_ban), GetImage(s_check));
+            m_ban.BaselineAlignment = BaselineAlignment.Center;
             m_ban.Clicked += m_ban_Clicked;
             m_ban.Restore += Unban;
 
             m_eight = new TimeOutIcon(GetImage(s_eight), GetImage(s_check));
+            m_eight.BaselineAlignment = BaselineAlignment.Center;
             m_eight.Clicked += m_eight_Clicked;
             m_eight.Restore += Unban;
 
             m_timeout = new TimeOutIcon(GetImage(s_timeout), GetImage(s_check));
             m_timeout.Clicked += m_timeout_Clicked;
+            m_timeout.BaselineAlignment = BaselineAlignment.Center;
             m_timeout.Restore += Unban;
 
             if (Controller.ShowIcons)
@@ -233,12 +237,17 @@ namespace TwitchChat
             if (m_user.IsModerator)
             {
                 m_mod = new InlineUIContainer(GetImage(s_mod));
+                m_mod.BaselineAlignment = BaselineAlignment.Center;
                 Inlines.Add(m_mod);
             }
 
             var user = msg.User;
             if (user.IsSubscriber)
-                Inlines.Add(GetImage(s_sub));
+            {
+                var sub = new InlineUIContainer(GetImage(s_sub));
+                sub.BaselineAlignment = BaselineAlignment.Center;
+                Inlines.Add(sub);
+            }
 
             Brush userColor = Brushes.Black;
             if (user.Color != null)
@@ -257,16 +266,91 @@ namespace TwitchChat
             if (msg.Type != ItemType.Action)
                 Inlines.Add(new Run(": ") { BaselineAlignment = BaselineAlignment.Center });
 
-            if (msg.Type == ItemType.Question)
+            BuildText(msg);
+        }
+
+        private void BuildText(ChatMessage msg)
+        {
+            var text = msg.Message;
+            var weight = (msg.Type == ItemType.Question) ? FontWeights.Bold : FontWeights.Normal;
+
+            var set = TwitchHttp.Instance.ImageSet;
+            if (set == null)   
             {
-                m_message = new Run(msg.Message) { FontWeight = FontWeights.Bold, BaselineAlignment = BaselineAlignment.Center };
-                Inlines.Add(m_message);
+                var run = new Run(text) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                m_messages.Add(run);
+                Inlines.Add(run);
+                return;
             }
-            else
+
+            int curr = 0;
+            var emoticons = from item in set.Find(text, m_user.IconSet)
+                            orderby item.Item2, item.Item3 descending, item.Item1.Default
+                            select item;
+
+            foreach (var item in emoticons)
             {
-                m_message = new Run(msg.Message) { BaselineAlignment = BaselineAlignment.Center };
-                Inlines.Add(m_message);
+                var emote = item.Item1;
+                var start = item.Item2;
+                var len = item.Item3;
+
+                if (string.IsNullOrEmpty(emote.LocalFile))
+                    continue;
+
+                if (start < curr)
+                    continue;
+
+                if (curr < start)
+                {
+                    var run = new Run(text.Slice(curr, start)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                    m_messages.Add(run);
+                    Inlines.Add(run);
+                }
+
+                Image img = GetImage(emote);
+
+                if (img != null)
+                {
+                    InlineUIContainer cont = new InlineUIContainer(img);
+                    Inlines.Add(cont);
+                }
+
+                curr = start + len;
             }
+
+            if (curr < text.Length)
+            {
+                var run = new Run(text.Substring(curr)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                m_messages.Add(run);
+                Inlines.Add(run);
+            }
+        }
+
+        static Dictionary<TwitchEmoticon, BitmapImage> s_emotes = new Dictionary<TwitchEmoticon, BitmapImage>();
+        private static Image GetImage(TwitchEmoticon emote)
+        {
+            BitmapImage src;
+            if (!s_emotes.TryGetValue(emote, out src))
+            {
+                if (string.IsNullOrWhiteSpace(emote.LocalFile) || !File.Exists(emote.LocalFile))
+                    return null;
+
+                src = new BitmapImage();
+                src.BeginInit();
+                src.UriSource = new Uri(emote.LocalFile, UriKind.RelativeOrAbsolute);
+                src.EndInit();
+            }
+
+            Image img = new Image();
+            img.Source = src;
+            if (emote.Height != null)
+                img.Height = (int)emote.Height;
+
+            if (emote.Width != null)
+                img.Width = (int)emote.Width;
+
+            img.Stretch = Stretch.Uniform;
+            return img;
         }
 
         void m_timeout_Clicked(TimeOutIcon obj)

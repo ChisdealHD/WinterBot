@@ -165,5 +165,13 @@ namespace Winter
         {
             return Name;
         }
+
+        public void EnsureIconsDownloaded()
+        {
+            var sets = IconSet;
+            if (sets != null)
+                foreach (int i in sets)
+                    TwitchHttp.Instance.EnsureEmoticonsLoaded(i);
+        }
     }
 }
