@@ -164,7 +164,6 @@ namespace TwitchChat
                 }
             }
 
-
             Inlines.Add(new Run(user.Name) { FontWeight = FontWeights.Bold, Foreground = userColor, BaselineAlignment = BaselineAlignment.Center });
 
             if (msg.Type != ItemType.Action)
@@ -189,8 +188,8 @@ namespace TwitchChat
 
             if (user != null)
             {
-                Controller.Timeout(user, 600);
-                m_timeout.Child = GetImage(s_check);
+                if (Controller.Timeout(user, 600))
+                    m_timeout.Child = GetImage(s_check);
             }
         }
 
@@ -201,8 +200,8 @@ namespace TwitchChat
 
             if (user != null)
             {
-                Controller.Timeout(user, 28800);
-                m_eight.Child = GetImage(s_check);
+                if (Controller.Timeout(user, 28800))
+                    m_eight.Child = GetImage(s_check);
             }
         }
 
@@ -213,8 +212,8 @@ namespace TwitchChat
 
             if (user != null)
             {
-                Controller.Ban(user);
-                m_ban.Child = GetImage(s_check);
+                if (Controller.Ban(user))
+                    m_ban.Child = GetImage(s_check);
             }
         }
 

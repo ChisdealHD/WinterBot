@@ -82,24 +82,34 @@ namespace TwitchChat
             }
         }
 
-        public void Ban(TwitchUser user)
+        public bool Ban(TwitchUser user)
         {
             MessageBoxResult res = MessageBoxResult.Yes;
             if (ConfirmBans)
                 res = MessageBox.Show(string.Format("Ban user {0}?", user.Name), "Ban User", MessageBoxButton.YesNo);
 
             if (res == MessageBoxResult.Yes)
+            {
                 m_twitch.Ban(user.Name);
+                return true;
+            }
+
+            return false;
         }
 
-        public void Timeout(TwitchUser user, int duration)
+        public bool Timeout(TwitchUser user, int duration)
         {
             MessageBoxResult res = MessageBoxResult.Yes;
             if (ConfirmTimeouts)
                 res = MessageBox.Show(string.Format("Timeout user {0}?", user.Name), "Timeout User", MessageBoxButton.YesNo);
 
             if (res == MessageBoxResult.Yes)
+            {
                 m_twitch.Timeout(user.Name, duration);
+                return true;
+            }
+
+            return false;
         }
 
         public void ThreadProc()
@@ -377,6 +387,7 @@ namespace TwitchChat
         #region Event Handlers
         private void Window_Closed(object sender, EventArgs e)
         {
+            m_twitch.Quit();
             Application.Current.Shutdown();
             Environment.Exit(0);
         }
@@ -399,6 +410,20 @@ namespace TwitchChat
             ScrollBar.ScrollToVerticalOffset(ScrollBar.VerticalOffset - e.Delta);
             e.Handled = true;
         }
+        private void Chat_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && e.KeyboardDevice.Modifiers != ModifierKeys.Shift)
+            {
+                e.Handled = true;
+
+                string text = Chat.Text;
+                text = text.Replace('\n', ' ');
+                m_twitch.SendMessage(Importance.High, text);
+                Chat.Text = "";
+                return;
+            }
+        }
         #endregion
+
     }
 }

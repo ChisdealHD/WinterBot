@@ -9,19 +9,21 @@
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0"/>
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="40" />
             <RowDefinition Height="80"/>
         </Grid.RowDefinitions>
+        
+        <TextBox Grid.Row="1" Name="Chat" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown"/>
 
-        <ScrollViewer Grid.Row="1" Name="ScrollBar">
+        <ScrollViewer Grid.Row="0" Name="ScrollBar">
             <ListView Name="AllItems" BorderThickness="0" Background="#E4E4E4" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="AllItems_PreviewMouseWheel" ItemsSource="{Binding Messages}">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <DockPanel ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <local:ChatLine
                                 Value="{Binding}"
-                                FontSize="14"
+                                FontSize="15"
                                 TextWrapping="Wrap"
                                 FontFamily="Arial"
                                 Margin="0,2,0,2"
