@@ -10,7 +10,7 @@ using WinterBotLogging;
 
 namespace Winter
 {
-    class TwitchHttp
+    public class TwitchHttp
     {
         public static TwitchHttp Instance = new TwitchHttp();
 
@@ -74,6 +74,16 @@ namespace Winter
                     m_channelFollowers.Remove(channel);
             }
         }
+
+        public void StopPolling()
+        {
+            lock (m_sync)
+            {
+                m_channelData.Clear();
+                m_channelFollowers.Clear();
+            }
+        }
+
 
         private void FollowerThreadProc()
         {
@@ -298,7 +308,7 @@ namespace Winter
         }
     }
 
-    class TwitchImageSet
+    public class TwitchImageSet
     {
         HashSet<string> m_defaultImageSet;
         Dictionary<int, HashSet<string>> m_imageSets;
