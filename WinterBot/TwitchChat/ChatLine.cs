@@ -103,11 +103,26 @@ namespace TwitchChat
             }
 
             AddMenuItem("Copy", null, copy_line);
+            ContextMenu.Items.Add(new Separator());
             AddMenuItem("Chat Logs", s_logs, showlogs_Click);
+            AddMenuItem("Profile", null, profile_Click);
+            ContextMenu.Items.Add(new Separator());
+            AddMenuItem("Unban", null, profile_Unban);
+            ContextMenu.Items.Add(new Separator());
             AddMenuItem("Purge", null, purge_click);
             AddMenuItem("Timeout", s_timeout, timeout_click);
             AddMenuItem("8 Hour Timeout", s_eight, eight_click);
             AddMenuItem("Ban", s_ban, ban_click);
+        }
+
+        private void profile_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start(string.Format("www.twitch.tv/{0}/profile", m_user.Name));
+        }
+
+        private void profile_Unban(object sender, RoutedEventArgs e)
+        {
+            Controller.Unban(m_user);
         }
 
         private void copy_line(object sender, RoutedEventArgs e)
