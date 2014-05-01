@@ -17,7 +17,7 @@
         <TextBox Grid.Row="1" Name="Chat" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown"/>
 
         <ScrollViewer Grid.Row="0" Name="ScrollBar">
-            <ListView Name="AllItems" BorderThickness="0" Background="#E4E4E4" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="AllItems_PreviewMouseWheel" ItemsSource="{Binding Messages}">
+            <ListView IsTabStop="False" Name="AllItems" BorderThickness="0" Background="#E4E4E4" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="AllItems_PreviewMouseWheel" ItemsSource="{Binding Messages}">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <DockPanel ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -43,22 +43,22 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Margin="5,5">
-                <CheckBox IsChecked="{Binding PlaySounds, Mode=TwoWay}">Play Sounds</CheckBox>
-                <CheckBox IsChecked="{Binding HighlightQuestions, Mode=TwoWay}">Highlight Questions</CheckBox>
-                <CheckBox IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}">Confirm Timeouts</CheckBox>
-                <CheckBox IsChecked="{Binding ConfirmBans, Mode=TwoWay}">Confirm Bans</CheckBox>
-                <CheckBox IsChecked="{Binding ShowIcons, Mode=TwoWay}">Show Mod Icons</CheckBox>
+                <CheckBox IsTabStop="False" IsChecked="{Binding PlaySounds, Mode=TwoWay}">Play Sounds</CheckBox>
+                <CheckBox IsTabStop="False" IsChecked="{Binding HighlightQuestions, Mode=TwoWay}">Highlight Questions</CheckBox>
+                <CheckBox IsTabStop="False" IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}">Confirm Timeouts</CheckBox>
+                <CheckBox IsTabStop="False" IsChecked="{Binding ConfirmBans, Mode=TwoWay}">Confirm Bans</CheckBox>
+                <CheckBox IsTabStop="False" IsChecked="{Binding ShowIcons, Mode=TwoWay}">Show Mod Icons</CheckBox>
             </StackPanel>
             <StackPanel Grid.Column="1">
                 <StackPanel Margin="5">
                     <Label>Channel</Label>
-                    <TextBox Name="Channel" VerticalContentAlignment="Center" Height="30" TextChanged="Channel_TextChanged"></TextBox>
+                    <TextBox IsTabStop="False" Name="Channel" VerticalContentAlignment="Center" Height="30" TextChanged="Channel_TextChanged"></TextBox>
                     <Label Name="Viewers" FontWeight="Bold"></Label>
                 </StackPanel>
             </StackPanel>
             <StackPanel Grid.Column="2" HorizontalAlignment="Right" Grid.Row="1" Margin="5" >
-                <Button Margin="5" Width="70" Height="30" Click="OnClear">Clear</Button>
-                <Button Margin="5" Width="70" Height="30" Click="OnReconnect">Reconnect</Button>
+                <Button IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnClear">Clear</Button>
+                <Button IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnReconnect">Reconnect</Button>
             </StackPanel>
         </Grid>
     </Grid>
