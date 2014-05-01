@@ -715,6 +715,7 @@ namespace Winter
     // We'll limit to 15 messages to be safe.
     class FloodPreventer : IIrcFloodPreventer
     {
+        object m_sync = new object();
         const int MessageLimit = 16;
         const int Timespan = 30;
         const int LowThreshold = 10;
@@ -775,19 +776,23 @@ namespace Winter
 
         public void HandleMessageSent()
         {
-            m_messages.AddLast(DateTime.Now);
+            lock (m_sync)
+                m_messages.AddLast(DateTime.Now);
         }
 
         int GetRemaining()
         {
-            if (m_messages.Count == 0)
-                return MessageLimit;
+            lock (m_sync)
+            {
+                if (m_messages.Count == 0)
+                    return MessageLimit;
 
-            while (m_messages.Count > 0 && m_messages.First.Value.Elapsed().TotalSeconds >= Timespan)
-                m_messages.RemoveFirst();
+                while (m_messages.Count > 0 && m_messages.First.Value.Elapsed().TotalSeconds >= Timespan)
+                    m_messages.RemoveFirst();
 
-            // IrcDotNet actually only cares if the value is 0, so we won't do a big calculation here.
-            return MessageLimit - m_messages.Count;
+                // IrcDotNet actually only cares if the value is 0, so we won't do a big calculation here.
+                return MessageLimit - m_messages.Count;
+            }
         }
     }
 }
