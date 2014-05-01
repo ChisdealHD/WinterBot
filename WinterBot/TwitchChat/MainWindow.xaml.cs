@@ -63,6 +63,7 @@ namespace TwitchChat
 
             InitializeComponent();
             Channel.Text = m_channel;
+            ChatInput.Focus();
         }
 
         void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -141,7 +142,6 @@ namespace TwitchChat
 
             const int pingDelay = 20;
             DateTime lastPing = DateTime.Now;
-            DateTime lastPurge = DateTime.Now;
             while (true)
             {
                 Thread.Sleep(1000);
@@ -171,21 +171,7 @@ namespace TwitchChat
                     if (!Connect())
                         return;
                 }
-
-
-                if (lastPurge.Elapsed().TotalMinutes >= 5)
-                {
-                    lastPurge = DateTime.Now;
-                    Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(ClearMessages));
-                }
             }
-        }
-
-        private void ClearMessages()
-        {
-            DateTime now = DateTime.Now;
-            while (Messages.Count > 500 && (now - Messages[0].Time).TotalMinutes >= 5)
-                Messages.RemoveAt(0);
         }
 
 
@@ -334,7 +320,6 @@ namespace TwitchChat
         }
 
 
-
         private void DispatcherUserSubscribed(TwitchUser user)
         {
             AddItem(new Subscriber(this, user));
@@ -343,7 +328,12 @@ namespace TwitchChat
         void AddItem(ChatItem item)
         {
             bool gotoEnd = ScrollBar.VerticalOffset == ScrollBar.ScrollableHeight;
+
+            while (Messages.Count >= 250)
+                Messages.RemoveAt(0);
+
             Messages.Add(item);
+
             if (gotoEnd)
                 ScrollBar.ScrollToEnd();
         }
@@ -481,18 +471,17 @@ namespace TwitchChat
             {
                 e.Handled = true;
 
-                string text = Chat.Text;
+                string text = ChatInput.Text;
                 text = text.Replace('\n', ' ');
                 m_twitch.SendMessage(Importance.High, text);
 
-                Chat.Text = "";
+                ChatInput.Text = "";
                 
                 var user = m_twitch.ChannelData.GetUser(m_options.User);
                 AddItem(new ChatMessage(this, ItemType.Message, user, text));
                 return;
             }
         }
-        #endregion
 
         private void ScrollBar_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
@@ -501,5 +490,6 @@ namespace TwitchChat
             else
                 ScrollBar.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
+        #endregion
     }
 }

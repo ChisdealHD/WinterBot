@@ -57,7 +57,7 @@
         </ScrollViewer>
 
         <TextBox MaxLength="540" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-         ScrollViewer.VerticalScrollBarVisibility="Auto" Grid.Row="1" Name="Chat" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown"/>
+         ScrollViewer.VerticalScrollBarVisibility="Auto" Grid.Row="1" Name="ChatInput" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown" Margin="3,0,-3,0"/>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
