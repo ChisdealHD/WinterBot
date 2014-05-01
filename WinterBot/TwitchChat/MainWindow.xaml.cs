@@ -436,7 +436,6 @@ namespace TwitchChat
                     if (value)
                     {
                         this.Topmost = true;
-                        this.Activate();
                         this.Deactivated += MainWindow_Deactivated;
                     }
                     else
@@ -451,7 +450,6 @@ namespace TwitchChat
         void MainWindow_Deactivated(object sender, EventArgs e)
         {
             this.Topmost = true;
-            this.Activate();
         }
 
         public bool HighlightQuestions
