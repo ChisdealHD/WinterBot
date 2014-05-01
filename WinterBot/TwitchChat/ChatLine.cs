@@ -303,27 +303,24 @@ namespace TwitchChat
                 if (start < curr)
                     continue;
 
-                if (string.IsNullOrEmpty(emote.LocalFile))
-                {
-                    var run = new Run(text.Slice(curr, start+len)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
-                    m_messages.Add(run);
-                    Inlines.Add(run);
-                    curr = start + len;
-                    continue;
-                }
-
-                if (curr < start)
-                {
-                    var run = new Run(text.Slice(curr, start)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
-                    m_messages.Add(run);
-                    Inlines.Add(run);
-                }
-
                 Image img = GetImage(emote);
                 if (img != null)
                 {
+                    if (curr < start)
+                    {
+                        var run = new Run(text.Slice(curr, start)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                        m_messages.Add(run);
+                        Inlines.Add(run);
+                    }
+
                     InlineUIContainer cont = new InlineUIContainer(img);
                     Inlines.Add(cont);
+                }
+                else
+                {
+                    var run = new Run(text.Slice(curr, start + len)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                    m_messages.Add(run);
+                    Inlines.Add(run);
                 }
 
                 curr = start + len;

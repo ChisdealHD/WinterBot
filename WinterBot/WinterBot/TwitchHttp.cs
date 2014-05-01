@@ -94,43 +94,24 @@ namespace Winter
             IEnumerable<TwitchEmoticon> set = tmp.Item1;
             int id = tmp.Item2;
 
-            string cache = m_cacheFolder;
-            if (string.IsNullOrWhiteSpace(cache))
-                return;
-
             WebClient client = new WebClient();
             foreach (var emote in set)
             {
                 if (!string.IsNullOrWhiteSpace(emote.LocalFile))
                     continue;
 
-                string filename = GetUrlFilename(emote.Url);
-                filename = Path.Combine(cache, filename);
-                if (File.Exists(filename))
-                {
-                    emote.LocalFile = filename;
+                if (File.Exists(emote.LocalFile))
                     continue;
-                }
 
                 try
                 {
-                    client.DownloadFile(emote.Url, filename);
-                    emote.LocalFile = filename;
+                    client.DownloadFile(emote.Url, emote.LocalFile);
                 }
                 catch (Exception e)
                 {
                     
                 }
             }
-        }
-
-        private static string GetUrlFilename(string url)
-        {
-            string filename = string.Empty;
-            int i = url.LastIndexOf('/');
-            if (i > -1)
-                filename = url.Substring(i + 1);
-            return filename;
         }
 
         public void PollChannelData(string channel)
@@ -378,7 +359,7 @@ namespace Winter
                 {
                     if (image.emoticon_set == null)
                     {
-                        defaultSet.Add(new TwitchEmoticon(emote, image, true));
+                        defaultSet.Add(new TwitchEmoticon(m_cacheFolder, emote, image, true));
                     }
                     else
                     {
@@ -395,7 +376,7 @@ namespace Winter
                         if (set == null)
                             imageSets[setId] = set = new List<TwitchEmoticon>();
 
-                        set.Add(new TwitchEmoticon(emote, image, false));
+                        set.Add(new TwitchEmoticon(m_cacheFolder, emote, image, false));
                     }
                 }
             }
@@ -412,15 +393,29 @@ namespace Winter
 
     public class TwitchEmoticon
     {
+        public string Name { get; set; }
+
+        public int? Width { get; set; }
+
+        public int? Height { get; set; }
+
+        public string Url { get; set; }
+
+        public string LocalFile { get; private set; }
+
+        public bool Default { get; set; }
+
         Regex m_reg;
 
-        internal TwitchEmoticon(Emoticon e, JsonImage i, bool deflt)
+        internal TwitchEmoticon(string cache, Emoticon e, JsonImage i, bool deflt)
         {
             Name = e.regex.Trim();
             Width = i.width;
             Height = i.height;
             Url = i.url;
             Default = deflt;
+
+            LocalFile = Path.Combine(cache, GetUrlFilename(i.url));
 
             if (Name.IsRegex())
             {
@@ -434,19 +429,6 @@ namespace Winter
                 }
             }
         }
-
-        public string Name { get; set; }
-
-        public int? Width { get; set; }
-
-        public int? Height { get; set; }
-
-        public string Url { get; set; }
-
-        public string LocalFile { get; set; }
-
-        public bool Default { get; set; }
-
         public IEnumerable<Tuple<TwitchEmoticon, int, int>> Find(string str)
         {
             if (m_reg != null)
@@ -474,6 +456,16 @@ namespace Winter
         {
             return Name;
         }
+
+        private static string GetUrlFilename(string url)
+        {
+            string filename = string.Empty;
+            int i = url.LastIndexOf('/');
+            if (i > -1)
+                filename = url.Substring(i + 1);
+            return filename;
+        }
+
     }
 
     public class TwitchImageSet
