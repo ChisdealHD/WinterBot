@@ -371,10 +371,25 @@ namespace TwitchChat
                 if (string.IsNullOrWhiteSpace(emote.LocalFile) || !File.Exists(emote.LocalFile))
                     return null;
 
-                src = new BitmapImage();
-                src.BeginInit();
-                src.UriSource = new Uri(emote.LocalFile, UriKind.RelativeOrAbsolute);
-                src.EndInit();
+                try
+                {
+                    src = new BitmapImage();
+                    src.BeginInit();
+                    src.UriSource = new Uri(emote.LocalFile, UriKind.RelativeOrAbsolute);
+                    src.EndInit();
+                }
+                catch
+                {
+                    try
+                    {
+                        File.Delete(emote.LocalFile);
+                    }
+                    catch
+                    {
+                    }
+
+                    return null;
+                }
             }
 
             Image img = new Image();
