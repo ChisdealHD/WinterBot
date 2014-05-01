@@ -300,11 +300,17 @@ namespace TwitchChat
                 var start = item.Item2;
                 var len = item.Item3;
 
-                if (string.IsNullOrEmpty(emote.LocalFile))
-                    continue;
-
                 if (start < curr)
                     continue;
+
+                if (string.IsNullOrEmpty(emote.LocalFile))
+                {
+                    var run = new Run(text.Slice(curr, start+len)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                    m_messages.Add(run);
+                    Inlines.Add(run);
+                    curr = start + len;
+                    continue;
+                }
 
                 if (curr < start)
                 {
@@ -314,7 +320,6 @@ namespace TwitchChat
                 }
 
                 Image img = GetImage(emote);
-
                 if (img != null)
                 {
                     InlineUIContainer cont = new InlineUIContainer(img);
