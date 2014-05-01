@@ -675,6 +675,7 @@ namespace Winter
             }
 
             m_twitch = new TwitchClient(m_data);
+            m_twitch.TimeoutDelay = 250;
             m_twitch.InformChatClear += ClearChatHandler;
             m_twitch.MessageReceived += ChatMessageReceived;
             m_twitch.ActionReceived += ChatActionReceived;

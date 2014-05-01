@@ -1,5 +1,6 @@
 ﻿using IrcDotNet;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -127,12 +128,34 @@ namespace Winter
         public string Stream { get { return m_stream; } }
         public DateTime LastEvent { get; set; }
 
+        /// <summary>
+        /// Changes the delay between when a timeout is requested and when it is sent.
+        /// This is to prevent a bot from timing out too fast and users getting the
+        /// timeout before the message.  Delay is in milliseconds.
+        /// </summary>
+        public int TimeoutDelay
+        {
+            get
+            {
+                return m_timeoutDelay;
+            }
+
+            set
+            {
+                if (value >= 0)
+                {
+                    m_timeoutDelay = value;
+                }
+            }
+        }
 
         public TwitchClient(TwitchUsers data)
         {
             m_data = data;
             LastEvent = DateTime.Now;
+
         }
+
         public TwitchClient()
         {
             LastEvent = DateTime.Now;
@@ -148,6 +171,9 @@ namespace Winter
         /// <param name="auth">The twitch API token used to log in.  This must begin with 'oauth:'.</param>
         public ConnectResult Connect(string stream, string user, string auth, int timeout = 10000)
         {
+            if (m_shutdown)
+                throw new InvalidOperationException("Attempted to connect while disconnecting.");
+
             user = user.ToLower();
             m_stream = stream.ToLower();
 
@@ -245,16 +271,38 @@ namespace Winter
 
         public void Quit(int timeout=1000)
         {
+            m_shutdown = true;
+
             if (CanSendMessage(Importance.High, "QUIT ACTION"))
             {
                 TwitchSource.Log.Quit();
                 m_client.Quit(timeout);
             }
+
+            var thread = m_thread;
+            if (thread != null)
+            {
+                thread.Join();
+                thread = null;
+            }
+
+            m_shutdown = false;
         }
 
         public void Disconnect()
         {
+            m_shutdown = true;
+
             m_client.Disconnect();
+
+            var thread = m_thread;
+            if (thread != null)
+            {
+                thread.Join();
+                thread = null;
+            }
+
+            m_shutdown = false;
         }
 
         public void SendMessage(Importance importance, string text)
@@ -268,20 +316,60 @@ namespace Winter
 
         public void Timeout(string user, int duration = 600)
         {
-            // Sleep for 100 msec so that our message is sure to be received AFTER other users
-            // get the message we want to clear.  Also bypass flood check.
-            Thread.Sleep(100);
+            StartTimeoutThread();
+
+            if (duration <= 0)
+                duration = 1;
+
+            int delay = TimeoutDelay;
+            if (delay <= 0)
+            {
+                TimeoutRaw(user, duration);
+            }
+            else if (delay <= 150)
+            {
+                Thread.Sleep(delay);
+                TimeoutRaw(user, duration);
+            }
+            else
+            {
+                var request = new TimeoutRequest(this, user, duration);
+                m_timeouts.Add(request);
+            }
+        }
+
+        internal void TimeoutRaw(string user, int duration)
+        {
             TwitchSource.Log.TimeoutUser(user, duration);
             m_client.LocalUser.SendMessage(m_channel, string.Format(".timeout {0} {1}", user, duration));
         }
 
         public void Ban(string user)
         {
-            // Sleep for 100 msec so that our message is sure to be received AFTER other users
-            // get the message we want to clear.  Also bypass flood check.
-            Thread.Sleep(100);
+            StartTimeoutThread();
+
+            int delay = TimeoutDelay;
+            if (delay <= 0)
+            {
+                BanRaw(user);
+            }
+            else if (delay <= 150)
+            {
+                Thread.Sleep(delay);
+                BanRaw(user);
+            }
+            else
+            {
+                var request = new TimeoutRequest(this, user, -1);
+                m_timeouts.Add(request);
+            }
+        }
+
+        internal void BanRaw(string user)
+        {
             TwitchSource.Log.BanUser(user);
             SendMessage(Importance.High, string.Format(".ban {0}", user));
+            Console.WriteLine("[{0}] BAN", DateTime.Now);
         }
 
         public void Unban(string user)
@@ -291,6 +379,73 @@ namespace Winter
             Thread.Sleep(100);
             TwitchSource.Log.UnbanUser(user);
             SendMessage(Importance.High, string.Format(".unban {0}", user));
+        }
+
+
+        void StartTimeoutThread()
+        {
+            if (m_thread == null)
+            {
+                if (Interlocked.CompareExchange(ref m_thread, new Thread(TimeoutThread), null) == null)
+                {
+                    m_thread.Name = "Timeout delay helper";
+                    m_thread.Start();
+                }
+            }
+        }
+
+        private void TimeoutThread(object obj)
+        {
+            while (!m_shutdown)
+            {
+                TimeoutRequest evt;
+                if (!m_timeouts.TryTake(out evt))
+                {
+                    Thread.Sleep(100);
+                    continue;
+                }
+                
+                ProcessNext(evt);
+
+                while (evt.IsBan)
+                {
+                    TimeoutRequest next = null;
+                    for (int i = 0; i < 15; i++)
+                    {
+                        Thread.Sleep(100);
+                        if (m_shutdown)
+                            return;
+
+                        if (m_timeouts.TryTake(out next))
+                        {
+                            Console.WriteLine("[{0}] ProcessingReBan {1} msec", DateTime.Now, evt.Created.Elapsed().TotalMilliseconds);
+                            evt.Execute();
+                            ProcessNext(next);
+                            break;
+                        }
+                    }
+
+                    if (next == null)
+                    {
+                        Console.WriteLine("[{0}] ProcessingReBan {1} msec", DateTime.Now, evt.Created.Elapsed().TotalMilliseconds);
+                        evt.Execute();
+                        break;
+                    }
+
+                    evt = next;
+                }
+            }
+        }
+
+        private void ProcessNext(TimeoutRequest evt)
+        {
+            int delay = TimeoutDelay;
+
+            delay -= (int)evt.Created.Elapsed().TotalMilliseconds;
+            if (delay > 0)
+                Thread.Sleep(delay);
+            evt.Execute();
+            Console.WriteLine("[{0}] ProcessingBan {1} msec", DateTime.Now, evt.Created.Elapsed().TotalMilliseconds);
         }
 
         private bool CanSendMessage(Importance importance, string text)
@@ -707,8 +862,39 @@ namespace Winter
         readonly string m_action = new string((char)1, 1) + "ACTION";
         FloodPreventer m_flood;
         bool m_loginFailed;
-        #endregion
 
+        int m_timeoutDelay;
+        BlockingCollection<TimeoutRequest> m_timeouts = new BlockingCollection<TimeoutRequest>();
+        volatile Thread m_thread;
+        volatile bool m_shutdown;
+        #endregion
+    }
+
+    class TimeoutRequest
+    {
+        TwitchClient m_client;
+        string m_user;
+        int m_time;
+
+        public DateTime Created { get; private set; }
+
+        public bool IsBan { get { return m_time < 0; } }
+
+        public TimeoutRequest(TwitchClient client, string user, int timeout)
+        {
+            Created = DateTime.Now;
+            m_client = client;
+            m_user = user;
+            m_time = timeout;
+        }
+
+        public void Execute()
+        {
+            if (IsBan)
+                m_client.BanRaw(m_user);
+            else
+                m_client.TimeoutRaw(m_user, m_time);
+        }
     }
 
     // 20 commands over 30 seconds = 8 hour ban for twitch irc
