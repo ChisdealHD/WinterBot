@@ -493,5 +493,13 @@ namespace TwitchChat
             }
         }
         #endregion
+
+        private void ScrollBar_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (ScrollBar.VerticalOffset == ScrollBar.ScrollableHeight)
+                ScrollBar.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
+            else
+                ScrollBar.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        }
     }
 }
