@@ -234,14 +234,12 @@ namespace TwitchChat
 
         private void SetSubscriber(Subscriber subscriber)
         {
-            Text = string.Format("{0} just subscribed!", subscriber.User.Name);
-            Foreground = Brushes.Red;
+            Inlines.Add(new Run(string.Format("{0} just subscribed!", subscriber.User.Name)) { BaselineAlignment = BaselineAlignment.Center, Foreground = Brushes.Red });
         }
 
         private void SetStatus(StatusMessage statusMessage)
         {
-            Text = statusMessage.Message;
-            Foreground = Brushes.Green;
+            Inlines.Add(new Run(statusMessage.Message) { BaselineAlignment = BaselineAlignment.Center, Foreground = Brushes.Green });
         }
 
         private void SetMessage(ChatMessage msg)
