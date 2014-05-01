@@ -199,6 +199,10 @@ namespace Winter
             int currTimeout = timeout;
             DateTime started = DateTime.Now;
 
+            m_connectedEvent.Reset();
+            m_registeredEvent.Reset();
+            m_joinedEvent.Reset();
+
             // Connect to server.
             m_client.Connect("irc.twitch.tv", 6667, false, new IrcUserRegistrationInfo()
             {
