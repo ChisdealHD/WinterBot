@@ -29,7 +29,7 @@ namespace TwitchChat
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions, m_showIcons;
+        bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions, m_showIcons, m_onTop;
         Thread m_thread;
         ChatOptions m_options;
         TwitchClient m_twitch;
@@ -52,6 +52,7 @@ namespace TwitchChat
             m_confirmBans = m_options.GetOption("ConfirmBans", true);
             m_confirmTimeouts = m_options.GetOption("ConfirmTimeouts", false);
             m_showIcons = m_options.GetOption("ShowIcons", true);
+            OnTop = m_options.GetOption("OnTop", false);
             m_channel = m_options.Stream.ToLower();
             TwitchHttp.Instance.PollChannelData(m_channel);
             TwitchHttp.Instance.ChannelDataReceived += Instance_ChannelDataReceived;
@@ -416,6 +417,41 @@ namespace TwitchChat
                     OnPropertyChanged("ShowIcons");
                 }
             }
+        }
+
+        public bool OnTop
+        {
+            get
+            {
+                return m_onTop;
+            }
+            set
+            {
+                if (m_onTop != value)
+                {
+                    m_options.SetOption("OnTop", value);
+                    m_onTop = value;
+                    OnPropertyChanged("OnTop");
+
+                    if (value)
+                    {
+                        this.Topmost = true;
+                        this.Activate();
+                        this.Deactivated += MainWindow_Deactivated;
+                    }
+                    else
+                    {
+                        this.Topmost = false;
+                        this.Deactivated -= MainWindow_Deactivated;
+                    }
+                }
+            }
+        }
+
+        void MainWindow_Deactivated(object sender, EventArgs e)
+        {
+            this.Topmost = true;
+            this.Activate();
         }
 
         public bool HighlightQuestions

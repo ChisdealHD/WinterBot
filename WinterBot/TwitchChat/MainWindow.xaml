@@ -11,7 +11,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="60" />
-            <RowDefinition Height="85"/>
+            <RowDefinition Height="100"/>
         </Grid.RowDefinitions>
 
         <ScrollViewer
@@ -67,11 +67,12 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Margin="5,5">
-                <CheckBox IsTabStop="False" IsChecked="{Binding PlaySounds, Mode=TwoWay}">Play Sounds</CheckBox>
+                <CheckBox IsTabStop="False" IsChecked="{Binding PlaySounds, Mode=TwoWay}">Play Subscriber Sound</CheckBox>
                 <CheckBox IsTabStop="False" IsChecked="{Binding HighlightQuestions, Mode=TwoWay}">Highlight Questions</CheckBox>
                 <CheckBox IsTabStop="False" IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}">Confirm Timeouts</CheckBox>
                 <CheckBox IsTabStop="False" IsChecked="{Binding ConfirmBans, Mode=TwoWay}">Confirm Bans</CheckBox>
                 <CheckBox IsTabStop="False" IsChecked="{Binding ShowIcons, Mode=TwoWay}">Show Mod Icons</CheckBox>
+                <CheckBox IsTabStop="False" IsChecked="{Binding OnTop, Mode=TwoWay}">Always On Top</CheckBox>
             </StackPanel>
             <StackPanel Grid.Column="1">
                 <StackPanel Margin="5">
