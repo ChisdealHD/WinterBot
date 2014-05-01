@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -80,6 +81,7 @@ namespace TwitchChat
             }
         }
 
+        static int s_curr;
 
         public ChatLine()
         {
@@ -186,6 +188,21 @@ namespace TwitchChat
                     Debug.Assert(false);
                     break;
             }
+
+            // Ensure we have a minimum height...
+            Image Spacer = new Image();
+            Spacer.Height = 30;
+            Inlines.Add(Spacer);
+
+            // ...and correct alignment...
+            this.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+
+            // ...and the right background color.
+            int curr = ++s_curr;
+            if ((curr % 2) == 0)
+                Background = (SolidColorBrush)(new BrushConverter().ConvertFrom("#C8C8C8"));
+            else
+                Background = (SolidColorBrush)(new BrushConverter().ConvertFrom("#E4E4E4"));
         }
 
         void value_Clear()
@@ -215,7 +232,6 @@ namespace TwitchChat
         private void SetMessage(ChatMessage msg)
         {
             m_user = msg.User;
-            this.VerticalAlignment = System.Windows.VerticalAlignment.Center;
 
             m_ban = new TimeOutIcon(GetImage(s_ban), GetImage(s_check));
             m_ban.BaselineAlignment = BaselineAlignment.Center;

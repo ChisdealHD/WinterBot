@@ -13,27 +13,47 @@
             <RowDefinition Height="40" />
             <RowDefinition Height="85"/>
         </Grid.RowDefinitions>
-        
-        <TextBox Grid.Row="1" Name="Chat" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown"/>
 
-        <ScrollViewer Grid.Row="0" Name="ScrollBar">
-            <ListView IsTabStop="False" Name="AllItems" BorderThickness="0" Background="#E4E4E4" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="AllItems_PreviewMouseWheel" ItemsSource="{Binding Messages}">
+        <ScrollViewer Margin="-10,0,0,0" Grid.Row="0" Name="ScrollBar">
+            <ListView 
+                ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                      HorizontalContentAlignment="Stretch"
+                      VerticalContentAlignment="Stretch"
+                      BorderThickness="0"
+                      IsTabStop="False"
+                      Name="AllItems"
+                      Background="#E4E4E4"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      PreviewMouseWheel="AllItems_PreviewMouseWheel"
+                      ItemsSource="{Binding Messages}">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListViewItem">
+                                    <Border Name="Border" BorderBrush="#B4B4B4" BorderThickness="0,0,0,1">
+                                        <ContentPresenter />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListView.ItemContainerStyle>
                 <ListView.ItemTemplate>
                     <DataTemplate>
-                        <DockPanel ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <local:ChatLine
-                                Value="{Binding}"
-                                FontSize="16"
-                                TextWrapping="Wrap"
-                                FontFamily="Arial"
-                                Margin="0,2,0,2"
-                                VerticalAlignment="Center" />
-                        </DockPanel>
+                        <local:ChatLine
+                                    Value="{Binding}"
+                                    FontSize="16"
+                                    TextWrapping="Wrap"
+                                    FontFamily="Arial"
+                                    VerticalAlignment="Center" />
                     </DataTemplate>
                 </ListView.ItemTemplate>
 
             </ListView>
         </ScrollViewer>
+
+        <TextBox Grid.Row="1" Name="Chat" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown"/>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
