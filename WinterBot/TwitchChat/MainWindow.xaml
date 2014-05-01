@@ -10,7 +10,7 @@
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="40" />
+            <RowDefinition Height="60" />
             <RowDefinition Height="85"/>
         </Grid.RowDefinitions>
 
@@ -53,11 +53,11 @@
                                     VerticalAlignment="Center" />
                     </DataTemplate>
                 </ListView.ItemTemplate>
-
             </ListView>
         </ScrollViewer>
 
-        <TextBox Grid.Row="1" Name="Chat" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown"/>
+        <TextBox MaxLength="540" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+         ScrollViewer.VerticalScrollBarVisibility="Auto" Grid.Row="1" Name="Chat" AcceptsReturn="True" TextWrapping="Wrap"  FontSize="14" PreviewKeyDown="Chat_PreviewKeyDown"/>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
