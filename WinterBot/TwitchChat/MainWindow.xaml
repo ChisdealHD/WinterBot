@@ -47,7 +47,7 @@
                     <DataTemplate>
                         <local:ChatLine
                                     Value="{Binding}"
-                                    FontSize="16"
+                                    FontSize="12"
                                     TextWrapping="Wrap"
                                     FontFamily="Arial"
                                     VerticalAlignment="Center" />
@@ -66,14 +66,39 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Margin="5,5">
-                <CheckBox IsTabStop="False" IsChecked="{Binding PlaySounds, Mode=TwoWay}">Play Subscriber Sound</CheckBox>
-                <CheckBox IsTabStop="False" IsChecked="{Binding HighlightQuestions, Mode=TwoWay}">Highlight Questions</CheckBox>
-                <CheckBox IsTabStop="False" IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}">Confirm Timeouts</CheckBox>
-                <CheckBox IsTabStop="False" IsChecked="{Binding ConfirmBans, Mode=TwoWay}">Confirm Bans</CheckBox>
-                <CheckBox IsTabStop="False" IsChecked="{Binding ShowIcons, Mode=TwoWay}">Show Mod Icons</CheckBox>
-                <CheckBox IsTabStop="False" IsChecked="{Binding OnTop, Mode=TwoWay}">Always On Top</CheckBox>
-            </StackPanel>
+            <Button Grid.Column="0" Width="32" Height="32"  ContextMenuService.Placement="Top">
+                <Image Source="/Images/gear.png" Width="18" Height="18" Stretch="Fill" />
+                <Button.Style>
+                    <Style TargetType="{x:Type Button}">
+                        <Style.Triggers>
+                            <EventTrigger RoutedEvent="Click">
+                                <EventTrigger.Actions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <BooleanAnimationUsingKeyFrames Storyboard.TargetProperty="ContextMenu.IsOpen">
+                                                <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="True"/>
+                                            </BooleanAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger.Actions>
+                            </EventTrigger>
+                        </Style.Triggers>
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                    <ContextMenu>
+                                        <MenuItem Header="Play Subscriber Sound" IsCheckable="True" IsChecked="{Binding PlaySounds, Mode=TwoWay}" />
+                                        <MenuItem Header="Highlight Questions" IsCheckable="True" IsChecked="{Binding HighlightQuestions, Mode=TwoWay}" />
+                                        <MenuItem Header="Confirm Timeouts" IsCheckable="True" IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}" />
+                                        <MenuItem Header="Confirm Bans" IsCheckable="True" IsChecked="{Binding ConfirmBans, Mode=TwoWay}" />
+                                        <MenuItem Header="Show Mod Icons" IsCheckable="True" IsChecked="{Binding ShowIcons, Mode=TwoWay}" />
+                                        <MenuItem Header="Always On Top" IsCheckable="True" IsChecked="{Binding OnTop, Mode=TwoWay}" />
+                                    </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+
             <StackPanel Grid.Column="1">
                 <StackPanel Margin="5">
                     <Label>Channel</Label>
@@ -84,6 +109,7 @@
             <StackPanel Grid.Column="2" HorizontalAlignment="Right" Grid.Row="1" Margin="5" >
                 <Button IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnClear">Clear</Button>
                 <Button IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnReconnect">Reconnect</Button>
+                
             </StackPanel>
         </Grid>
     </Grid>
