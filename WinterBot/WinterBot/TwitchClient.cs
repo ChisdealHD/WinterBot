@@ -454,6 +454,9 @@ namespace Winter
 
         private bool CanSendMessage(Importance importance, string text)
         {
+            if (m_flood == null)
+                return false;
+
             if (!m_flood.ShouldSendMessage(importance, text))
             {
                 WriteDiagnosticMessage("Dropped message: {0}.", text);
