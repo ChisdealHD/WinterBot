@@ -59,6 +59,9 @@ namespace Winter
         {
             lock (m_sync)
             {
+                if (ImageSet == null || string.IsNullOrEmpty(m_cacheFolder))
+                    return;
+
                 if (!m_loadedSets.Contains(-1))
                 {
                     ThreadPool.QueueUserWorkItem(DownloadSet, new Tuple<IEnumerable<TwitchEmoticon>, int>(ImageSet.DefaultSet, -1));
@@ -69,11 +72,11 @@ namespace Winter
 
         public void EnsureEmoticonsLoaded(int set)
         {
-            if (ImageSet == null || string.IsNullOrEmpty(m_cacheFolder))
-                return;
-
             lock (m_sync)
             {
+                if (ImageSet == null || string.IsNullOrEmpty(m_cacheFolder))
+                    return;
+
                 if (!m_loadedSets.Contains(-1))
                 {
                     ThreadPool.QueueUserWorkItem(DownloadSet, new Tuple<IEnumerable<TwitchEmoticon>, int>(ImageSet.DefaultSet, -1));
