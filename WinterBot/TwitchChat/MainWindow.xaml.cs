@@ -56,15 +56,26 @@ namespace TwitchChat
             m_channel = m_options.Stream.ToLower();
             TwitchHttp.Instance.PollChannelData(m_channel);
             TwitchHttp.Instance.ChannelDataReceived += Instance_ChannelDataReceived;
-
-            m_thread = new Thread(ThreadProc);
-            m_thread.Start();
+            StartThread();
 
             Messages = new ObservableCollection<ChatItem>();
 
             InitializeComponent();
             Channel.Text = m_channel;
             ChatInput.Focus();
+        }
+
+        private void StartThread()
+        {
+            if (m_thread != null)
+                return;
+
+            var thread = new Thread(ThreadProc);
+            if (Interlocked.CompareExchange(ref m_thread, thread, null) == null)
+            {
+                m_thread.Name = "TwitchIRC Thread";
+                m_thread.Start();
+            }
         }
 
         void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -139,7 +150,11 @@ namespace TwitchChat
             m_twitch = new TwitchClient();
 
             if (!Connect())
+            {
+                m_thread = null;
+                m_twitch = null;
                 return;
+            }
 
             const int pingDelay = 20;
             DateTime lastPing = DateTime.Now;
@@ -162,7 +177,7 @@ namespace TwitchChat
                     m_twitch.Quit(250);
 
                     if (!Connect())
-                        return;
+                        break;
 
                     WinterBotSource.Log.EndReconnect();
                 }
@@ -170,9 +185,17 @@ namespace TwitchChat
                 {
                     m_reconnect = false;
                     if (!Connect())
-                        return;
+                        break;
                 }
             }
+
+            if (m_twitch != null)
+            {
+                m_twitch.Quit();
+                m_twitch = null;
+            }
+
+            m_thread = null;
         }
 
 
@@ -185,6 +208,7 @@ namespace TwitchChat
                 m_twitch.ActionReceived -= ChatActionReceived;
                 m_twitch.UserSubscribed -= SubscribeHandler;
                 m_twitch.StatusUpdate -= StatusUpdate;
+                m_twitch.Quit();
             }
 
             string channel = m_channel.ToLower();
@@ -473,7 +497,10 @@ namespace TwitchChat
         #region Event Handlers
         private void Window_Closed(object sender, EventArgs e)
         {
-            m_twitch.Quit();
+            var twitch = m_twitch;
+            if (twitch != null)
+                twitch.Quit();
+
             Application.Current.Shutdown();
             Environment.Exit(0);
         }
@@ -481,6 +508,8 @@ namespace TwitchChat
         private void OnReconnect(object sender, RoutedEventArgs e)
         {
             m_reconnect = true;
+            if (m_thread == null)
+                StartThread();
         }
 
         private void OnClear(object sender, RoutedEventArgs e)
@@ -488,12 +517,34 @@ namespace TwitchChat
             Messages.Clear();
         }
 
-        private void Channel_TextChanged(object sender, TextChangedEventArgs e)
+
+        private void Channel_LostFocus(object sender, RoutedEventArgs e)
         {
-            TwitchHttp.Instance.StopPolling();
-            m_channel = Channel.Text.ToLower();
-            TwitchHttp.Instance.PollChannelData(m_channel);
+            UpdateChannel(Channel.Text);
         }
+
+        private void Channel_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                UpdateChannel(Channel.Text);
+                ChatInput.Focus();
+            }
+        }
+
+        private void UpdateChannel(string channel)
+        {
+            channel = channel.ToLower();
+            if (m_channel != channel)
+            {
+                TwitchHttp.Instance.StopPolling();
+                m_channel = channel;
+                TwitchHttp.Instance.PollChannelData(m_channel);
+                OnReconnect(null, null);
+            }
+        }
+
         private void AllItems_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             ScrollBar.ScrollToVerticalOffset(ScrollBar.VerticalOffset - e.Delta);
@@ -525,5 +576,29 @@ namespace TwitchChat
                 ScrollBar.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
         #endregion
+
+        private void Button_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            var menu = ConfigButton.ContextMenu;
+            menu.PlacementTarget = (UIElement)sender;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+            menu.IsOpen = true;
+        }
+
+
+        private void Button_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+        }
+    }
+
+    static class Extensions
+    {
+        public static void BeginInvokeAction(this Dispatcher dispatcher,
+                                     Action action)
+        {
+            dispatcher.BeginInvoke(action);
+        }
     }
 }

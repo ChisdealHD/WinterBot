@@ -66,7 +66,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Width="32" Height="32"  ContextMenuService.Placement="Top">
+            <Button Name="ConfigButton" Grid.Column="0" Width="32" Height="32"  ContextMenuService.Placement="Top" PreviewMouseLeftButtonDown="Button_MouseLeftButtonDown" MouseLeftButtonUp="Button_MouseLeftButtonUp">
                 <Image Source="/Images/gear.png" Width="18" Height="18" Stretch="Fill" />
                 <Button.Style>
                     <Style TargetType="{x:Type Button}">
@@ -85,7 +85,7 @@
                         </Style.Triggers>
                         <Setter Property="ContextMenu">
                             <Setter.Value>
-                                    <ContextMenu>
+                                    <ContextMenu Name="ConfigMenu">
                                         <MenuItem Header="Play Subscriber Sound" IsCheckable="True" IsChecked="{Binding PlaySounds, Mode=TwoWay}" />
                                         <MenuItem Header="Highlight Questions" IsCheckable="True" IsChecked="{Binding HighlightQuestions, Mode=TwoWay}" />
                                         <MenuItem Header="Confirm Timeouts" IsCheckable="True" IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}" />
@@ -102,13 +102,13 @@
             <StackPanel Grid.Column="1">
                 <StackPanel Margin="5">
                     <Label>Channel</Label>
-                    <TextBox IsTabStop="False" Name="Channel" VerticalContentAlignment="Center" Height="30" TextChanged="Channel_TextChanged"></TextBox>
+                    <TextBox IsTabStop="False" Name="Channel" VerticalContentAlignment="Center" Height="30" LostFocus="Channel_LostFocus" PreviewKeyDown="Channel_PreviewKeyDown"></TextBox>
                     <Label Name="Viewers" FontWeight="Bold"></Label>
                 </StackPanel>
             </StackPanel>
             <StackPanel Grid.Column="2" HorizontalAlignment="Right" Grid.Row="1" Margin="5" >
                 <Button IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnClear">Clear</Button>
-                <Button IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnReconnect">Reconnect</Button>
+                <Button Name="ConnectButton" IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnReconnect">Reconnect</Button>
                 
             </StackPanel>
         </Grid>
