@@ -88,6 +88,11 @@ namespace Winter
         /// Fired when a chat action occurs (such as using /me).
         /// </summary>
         public event MessageHandler ActionReceived;
+
+        /// <summary>
+        /// Fired when the Jtv user sends a message informing the user of chat changes).
+        /// </summary>
+        public event MessageHandler JtvMessageReceived;
         
         /// <summary>
         /// Event handler for when messages are received from the chat channel.
@@ -534,7 +539,8 @@ namespace Winter
                     break;
 
                 case 'C':
-                    ParseChatClear(text);
+                    if (!ParseChatClear(text))
+                        RawJtvMessage("Chat was cleared by a moderator");
                     break;
 
                 case 'S':
@@ -542,7 +548,14 @@ namespace Winter
                     break;
 
                 case 'T':
-                    ParseModerators(text);
+                    if (text.StartsWith("The moderators of this room are:"))
+                        ParseModerators(text);
+                    
+                    RawJtvMessage(text);
+                    break;
+
+                case 'H':
+                    // HISTORYEND
                     break;
 
                 case 'U':
@@ -550,7 +563,18 @@ namespace Winter
                     break;
 
                 default:
+                    RawJtvMessage(text);
                     return;
+            }
+        }
+
+        private void RawJtvMessage(string text)
+        {
+            var evt = JtvMessageReceived;
+            if (evt != null)
+            {
+                var user = m_data.GetUser("jtv");
+                evt(this, user, text);
             }
         }
 
@@ -567,6 +591,7 @@ namespace Winter
 
         private void ParseModerators(string text)
         {
+            // This room is now in slow mode. You may send messages every 120 seconds
             //*  The moderators of this room are: mod1, mod2, mod3
 
             string modMsg = "The moderators of this room are: ";
@@ -611,13 +636,14 @@ namespace Winter
             }
         }
 
-        private void ParseChatClear(string text)
+        private bool ParseChatClear(string text)
         {
             //CLEARCHAT username
             if (text.Length <= 10 || text[9] != ' ')
-                return;
+                return false;
 
             OnChatClear(text.Substring(10));
+            return true;
         }
 
         private void ParseEmoteSet(string text)

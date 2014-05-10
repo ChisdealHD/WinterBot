@@ -35,6 +35,7 @@ namespace TwitchChat
         TwitchClient m_twitch;
         TwitchUsers m_users;
         string m_channel;
+        bool m_modListRequested;
 
         public event PropertyChangedEventHandler PropertyChanged;
         bool m_reconnect;
@@ -183,6 +184,7 @@ namespace TwitchChat
             {
                 m_twitch.InformChatClear -= ClearChatHandler;
                 m_twitch.MessageReceived -= ChatMessageReceived;
+                m_twitch.JtvMessageReceived -= JtvMessageReceived;
                 m_twitch.ActionReceived -= ChatActionReceived;
                 m_twitch.UserSubscribed -= SubscribeHandler;
                 m_twitch.StatusUpdate -= StatusUpdate;
@@ -194,6 +196,7 @@ namespace TwitchChat
             m_twitch = new TwitchClient(m_users);
             m_twitch.InformChatClear += ClearChatHandler;
             m_twitch.MessageReceived += ChatMessageReceived;
+            m_twitch.JtvMessageReceived += JtvMessageReceived;
             m_twitch.ActionReceived += ChatActionReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
             m_twitch.StatusUpdate += StatusUpdate;
@@ -259,6 +262,20 @@ namespace TwitchChat
 
             user.EnsureIconsDownloaded();
             Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action<ChatItem>(AddItem), new ChatAction(this, user, text));
+        }
+
+
+        private void JtvMessageReceived(TwitchClient sender, TwitchUser user, string text)
+        {
+            if (text.StartsWith("The moderators of this"))
+            {
+                if (m_modListRequested)
+                    m_modListRequested = false;
+                else
+                    return;
+            }
+
+            WriteStatus(text);
         }
 
         private void ChatMessageReceived(TwitchClient sender, TwitchUser user, string text)
@@ -550,15 +567,40 @@ namespace TwitchChat
                 e.Handled = true;
 
                 string text = ChatInput.Text;
+                ChatInput.Text = "";
+
+                if (string.IsNullOrEmpty(text))
+                {
+                    return;
+                }
+                else if (text.StartsWith("/"))
+                {
+                    HandleCommand(text);
+                    return;
+                }
+                else if (text.StartsWith("."))
+                {
+                    text = " " + text;
+                }
+                
                 text = text.Replace('\n', ' ');
+
                 m_twitch.SendMessage(Importance.High, text);
 
-                ChatInput.Text = "";
-                
                 var user = m_twitch.ChannelData.GetUser(m_options.User);
                 AddItem(new ChatMessage(this, ItemType.Message, user, text));
                 return;
             }
+        }
+
+        private void HandleCommand(string text)
+        {
+            text = "." + text.Substring(1);
+
+            if (text.ToLower().StartsWith(".mods"))
+                m_modListRequested = true;
+
+            m_twitch.SendMessage(Importance.High, text);
         }
 
         private void ScrollBar_ScrollChanged(object sender, ScrollChangedEventArgs e)
