@@ -11,7 +11,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="60" />
-            <RowDefinition Height="100"/>
+            <RowDefinition Height="120"/>
         </Grid.RowDefinitions>
 
         <ScrollViewer
@@ -47,7 +47,7 @@
                     <DataTemplate>
                         <local:ChatLine
                                     Value="{Binding}"
-                                    FontSize="12"
+                                    FontSize="16"
                                     TextWrapping="Wrap"
                                     FontFamily="Arial"
                                     VerticalAlignment="Center" />
@@ -85,14 +85,14 @@
                         </Style.Triggers>
                         <Setter Property="ContextMenu">
                             <Setter.Value>
-                                    <ContextMenu Name="ConfigMenu">
-                                        <MenuItem Header="Play Subscriber Sound" IsCheckable="True" IsChecked="{Binding PlaySounds, Mode=TwoWay}" />
-                                        <MenuItem Header="Highlight Questions" IsCheckable="True" IsChecked="{Binding HighlightQuestions, Mode=TwoWay}" />
-                                        <MenuItem Header="Confirm Timeouts" IsCheckable="True" IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}" />
-                                        <MenuItem Header="Confirm Bans" IsCheckable="True" IsChecked="{Binding ConfirmBans, Mode=TwoWay}" />
-                                        <MenuItem Header="Show Mod Icons" IsCheckable="True" IsChecked="{Binding ShowIcons, Mode=TwoWay}" />
-                                        <MenuItem Header="Always On Top" IsCheckable="True" IsChecked="{Binding OnTop, Mode=TwoWay}" />
-                                    </ContextMenu>
+                                <ContextMenu Name="ConfigMenu">
+                                    <MenuItem Header="Play Subscriber Sound" IsCheckable="True" IsChecked="{Binding PlaySounds, Mode=TwoWay}" />
+                                    <MenuItem Header="Highlight Questions" IsCheckable="True" IsChecked="{Binding HighlightQuestions, Mode=TwoWay}" />
+                                    <MenuItem Header="Confirm Timeouts" IsCheckable="True" IsChecked="{Binding ConfirmTimeouts, Mode=TwoWay}" />
+                                    <MenuItem Header="Confirm Bans" IsCheckable="True" IsChecked="{Binding ConfirmBans, Mode=TwoWay}" />
+                                    <MenuItem Header="Show Mod Icons" IsCheckable="True" IsChecked="{Binding ShowIcons, Mode=TwoWay}" />
+                                    <MenuItem Header="Always On Top" IsCheckable="True" IsChecked="{Binding OnTop, Mode=TwoWay}" />
+                                </ContextMenu>
                             </Setter.Value>
                         </Setter>
                     </Style>
@@ -109,7 +109,6 @@
             <StackPanel Grid.Column="2" HorizontalAlignment="Right" Grid.Row="1" Margin="5" >
                 <Button IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnClear">Clear</Button>
                 <Button Name="ConnectButton" IsTabStop="False" Margin="5" Width="70" Height="30" Click="OnReconnect">Reconnect</Button>
-                
             </StackPanel>
         </Grid>
     </Grid>

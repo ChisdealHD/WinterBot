@@ -261,7 +261,10 @@ namespace TwitchChat
             m_timeout.BaselineAlignment = BaselineAlignment.Center;
             m_timeout.Restore += Unban;
 
-            if (Controller.ShowIcons)
+            if (Controller.ShowTimestamps)
+                Inlines.Add(new Run(DateTime.Now.ToString("hh:mm ")) { Foreground = (SolidColorBrush)(new BrushConverter().ConvertFrom("#707070")), BaselineAlignment = BaselineAlignment.Center });
+
+            if (Controller.ShowIcons && Controller.CurrentUser.IsModerator)
             {
                 Inlines.Add(m_ban);
                 Inlines.Add(m_eight);
@@ -343,6 +346,7 @@ namespace TwitchChat
                     }
 
                     InlineUIContainer cont = new InlineUIContainer(img);
+                    cont.BaselineAlignment = BaselineAlignment.Center;
                     Inlines.Add(cont);
                 }
                 else

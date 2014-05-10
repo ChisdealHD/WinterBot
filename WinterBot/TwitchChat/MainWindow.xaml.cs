@@ -29,7 +29,7 @@ namespace TwitchChat
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions, m_showIcons, m_onTop;
+        bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions, m_showIcons, m_onTop, m_showTimestamp;
         Thread m_thread;
         ChatOptions m_options;
         TwitchClient m_twitch;
@@ -52,30 +52,20 @@ namespace TwitchChat
             m_confirmBans = m_options.GetOption("ConfirmBans", true);
             m_confirmTimeouts = m_options.GetOption("ConfirmTimeouts", false);
             m_showIcons = m_options.GetOption("ShowIcons", true);
+            m_showTimestamp = m_options.GetOption("ShowTimestamps", false);
             OnTop = m_options.GetOption("OnTop", false);
             m_channel = m_options.Stream.ToLower();
             TwitchHttp.Instance.PollChannelData(m_channel);
             TwitchHttp.Instance.ChannelDataReceived += Instance_ChannelDataReceived;
-            StartThread();
+
+            m_thread = new Thread(ThreadProc);
+            m_thread.Start();
 
             Messages = new ObservableCollection<ChatItem>();
 
             InitializeComponent();
             Channel.Text = m_channel;
             ChatInput.Focus();
-        }
-
-        private void StartThread()
-        {
-            if (m_thread != null)
-                return;
-
-            var thread = new Thread(ThreadProc);
-            if (Interlocked.CompareExchange(ref m_thread, thread, null) == null)
-            {
-                m_thread.Name = "TwitchIRC Thread";
-                m_thread.Start();
-            }
         }
 
         void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -150,11 +140,7 @@ namespace TwitchChat
             m_twitch = new TwitchClient();
 
             if (!Connect())
-            {
-                m_thread = null;
-                m_twitch = null;
                 return;
-            }
 
             const int pingDelay = 20;
             DateTime lastPing = DateTime.Now;
@@ -177,7 +163,7 @@ namespace TwitchChat
                     m_twitch.Quit(250);
 
                     if (!Connect())
-                        break;
+                        return;
 
                     WinterBotSource.Log.EndReconnect();
                 }
@@ -185,17 +171,9 @@ namespace TwitchChat
                 {
                     m_reconnect = false;
                     if (!Connect())
-                        break;
+                        return;
                 }
             }
-
-            if (m_twitch != null)
-            {
-                m_twitch.Quit();
-                m_twitch = null;
-            }
-
-            m_thread = null;
         }
 
 
@@ -219,6 +197,8 @@ namespace TwitchChat
             m_twitch.ActionReceived += ChatActionReceived;
             m_twitch.UserSubscribed += SubscribeHandler;
             m_twitch.StatusUpdate += StatusUpdate;
+
+            CurrentUser = m_users.GetUser(m_options.User);
 
             bool first = true;
             ConnectResult result;
@@ -354,8 +334,9 @@ namespace TwitchChat
         {
             bool gotoEnd = ScrollBar.VerticalOffset == ScrollBar.ScrollableHeight;
 
-            while (Messages.Count >= 250)
-                Messages.RemoveAt(0);
+            if (gotoEnd)
+                while (Messages.Count >= 250)
+                    Messages.RemoveAt(0);
 
             Messages.Add(item);
 
@@ -373,6 +354,8 @@ namespace TwitchChat
         }
 
         public ObservableCollection<ChatItem> Messages { get; set; }
+
+        public TwitchUser CurrentUser { get; private set; }
         
         public bool PlaySounds
         {
@@ -384,7 +367,7 @@ namespace TwitchChat
             {
                 if (m_playSounds != value)
                 {
-                    m_options.SetOption("PlaySounds", value);
+                    ThreadPool.QueueUserWorkItem((o) => m_options.SetOption("PlaySounds", value));
                     m_playSounds = value;
                     OnPropertyChanged("PlaySounds");
                 }
@@ -401,7 +384,7 @@ namespace TwitchChat
             {
                 if (m_confirmTimeouts != value)
                 {
-                    m_options.SetOption("ConfirmTimeouts", value);
+                    ThreadPool.QueueUserWorkItem((o) => m_options.SetOption("ConfirmTimeouts", value));
                     m_confirmTimeouts = value;
                     OnPropertyChanged("ConfirmTimeouts");
                 }
@@ -418,7 +401,7 @@ namespace TwitchChat
             {
                 if (m_confirmBans != value)
                 {
-                    m_options.SetOption("ConfirmBans", value);
+                    ThreadPool.QueueUserWorkItem((o) => m_options.SetOption("ConfirmBans", value));
                     m_confirmBans = value;
                     OnPropertyChanged("ConfirmBans");
                 }
@@ -436,7 +419,7 @@ namespace TwitchChat
             {
                 if (m_showIcons != value)
                 {
-                    m_options.SetOption("ShowIcons", value);
+                    ThreadPool.QueueUserWorkItem((o) => m_options.SetOption("ShowIcons", value));
                     m_showIcons = value;
                     OnPropertyChanged("ShowIcons");
                 }
@@ -453,7 +436,7 @@ namespace TwitchChat
             {
                 if (m_onTop != value)
                 {
-                    m_options.SetOption("OnTop", value);
+                    ThreadPool.QueueUserWorkItem((o) => m_options.SetOption("OnTop", value));
                     m_onTop = value;
                     OnPropertyChanged("OnTop");
 
@@ -467,6 +450,22 @@ namespace TwitchChat
                         this.Topmost = false;
                         this.Deactivated -= MainWindow_Deactivated;
                     }
+                }
+            }
+        }
+        public bool ShowTimestamps
+        {
+            get
+            {
+                return m_showTimestamp;
+            }
+            set
+            {
+                if (m_showTimestamp != value)
+                {
+                    ThreadPool.QueueUserWorkItem((o) => m_options.SetOption("ShowTimestamps", value));
+                    m_showTimestamp = value;
+                    OnPropertyChanged("ShowTimestamps");
                 }
             }
         }
@@ -497,10 +496,7 @@ namespace TwitchChat
         #region Event Handlers
         private void Window_Closed(object sender, EventArgs e)
         {
-            var twitch = m_twitch;
-            if (twitch != null)
-                twitch.Quit();
-
+            m_twitch.Quit();
             Application.Current.Shutdown();
             Environment.Exit(0);
         }
@@ -508,8 +504,6 @@ namespace TwitchChat
         private void OnReconnect(object sender, RoutedEventArgs e)
         {
             m_reconnect = true;
-            if (m_thread == null)
-                StartThread();
         }
 
         private void OnClear(object sender, RoutedEventArgs e)
@@ -544,7 +538,6 @@ namespace TwitchChat
                 OnReconnect(null, null);
             }
         }
-
         private void AllItems_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             ScrollBar.ScrollToVerticalOffset(ScrollBar.VerticalOffset - e.Delta);
