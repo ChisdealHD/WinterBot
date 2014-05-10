@@ -17,6 +17,7 @@ namespace WinterExtensions
         object m_sync = new object();
         WinterBot m_bot;
         WinterOptions m_options;
+        HttpManager m_http;
 
         public ViewerCountLogger(WinterBot bot, WinterOptions options)
             : base(bot)
@@ -27,6 +28,7 @@ namespace WinterExtensions
             m_bot = bot;
             m_options = options;
 
+            m_http = new HttpManager(options);
             bot.ViewerCountChanged += bot_ViewerCountChanged;
         }
 
@@ -51,7 +53,7 @@ namespace WinterExtensions
                 m_viewers.Clear();
             }
 
-            HttpManager.Instance.PostAsync("api.php", "VIEWERS", sb).Wait();
+            m_http.PostAsync("api.php", "VIEWERS", sb).Wait();
         }
     }
 }

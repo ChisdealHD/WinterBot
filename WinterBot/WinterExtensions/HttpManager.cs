@@ -14,13 +14,12 @@ namespace WinterExtensions
 {
     class HttpManager
     {
-        static public HttpManager Instance = new HttpManager();
-
         public WinterOptions Options { get; internal set; }
         public string ApiKey { get { return Options.WebApiKey; } }
 
-        private HttpManager()
+        public HttpManager(WinterOptions options)
         {
+            Options = options;
         }
 
         public void PostAsync(string api, StringBuilder data)
@@ -47,7 +46,7 @@ namespace WinterExtensions
         {
             string url = GetUrl(api, parameters);
 
-            HttpGet get = new HttpGet(url, callback);
+            HttpGet get = new HttpGet(this, url, callback);
             Task t = new Task(get.Go);
             t.Start();
 
@@ -78,9 +77,11 @@ namespace WinterExtensions
     {
         string m_url;
         Action<Stream> m_callback;
+        HttpManager m_http;
 
-        public HttpGet(string url, Action<Stream> callback)
+        public HttpGet(HttpManager http, string url, Action<Stream> callback)
         {
+            m_http = http;
             m_url = url;
             m_callback = callback;
         }
@@ -108,7 +109,7 @@ namespace WinterExtensions
             request.Method = "GET";
             request.KeepAlive = false;
 
-            var apiKey = HttpManager.Instance.ApiKey;
+            var apiKey = m_http.ApiKey;
             if (!string.IsNullOrWhiteSpace(apiKey))
                 request.Headers.Add("APIKey", apiKey);
 

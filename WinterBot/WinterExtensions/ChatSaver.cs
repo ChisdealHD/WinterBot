@@ -78,6 +78,7 @@ namespace WinterExtensions
         volatile List<ChatMessage> m_messages = new List<ChatMessage>();
         WinterBot m_bot;
         WinterOptions m_options;
+        private HttpManager m_http;
 
         public override TimeSpan Interval
         {
@@ -95,6 +96,7 @@ namespace WinterExtensions
             //if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
             //    return;
 
+            m_http = new HttpManager(options);
             bot.MessageReceived += bot_MessageReceived;
             bot.ActionReceived += bot_ActionReceived;
             bot.UserSubscribed += bot_UserSubscribed;
@@ -156,7 +158,7 @@ namespace WinterExtensions
             
             DateTime now = DateTime.Now;
             string parameters = string.Format("SAVECHAT={0}_{1:00}_{2:00}_{3:00}.txt", Bot.Channel, now.Year, now.Month, now.Day);
-            HttpManager.Instance.PostAsync("api.php", parameters, data).Wait();
+            m_http.PostAsync("api.php", parameters, data).Wait();
         }
     }
 }

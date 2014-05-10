@@ -40,7 +40,7 @@ namespace WinterExtensions
         AutoResetEvent m_event = new AutoResetEvent(false);
         volatile bool m_shutdown;
         Thread m_thread;
-
+        HttpManager m_http;
 
         public BettingSystem(WinterBot bot, WinterOptions options)
         {
@@ -48,7 +48,8 @@ namespace WinterExtensions
             m_bot = bot;
             Enabled = true;
 
-            HttpManager.Instance.GetAsync("points.php", LoadPoints);
+            m_http = new HttpManager(options);
+            m_http.GetAsync("points.php", LoadPoints);
         }
 
 
@@ -313,8 +314,8 @@ namespace WinterExtensions
 
                     m_queue.Clear();
                 }
-                
-                Task t = HttpManager.Instance.PostAsync("points.php", "SET=1", sb);
+
+                Task t = m_http.PostAsync("points.php", "SET=1", sb);
                 if (m_shutdown)
                     t.Wait();
             }
@@ -327,7 +328,7 @@ namespace WinterExtensions
                 // Try again in ten seconds.  We are on a task so we aren't blocking
                 // any main thread.
                 Thread.Sleep(10000);
-                HttpManager.Instance.GetAsync("points.php", LoadPoints);
+                m_http.GetAsync("points.php", LoadPoints);
                 return;
             }
 

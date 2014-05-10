@@ -8,7 +8,6 @@ namespace WinterExtensions
         public static void Init(WinterBot bot)
         {
             WinterOptions options = new WinterOptions(bot.Options);
-            HttpManager.Instance.Options = options;
 
             bot.AddCommands(new JukeBox(bot, options));
             bot.AddCommands(new BettingSystem(bot, options));

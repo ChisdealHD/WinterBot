@@ -30,6 +30,7 @@ namespace WinterExtensions
         const int MaxMessages = 5;
 
         LinkedList<Tuple<string, DateTime>> m_sent = new LinkedList<Tuple<string, DateTime>>();
+        HttpManager m_http;
 
         public BetterCommands(WinterBot bot, WinterOptions options)
             : base(bot)
@@ -41,7 +42,8 @@ namespace WinterExtensions
             m_options = options;
             m_bot.UnknownCommandReceived += UnknownCommandReceived;
 
-            HttpManager.Instance.GetAsync("api.php", "GETCMDS=1", Load);
+            m_http = new HttpManager(options);
+            m_http.GetAsync("api.php", "GETCMDS=1", Load);
         }
 
         [BotCommand(AccessLevel.Normal, "commands", "listcommands")]
@@ -54,7 +56,7 @@ namespace WinterExtensions
             }
 
             m_lastCommandList = DateTime.Now;
-            sender.SendMessage("A full listing of user commands can be found here: " + HttpManager.Instance.GetUrl("commands.php"));
+            sender.SendMessage("A full listing of user commands can be found here: " + m_http.GetUrl("commands.php"));
             m_sent.AddLast(new Tuple<string, DateTime>("commands", DateTime.Now));
         }
 
@@ -193,7 +195,7 @@ namespace WinterExtensions
             if (stream == null)
             {
                 Thread.Sleep(10000);
-                HttpManager.Instance.GetAsync("api.php", "GETCMDS=1", Load);
+                m_http.GetAsync("api.php", "GETCMDS=1", Load);
                 return;
             }
 
@@ -240,7 +242,7 @@ namespace WinterExtensions
                 m_dirty = false;
             }
 
-            HttpManager.Instance.PostAsync("api.php", "SETCMDS=1", sb).Wait();
+            m_http.PostAsync("api.php", "SETCMDS=1", sb).Wait();
         }
 
         class Command
