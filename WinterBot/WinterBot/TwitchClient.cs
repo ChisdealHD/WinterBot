@@ -373,7 +373,6 @@ namespace Winter
         {
             TwitchSource.Log.BanUser(user);
             SendMessage(Importance.High, string.Format(".ban {0}", user));
-            Console.WriteLine("[{0}] BAN", DateTime.Now);
         }
 
         public void Unban(string user)
@@ -422,7 +421,6 @@ namespace Winter
 
                         if (m_timeouts.TryTake(out next))
                         {
-                            Console.WriteLine("[{0}] ProcessingReBan {1} msec", DateTime.Now, evt.Created.Elapsed().TotalMilliseconds);
                             evt.Execute();
                             ProcessNext(next);
                             break;
@@ -431,7 +429,6 @@ namespace Winter
 
                     if (next == null)
                     {
-                        Console.WriteLine("[{0}] ProcessingReBan {1} msec", DateTime.Now, evt.Created.Elapsed().TotalMilliseconds);
                         evt.Execute();
                         break;
                     }
@@ -449,7 +446,6 @@ namespace Winter
             if (delay > 0)
                 Thread.Sleep(delay);
             evt.Execute();
-            Console.WriteLine("[{0}] ProcessingBan {1} msec", DateTime.Now, evt.Created.Elapsed().TotalMilliseconds);
         }
 
         private bool CanSendMessage(Importance importance, string text)
