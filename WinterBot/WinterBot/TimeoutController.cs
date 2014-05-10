@@ -136,6 +136,12 @@ namespace Winter
         #endregion
 
         #region Feature Enable/Disable
+        [BotCommand(AccessLevel.Mod, "banwordmode")]
+        public void BanWordMode(WinterBot sender, TwitchUser user, string cmd, string value)
+        {
+            m_banWordOptions.Enabled = ChangeMode(sender, user, value, "BanWord", m_banWordOptions.Enabled);
+        }
+
         [BotCommand(AccessLevel.Mod, "capsmode")]
         public void CapsMode(WinterBot sender, TwitchUser user, string cmd, string value)
         {
