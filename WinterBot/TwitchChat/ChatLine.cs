@@ -204,13 +204,6 @@ namespace TwitchChat
                     break;
             }
 
-            // Ensure we have a minimum height...
-            Image Spacer = new Image();
-            Spacer.Height = 30;
-            Inlines.Add(Spacer);
-
-            // ...and correct alignment...
-            this.VerticalAlignment = System.Windows.VerticalAlignment.Center;
 
             // ...and the right background color.
             int curr = ++s_curr;
