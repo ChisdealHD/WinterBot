@@ -37,7 +37,6 @@ namespace TwitchChat
 
         MainWindow Controller { get { return Value != null ? Value.Controller : null; } }
 
-
         static ChatLine()
         {
             s_sub = GetBitmapImage(TwitchChat.Properties.Resources.star);
@@ -177,6 +176,9 @@ namespace TwitchChat
 
         void ChatLine_Initialized(object sender, EventArgs e)
         {
+            if (Controller != null)
+                FontSize = Controller.DynamicFontSize;
+
             var value = Value;
             if (value == null)
                 return;
@@ -203,7 +205,6 @@ namespace TwitchChat
                     Debug.Assert(false);
                     break;
             }
-
 
             // ...and the right background color.
             int curr = ++s_curr;

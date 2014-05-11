@@ -20,7 +20,7 @@
             Grid.Row="0"
             VerticalScrollBarVisibility="Hidden"
             Name="ScrollBar" ScrollChanged="ScrollBar_ScrollChanged">
-            <ListView  
+            <ListView
                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
                       HorizontalContentAlignment="Stretch"
                       VerticalContentAlignment="Center"
@@ -49,7 +49,6 @@
                         <local:ChatLine
                             MinHeight="30"
                             Value="{Binding}"
-                            FontSize="16"
                             TextWrapping="Wrap"
                             FontFamily="Arial"
                             VerticalAlignment="Center" />
@@ -168,6 +167,67 @@
                     </Style>
                 </Button.Style>
             </Button>
+
+            <Button Margin="4" Name="TextButton" Width="24" Height="24" ContextMenuService.Placement="Top" PreviewMouseLeftButtonDown="Button_MouseLeftButtonDown" MouseLeftButtonUp="Button_MouseLeftButtonUp">
+                <Image Source="/Images/text.png" Width="18" Height="18" Stretch="Fill" />
+                <Button.Style>
+                    <Style TargetType="{x:Type Button}">
+                        <Style.Triggers>
+                            <EventTrigger RoutedEvent="Click">
+                                <EventTrigger.Actions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <BooleanAnimationUsingKeyFrames Storyboard.TargetProperty="ContextMenu.IsOpen">
+                                                <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="True"/>
+                                            </BooleanAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger.Actions>
+                            </EventTrigger>
+                        </Style.Triggers>
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu Name="ConfigMenu">
+
+                                    <MenuItem Header="Small Font" IsCheckable="True" IsChecked="False">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <EventSetter Event="Click" Handler="OnFontSize"/>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    
+                                    <MenuItem Header="Medium Font" IsCheckable="True" IsChecked="True">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <EventSetter Event="Click" Handler="OnFontSize"/>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+
+
+                                    <MenuItem Header="Large Font" IsCheckable="True" IsChecked="False">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <EventSetter Event="Click" Handler="OnFontSize"/>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+
+
+                                    <MenuItem Header="Huge Font" IsCheckable="True" IsChecked="False">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <EventSetter Event="Click" Handler="OnFontSize"/>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
             <Button Margin="4" Name="ConfigButton" Width="24" Height="24" ContextMenuService.Placement="Top" PreviewMouseLeftButtonDown="Button_MouseLeftButtonDown" MouseLeftButtonUp="Button_MouseLeftButtonUp">
                 <Image Source="/Images/gear.png" Width="18" Height="18" Stretch="Fill" />
                 <Button.Style>
@@ -216,6 +276,7 @@
                     </Style>
                 </Button.Style>
             </Button>
+                
             <Button Margin="4" Width="255" Background="#6D51A1" Foreground="White" Click="Button_Click">Chat</Button>
             </StackPanel>
 

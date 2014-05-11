@@ -30,6 +30,7 @@ namespace TwitchChat
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions, m_showIcons, m_onTop, m_showTimestamp;
+        int m_fontSize;
         Visibility m_modButtonVisible = Visibility.Collapsed;
         Thread m_thread;
         ChatOptions m_options;
@@ -55,6 +56,7 @@ namespace TwitchChat
             m_confirmTimeouts = m_options.GetOption("ConfirmTimeouts", false);
             m_showIcons = m_options.GetOption("ShowIcons", true);
             m_showTimestamp = m_options.GetOption("ShowTimestamps", false);
+            m_fontSize = 14;
             OnTop = m_options.GetOption("OnTop", false);
             m_channel = m_options.Stream.ToLower();
             TwitchHttp.Instance.PollChannelData(m_channel);
@@ -490,6 +492,27 @@ namespace TwitchChat
                 }
             }
         }
+
+        public int DynamicFontSize
+        {
+            get
+            {
+                return m_fontSize;
+            }
+            set
+            {
+                if (value < 8 || value > 24)
+                    return;
+
+                if (m_fontSize != value)
+                {
+                    m_fontSize = value;
+
+                    OnPropertyChanged("DynamicFontSize");
+                }
+            }
+        }
+
         public bool ShowTimestamps
         {
             get
@@ -598,6 +621,47 @@ namespace TwitchChat
         {
             m_twitch.SendMessage(Importance.High, ".subscribersoff");
         }
+
+        void OnFontSize(object sender, RoutedEventArgs e)
+        {
+
+            var menuItem = (MenuItem)sender;
+
+            ContextMenu menu = (ContextMenu)menuItem.Parent;
+            for (int i = 0; i < 4; i++)
+                ((MenuItem)menu.Items[i]).IsChecked = false;
+
+            switch (menuItem.Header.ToString())
+            {
+                case "Small Font":
+                    DynamicFontSize = 12;
+                    ((MenuItem)menu.Items[0]).IsChecked = true;
+                    break;
+
+
+                case "Medium Font":
+                    DynamicFontSize = 14;
+                    ((MenuItem)menu.Items[1]).IsChecked = true;
+                    break;
+
+
+                case "Large Font":
+                    DynamicFontSize = 16;
+                    ((MenuItem)menu.Items[2]).IsChecked = true;
+                    break;
+
+
+                case "Huge Font":
+                    DynamicFontSize = 18;
+                    ((MenuItem)menu.Items[3]).IsChecked = true;
+                    break;
+
+                default:
+                    Debug.Assert(false);
+                    break;
+            }
+        }
+
 
         private void Channel_LostFocus(object sender, RoutedEventArgs e)
         {
