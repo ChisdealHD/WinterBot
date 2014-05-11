@@ -94,7 +94,6 @@ namespace TwitchChat
         public void Unban(TwitchUser user)
         {
             m_twitch.Unban(user.Name);
-            WriteStatus(string.Format("Unbanned user {0}.", user.Name));
         }
 
         public bool Ban(TwitchUser user)
@@ -106,7 +105,6 @@ namespace TwitchChat
             if (res == MessageBoxResult.Yes)
             {
                 m_twitch.Ban(user.Name);
-                WriteStatus(string.Format("Banned user {0}.", user.Name));
                 return true;
             }
 
@@ -125,12 +123,6 @@ namespace TwitchChat
             if (res == MessageBoxResult.Yes)
             {
                 m_twitch.Timeout(user.Name, duration);
-
-                if (duration > 1)
-                    WriteStatus(string.Format("Timed out user {0} for {1} seconds", user.Name, duration));
-                else
-                    WriteStatus(string.Format("Purged user {0}.", user.Name));
-
                 return true;
             }
 
