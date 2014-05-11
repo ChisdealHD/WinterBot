@@ -94,7 +94,11 @@ namespace Winter
 
     public class TwitchUser
     {
-        private TwitchUsers m_data;
+        TwitchUsers m_data;
+        bool m_mod;
+
+        public event Action<TwitchUser, bool> ModeratorStatusChanged;
+
         public string Color { get; internal set; }
         public int[] IconSet { get; internal set; }
 
@@ -127,7 +131,24 @@ namespace Winter
 
         public bool IsStreamer { get; internal set; }
 
-        public bool IsModerator { get; internal set; }
+        public bool IsModerator
+        {
+            get
+            {
+                return m_mod;
+            }
+
+            internal set
+            {
+                if (m_mod != value)
+                {
+                    m_mod = value;
+                    var evt = ModeratorStatusChanged;
+                    if (evt != null)
+                        evt(this, value);
+                }
+            }
+        }
 
         public bool IsSubscriber { get; internal set; }
 

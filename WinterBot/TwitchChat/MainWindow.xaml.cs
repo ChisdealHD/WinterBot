@@ -30,6 +30,7 @@ namespace TwitchChat
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         bool m_playSounds, m_confirmTimeouts, m_confirmBans, m_highlightQuestions, m_showIcons, m_onTop, m_showTimestamp;
+        Visibility m_modButtonVisible = Visibility.Collapsed;
         Thread m_thread;
         ChatOptions m_options;
         TwitchClient m_twitch;
@@ -182,6 +183,9 @@ namespace TwitchChat
         {
             if (m_twitch != null)
             {
+                var user = CurrentUser;
+                if (user != null)
+                    user.ModeratorStatusChanged -= ModStatusChanged;
                 m_twitch.InformChatClear -= ClearChatHandler;
                 m_twitch.MessageReceived -= ChatMessageReceived;
                 m_twitch.JtvMessageReceived -= JtvMessageReceived;
@@ -201,8 +205,10 @@ namespace TwitchChat
             m_twitch.UserSubscribed += SubscribeHandler;
             m_twitch.StatusUpdate += StatusUpdate;
 
-            CurrentUser = m_users.GetUser(m_options.User);
-
+            var currUser = CurrentUser = m_users.GetUser(m_options.User);
+            currUser.ModeratorStatusChanged += ModStatusChanged;
+            ModStatusChanged(currUser, currUser.IsStreamer || currUser.IsModerator);
+            
             bool first = true;
             ConnectResult result;
             const int sleepTime = 5000;
@@ -373,6 +379,28 @@ namespace TwitchChat
         public ObservableCollection<ChatItem> Messages { get; set; }
 
         public TwitchUser CurrentUser { get; private set; }
+
+
+        public Visibility ModButtonVisibility
+        {
+            get
+            {
+                return m_modButtonVisible;
+            }
+            set
+            {
+                if (m_modButtonVisible != value)
+                {
+                    m_modButtonVisible = value;
+                    OnPropertyChanged("ModButtonVisibility");
+                }
+            }
+        }
+
+        private void ModStatusChanged(TwitchUser user, bool modStatus)
+        {
+            ModButtonVisibility = modStatus ? Visibility.Visible : Visibility.Collapsed;
+        }
         
         public bool PlaySounds
         {
@@ -528,6 +556,56 @@ namespace TwitchChat
             Messages.Clear();
         }
 
+        private void OnCommercial(object sender, RoutedEventArgs e)
+        {
+            int time;
+            if (TryParseMenuTime(sender as MenuItem, out time))
+                m_twitch.SendMessage(Importance.High, string.Format(".commercial {0}", time));
+        }
+
+        bool TryParseMenuTime(MenuItem item, out int time)
+        {
+            time = 0;
+
+            Debug.Assert(item != null);
+            if (item == null)
+                return false;
+
+            string[] header = item.Header.ToString().Split(' ');
+            Debug.Assert(header.Length >= 2);
+
+            string text = header[header.Length - 1];
+            Debug.Assert(int.TryParse(text, out time));
+
+            return int.TryParse(text, out time);
+        }
+
+
+        void OnClearChat(object sender, RoutedEventArgs e)
+        {
+            m_twitch.SendMessage(Importance.High, ".clear");
+        }
+
+        void OnSlowMode(object sender, RoutedEventArgs e)
+        {
+            int time;
+            if (TryParseMenuTime(sender as MenuItem, out time))
+                m_twitch.SendMessage(Importance.High, string.Format(".slow {0}", time));
+        }
+
+        void OnSlowModeOff(object sender, RoutedEventArgs e)
+        {
+            m_twitch.SendMessage(Importance.High, ".slowoff");
+        }
+        void OnSubMode(object sender, RoutedEventArgs e)
+        {
+            m_twitch.SendMessage(Importance.High, ".subscribers");
+        }
+
+        void OnSubModeOff(object sender, RoutedEventArgs e)
+        {
+            m_twitch.SendMessage(Importance.High, ".subscribersoff");
+        }
 
         private void Channel_LostFocus(object sender, RoutedEventArgs e)
         {
@@ -565,32 +643,43 @@ namespace TwitchChat
             if (e.Key == Key.Enter && e.KeyboardDevice.Modifiers != ModifierKeys.Shift)
             {
                 e.Handled = true;
+                SendTextInput();
+            }
+        }
+        
 
-                string text = ChatInput.Text;
-                ChatInput.Text = "";
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            SendTextInput();
+        }
 
-                if (string.IsNullOrEmpty(text))
-                {
-                    return;
-                }
-                else if (text.StartsWith("/"))
-                {
-                    HandleCommand(text);
-                    return;
-                }
-                else if (text.StartsWith("."))
-                {
-                    text = " " + text;
-                }
-                
-                text = text.Replace('\n', ' ');
 
-                m_twitch.SendMessage(Importance.High, text);
 
-                var user = m_twitch.ChannelData.GetUser(m_options.User);
-                AddItem(new ChatMessage(this, ItemType.Message, user, text));
+        private void SendTextInput()
+        {
+            string text = ChatInput.Text;
+            ChatInput.Text = "";
+
+            if (string.IsNullOrEmpty(text))
+            {
                 return;
             }
+            else if (text.StartsWith("/"))
+            {
+                HandleCommand(text);
+                return;
+            }
+            else if (text.StartsWith("."))
+            {
+                text = " " + text;
+            }
+
+            text = text.Replace('\n', ' ');
+
+            m_twitch.SendMessage(Importance.High, text);
+
+            var user = m_twitch.ChannelData.GetUser(m_options.User);
+            AddItem(new ChatMessage(this, ItemType.Message, user, text));
         }
 
         private void HandleCommand(string text)
@@ -615,8 +704,58 @@ namespace TwitchChat
         private void Button_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             e.Handled = true;
-            var menu = ConfigButton.ContextMenu;
-            menu.PlacementTarget = (UIElement)sender;
+
+            Button button = (Button)sender;
+
+            var menu = button.ContextMenu;
+            menu.PlacementTarget = button;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+            menu.IsOpen = true;
+        }
+
+        List<UIElement> m_streamerItems;
+        bool m_streamerMenu = true;
+
+        private void ModButton_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+
+            Button button = (Button)sender;
+            ContextMenu menu = button.ContextMenu;
+
+            if (m_streamerItems == null)
+            {
+                m_streamerItems = new List<UIElement>(menu.Items.Count);
+                foreach (UIElement item in menu.Items)
+                    m_streamerItems.Add(item);
+            }
+
+            if (CurrentUser != null && (CurrentUser.IsStreamer != m_streamerMenu))
+            {
+                if (CurrentUser.IsStreamer)
+                {
+                    menu.Items.Clear();
+                    foreach (var item in m_streamerItems)
+                        menu.Items.Add(item);
+
+                    m_streamerMenu = true;
+                }
+                else
+                {
+                    menu.Items.Clear();
+                    int i;
+                    for (i = 0; i < m_streamerItems.Count; ++i)
+                        if (m_streamerItems[i] is Separator)
+                            break;
+
+                    for (i = i + 1; i < m_streamerItems.Count; ++i)
+                        menu.Items.Add(m_streamerItems[i]);
+
+                    m_streamerMenu = false;
+                }
+            }
+
+            menu.PlacementTarget = button;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
             menu.IsOpen = true;
         }
