@@ -82,7 +82,28 @@ namespace TwitchChat
             return defaultValue;
         }
 
+        internal int GetOption(string key, int defaultValue)
+        {
+            object res = m_reg.GetValue(key, defaultValue);
+            if (res == null)
+                return defaultValue;
+
+            if (res is int)
+                return (int)res;
+
+            int result;
+            if (res is string)
+                if (int.TryParse((string)res, out result))
+                    return result;
+
+            return defaultValue;
+        }
         public void SetOption(string key, bool value)
+        {
+            m_reg.SetValue(key, value);
+        }
+
+        public void SetOption(string key, int value)
         {
             m_reg.SetValue(key, value);
         }

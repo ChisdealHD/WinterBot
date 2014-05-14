@@ -305,11 +305,12 @@ namespace TwitchChat
         {
             var text = msg.Message;
             var weight = (msg.Type == ItemType.Question) ? FontWeights.Bold : FontWeights.Normal;
+            var color = (msg.Type == ItemType.Question) ? Brushes.Red : Brushes.Black;
 
             var set = TwitchHttp.Instance.ImageSet;
             if (set == null)   
             {
-                var run = new Run(text) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                var run = new Run(text) { Foreground = color, FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
                 m_messages.Add(run);
                 Inlines.Add(run);
                 return;
@@ -334,7 +335,7 @@ namespace TwitchChat
                 {
                     if (curr < start)
                     {
-                        var run = new Run(text.Slice(curr, start)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                        var run = new Run(text.Slice(curr, start)) { Foreground = color, FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
                         m_messages.Add(run);
                         Inlines.Add(run);
                     }
@@ -345,7 +346,7 @@ namespace TwitchChat
                 }
                 else
                 {
-                    var run = new Run(text.Slice(curr, start + len)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                    var run = new Run(text.Slice(curr, start + len)) { Foreground = color, FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
                     m_messages.Add(run);
                     Inlines.Add(run);
                 }
@@ -355,7 +356,7 @@ namespace TwitchChat
 
             if (curr < text.Length)
             {
-                var run = new Run(text.Substring(curr)) { FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
+                var run = new Run(text.Substring(curr)) { Foreground = color, FontWeight = weight, BaselineAlignment = BaselineAlignment.Center };
                 m_messages.Add(run);
                 Inlines.Add(run);
             }
