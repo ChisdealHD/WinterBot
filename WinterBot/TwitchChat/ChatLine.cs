@@ -341,6 +341,7 @@ namespace TwitchChat
                     }
 
                     InlineUIContainer cont = new InlineUIContainer(img);
+                    cont.ToolTip = emote.Name;
                     cont.BaselineAlignment = BaselineAlignment.Center;
                     Inlines.Add(cont);
                 }
