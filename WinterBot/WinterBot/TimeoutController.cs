@@ -209,19 +209,23 @@ namespace Winter
         }
 
         [BotCommand(AccessLevel.Mod, "purge", "purgespam")]
-        public void Purge(WinterBot sender, TwitchUser user, string cmd, string value)
+        public void Purge(WinterBot sender, TwitchUser user, string c, string value)
         {
-            value = value.Trim().ToLower();
+            var cmd = value.ParseArguments(sender);
+            int time = cmd.GetIntFlag("time", 0);
+
+            value = cmd.GetString();
             if (string.IsNullOrWhiteSpace(value))
                 return;
 
+            value = value.ToLower();
             var users = from msg in m_lastMsgs
                         where msg != null && msg.Item2 != null
                         where msg.Item2.Contains(value)
                         select msg.Item1;
 
             foreach (var usr in users.Distinct())
-                sender.Timeout(usr, 1);
+                sender.Timeout(usr, time > 0 ? time : 1);
         }
 
         [BotCommand(AccessLevel.Mod, "clearspam", "clearban")]
