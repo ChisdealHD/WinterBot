@@ -22,9 +22,6 @@ namespace WinterExtensions
         public ViewerCountLogger(WinterBot bot, WinterOptions options)
             : base(bot)
         {
-            if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
-                return;
-
             m_bot = bot;
             m_options = options;
 

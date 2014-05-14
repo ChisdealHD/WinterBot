@@ -93,8 +93,6 @@ namespace WinterExtensions
         {
             m_options = options;
             m_bot = bot;
-            //if (!bot.Channel.Equals("zlfreebird", StringComparison.CurrentCultureIgnoreCase))
-            //    return;
 
             m_http = new HttpManager(options);
             bot.MessageReceived += bot_MessageReceived;
