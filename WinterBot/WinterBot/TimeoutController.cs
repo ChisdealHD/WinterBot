@@ -606,14 +606,17 @@ namespace Winter
                     break;
 
                 case 3:
+                    shouldMessage = !string.IsNullOrEmpty(clearReason);
                     duration = 5 * 60;
                     break;
 
                 case 4:
+                    shouldMessage = !string.IsNullOrEmpty(clearReason);
                     duration = 10 * 60;
                     break;
 
                 case 5:
+                    shouldMessage = !string.IsNullOrEmpty(clearReason);
                     duration = 8 * 60 * 60;
                     break;
             }
