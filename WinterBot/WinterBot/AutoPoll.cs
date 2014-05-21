@@ -12,115 +12,125 @@ namespace Winter
         bool m_active = false;
         DateTime m_lastVote = DateTime.Now;
         DateTime m_lastMessage = DateTime.Now;
-        int[] m_result = new int[4];
+        Dictionary<TwitchUser, int> m_result = new Dictionary<TwitchUser, int>();
 
-        int m_lastTotal = 0;
-        int m_total = 0;
+        bool m_dirty = false;
+        AutoPollOptions m_options;
 
         public AutoPoll(WinterBot bot)
         {
+            m_options = bot.Options.AutoPollOptions;
+            if (!m_options.Enabled)
+                return;
+
             bot.MessageReceived += bot_MessageReceived;
             bot.Tick += bot_Tick;
         }
 
 
-        [BotCommand(AccessLevel.Mod, "voteclear", "clearvote", "closevote")]
+        [BotCommand(AccessLevel.Mod, "voteclear", "clearvote", "closevote", "voteclose")]
         public void ClearVote(WinterBot bot, TwitchUser user, string cmd, string value)
         {
             m_lastStop = DateTime.Now;
-            Reset();
+            Reset(bot);
         }
 
 
         [BotCommand(AccessLevel.Mod, "newvote", "vote")]
         public void NewVote(WinterBot bot, TwitchUser user, string cmd, string value)
         {
-            Reset();
-        }
-
-        void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
-        {
-            if (m_lastVote.Elapsed().TotalSeconds >= 60)
-                Reset();
-
-            if (m_lastMessage.Elapsed().TotalSeconds > 10 && m_active && m_total > 15 && (m_lastTotal != m_total))
-            {
-                int curr = 0;
-                int max = 0;
-                for (int i = 0; i < m_result.Length; ++i)
-                {
-                    if (m_result[i] > curr)
-                    {
-                        curr = m_result[i];
-                        max = i+1;
-                    }
-                }
-                
-                sender.SendResponse(Importance.Med, "@winter Current vote is for {0} with {1} votes.", max, curr);
-                m_lastMessage = DateTime.Now;
-                m_lastTotal = m_total;
-
-                if (m_lastVote.Elapsed().TotalSeconds >= 15)
-                    m_active = false;
-            }
+            Reset(bot);
         }
 
         void bot_MessageReceived(WinterBot sender, TwitchUser user, string text)
         {
-            if (m_lastStop.Elapsed().TotalSeconds < 120)
+            if (m_lastStop.Elapsed().TotalSeconds < m_options.VoteClearTimer)
                 return;
 
-            int result = 0;
+            if (m_active && m_lastVote.Elapsed().TotalSeconds >= m_options.VoteTimeout)
+                Reset(sender);
 
-            if (text.Contains("1"))
-                result += 1;
-
-            if (text.Contains("2"))
-                if (result == 0)
-                    result = 2;
-                else
-                    result = 27;
-
-
-            if (text.Contains("3"))
-                if (result == 0)
-                    result = 3;
-                else
-                    result = 27;
-
-            if (text.Contains("4"))
-                if (result == 0)
-                    result = 4;
-                else
-                    result = 27;
-
-            if (result == 27)
-                result = 0;
-
-            if (result != 0)
+            int result = -1;
+            for (int i = 1; i <= m_options.MaxVoteValue; ++i)
             {
+                if (text.Contains(i.ToString()))
+                {
+                    if (result != -1)
+                    {
+                        result = -1;
+                        break;
+                    }
 
-                m_lastVote = DateTime.Now;
-                m_result[result - 1] += user.IsSubscriber ? 3 : 1;
-                m_active = true;
-                m_total++;
+                    result = i;
+                }
             }
 
-
-            if (m_active && m_lastVote.Elapsed().TotalSeconds >= 30)
-                Reset();
+            if (result != -1)
+            {
+                m_result[user] = result;
+                m_lastVote = DateTime.Now;
+                m_dirty = true;
+                if (!m_active)
+                {
+                    m_lastMessage = DateTime.Now;
+                    m_active = true;
+                }
+            }
         }
 
-        private void Reset()
+        void bot_Tick(WinterBot sender, TimeSpan timeSinceLastUpdate)
         {
-            for (int i = 0; i < m_result.Length; ++i)
-                m_result[i] = 0;
+            if (!m_active)
+                return;
+
+            if (m_lastMessage.Elapsed().TotalSeconds > m_options.ReportTime && m_result.Count >= m_options.VoteThreshold)
+                ReportTotal(sender);
+
+            if (m_lastVote.Elapsed().TotalSeconds >= m_options.VoteTimeout)
+                Reset(sender);
+        }
+
+        private void ReportTotal(WinterBot sender)
+        {
+            if (!m_dirty)
+                return;
+
+            var votes = from item in m_result
+                        group item by item.Value into g
+                        let key = g.Key
+                        let count = g.Sum(p => p.Key.IsSubscriber ? m_options.SubVoteCount : 1)
+                        orderby key
+                        select new
+                        {
+                            Option = key,
+                            Votes = count
+                        };
+
+            var top = (from vote in votes orderby vote.Votes descending select vote).First();
+
+            string msg = "@winter Current vote is for {0} with {1} votes. {2}";
+            if (!m_active)
+                msg = "@winter Voting closed.  Result: {0} with {1} votes. {2}";
+
+            sender.SendResponse(Importance.Med, msg, top.Option, top.Votes, "(" + string.Join(", ", votes.Select(v => string.Format("Option {0}: {1} votes", v.Option, v.Votes))) + ".)");
+            m_lastMessage = DateTime.Now;
+            m_dirty = false;
+        }
+
+        private void Reset(WinterBot sender)
+        {
+            if (m_active && m_dirty)
+            {
+                m_active = false;
+                ReportTotal(sender);
+            }
+
+            m_result.Clear();
 
             m_lastVote = DateTime.Now;
             m_lastMessage = DateTime.Now;
             m_active = false;
-            m_total = 0;
-            m_lastTotal = 0;
+            m_dirty = false;
         }
     }
 }

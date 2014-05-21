@@ -305,6 +305,49 @@ namespace Winter
         }
     }
 
+    public class AutoPollOptions
+    {
+        bool m_enabled;
+        int m_maxValue = 5, m_subVoteCount = 2, m_reportTime = 15, m_voteTimeout = 30, m_voteThreshold = 15, m_voteClearTimer = 120;
+
+        public bool Enabled { get { return m_enabled; } }
+        public int MaxVoteValue { get { return m_maxValue; } }
+        public int SubVoteCount { get { return m_subVoteCount; } }
+        public int ReportTime { get { return m_reportTime; } }
+        public int VoteTimeout { get { return m_voteTimeout; } }
+        public int VoteThreshold { get { return m_voteThreshold; } }
+        public int VoteClearTimer { get { return m_voteClearTimer; } }
+
+        public AutoPollOptions(IniReader reader)
+        {
+            var section = reader.GetSectionByName("autopoll");
+            if (section != null)
+            {
+                section.GetValue("Enabled", ref m_enabled);
+                section.GetValue("MaxValue", ref m_maxValue);
+                section.GetValue("SubVoteCount", ref m_subVoteCount);
+                section.GetValue("ReportTime", ref m_reportTime);
+                section.GetValue("VoteTimeout", ref m_voteTimeout);
+                section.GetValue("VoteThreshold", ref m_voteThreshold);
+                section.GetValue("VoteClearTime", ref m_voteClearTimer);
+            }
+
+            if (m_maxValue < 2)
+                m_maxValue = 2;
+            else if (m_maxValue > 9)
+                m_maxValue = 9;
+
+            if (m_subVoteCount <= 0)
+                m_subVoteCount = 1;
+
+            if (m_reportTime < 10)
+                m_reportTime = 10;
+
+            if (m_voteTimeout <= m_reportTime)
+                m_voteTimeout = m_reportTime + 1;
+        }
+    }
+
     public class AutoMessageOptions
     {
         bool m_enabled, m_random;
@@ -362,6 +405,7 @@ namespace Winter
         EmoteTimeoutOptions m_emoteOptions;
         AutoMessageOptions m_autoMessageOptions;
         BanWordOptions m_banWordOptions;
+        AutoPollOptions m_autoPollOptions;
 
         public IniReader IniReader { get { return m_iniReader; } }
 
@@ -381,6 +425,7 @@ namespace Winter
         public SymbolTimeoutOptions SymbolOptions { get { return m_symbolOptions; } }
         public EmoteTimeoutOptions EmoteOptions { get { return m_emoteOptions; } }
         public AutoMessageOptions AutoMessageOptions { get { return m_autoMessageOptions; } }
+        public AutoPollOptions AutoPollOptions { get { return m_autoPollOptions; } }
         public BanWordOptions BanWordOptions { get { return m_banWordOptions; } }
 
         public IEnumerable<string> Plugins
@@ -412,6 +457,7 @@ namespace Winter
             m_chatOptions = new ChatOptions(m_iniReader);
             m_autoMessageOptions = new AutoMessageOptions(m_iniReader);
             m_banWordOptions = new BanWordOptions(m_iniReader);
+            m_autoPollOptions = new AutoPollOptions(m_iniReader);
         }
 
         public Options(string filename)
@@ -454,6 +500,7 @@ namespace Winter
             m_chatOptions = new ChatOptions(m_iniReader);
             m_autoMessageOptions = new AutoMessageOptions(m_iniReader);
             m_banWordOptions = new BanWordOptions(m_iniReader);
+            m_autoPollOptions = new AutoPollOptions(m_iniReader);
         }
     }
 }
