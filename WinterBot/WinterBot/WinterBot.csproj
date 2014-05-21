@@ -57,6 +57,7 @@
     <Compile Include="ArgumentParser.cs" />
     <Compile Include="AutoMessage.cs" />
     <Compile Include="AsyncTaskManager.cs" />
+    <Compile Include="AutoPoll.cs" />
     <Compile Include="ConcurrentDictionary.cs" />
     <Compile Include="ConcurrentHashset.cs" />
     <Compile Include="SaveQueue.cs" />

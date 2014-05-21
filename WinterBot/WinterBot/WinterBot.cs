@@ -336,6 +336,7 @@ namespace Winter
 
             AddCommands(new TimeoutController(this));
             AddCommands(new Quiet(this));
+            AddCommands(new AutoPoll(this));
         }
 
         public void AddCommands(object commands)
