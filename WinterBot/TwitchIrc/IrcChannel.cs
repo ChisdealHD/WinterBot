@@ -188,7 +188,7 @@ namespace IrcDotNet
             if (user == null)
                 throw new ArgumentNullException("user");
 
-            return this.users.SingleOrDefault(cu => cu.User == user);
+            return this.users.FirstOrDefault(cu => cu.User == user);
         }
 
         /// <inheritdoc cref="Invite(string)"/>
@@ -356,7 +356,7 @@ namespace IrcDotNet
         {
             lock (((ICollection)this.modesReadOnly).SyncRoot)
                 this.modes.UpdateModes(newModes, newModeParameters, this.client.ChannelUserModes,
-                    (add, mode, modeParameter) => this.users.Single(
+                    (add, mode, modeParameter) => this.users.First(
                         cu => cu.User.NickName == modeParameter).HandleModeChanged(add, mode));
 
             OnModesChanged(new IrcUserEventArgs(source));
@@ -386,8 +386,9 @@ namespace IrcDotNet
 
         internal void HandleUserLeft(IrcUser user, string comment)
         {
+            return;
             lock (((ICollection)this.modesReadOnly).SyncRoot)
-                HandleUserLeft(this.users.Single(u => u.User == user), comment);
+                HandleUserLeft(this.users.First(u => u.User == user), comment);
         }
 
         internal void HandleUserLeft(IrcChannelUser channelUser, string comment)
@@ -401,7 +402,7 @@ namespace IrcDotNet
         internal void HandleUserKicked(IrcUser user, string comment)
         {
             lock (((ICollection)this.modesReadOnly).SyncRoot)
-                HandleUserKicked(this.users.Single(u => u.User == user), comment);
+                HandleUserKicked(this.users.First(u => u.User == user), comment);
         }
 
         internal void HandleUserKicked(IrcChannelUser channelUser, string comment)
