@@ -385,8 +385,6 @@ namespace Winter
                 timeout = 1;
 
             ClearChat(bot, user, null, timeout);
-            if (m_timeouts[user].Count == 1)
-                m_timeouts[user].Count++;
 
             if (!string.IsNullOrWhiteSpace(msg))
             {
@@ -628,8 +626,12 @@ namespace Winter
             {
                 if (duration == 1)
                     sender.Send(MessageType.Timeout, Importance.Med, "{0}: {1} (This is not a timeout.)", user.Name, clearReason);
-                else
+                else if (duration < 60)
                     sender.Send(MessageType.Timeout, Importance.High, "{0}: {1}", user.Name, clearReason);
+                else if (duration < 3600)
+                    sender.Send(MessageType.Timeout, Importance.High, "{0}: {1} ({2} minute timeout.)", user.Name, clearReason, duration / 60);
+                else
+                    sender.Send(MessageType.Timeout, Importance.High, "{0}: {1} ({2} hour timeout.)", user.Name, clearReason, duration / 3600);
             }
 
             sender.Timeout(user, duration);
