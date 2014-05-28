@@ -83,7 +83,7 @@ namespace Winter
             if (!m_active)
                 return;
 
-            if (m_lastMessage.Elapsed().TotalSeconds > m_options.ReportTime && m_result.Count >= m_options.VoteThreshold)
+            if (m_lastMessage.Elapsed().TotalSeconds > m_options.ReportTime)
                 ReportTotal(sender);
 
             if (m_lastVote.Elapsed().TotalSeconds >= m_options.VoteTimeout)
@@ -92,7 +92,7 @@ namespace Winter
 
         private void ReportTotal(WinterBot sender)
         {
-            if (!m_dirty)
+            if (!m_dirty || m_result.Count < m_options.VoteThreshold)
                 return;
 
             var votes = from item in m_result
